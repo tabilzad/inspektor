@@ -6,6 +6,7 @@ import io.github.tabilzad.ktor.buildPluginConfiguration
 import io.github.tabilzad.ktor.convertInternalToOpenSpec
 import io.github.tabilzad.ktor.serializeAndWriteTo
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.messageCollector
 import org.jetbrains.kotlin.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.MppCheckerKind
@@ -13,7 +14,6 @@ import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirSimpleFunctionChecker
 import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
 import org.jetbrains.kotlin.fir.declarations.hasAnnotation
-import org.jetbrains.kotlin.ir.util.irMessageLogger
 
 
 /**
@@ -26,7 +26,7 @@ class SwaggerDeclarationChecker(
     configuration: CompilerConfiguration
 ) : FirSimpleFunctionChecker(MppCheckerKind.Common) {
 
-    private val log = configuration.irMessageLogger
+    private val log = configuration.messageCollector
     private val config = configuration.buildPluginConfiguration()
 
     override fun check(declaration: FirSimpleFunction, context: CheckerContext, reporter: DiagnosticReporter) {

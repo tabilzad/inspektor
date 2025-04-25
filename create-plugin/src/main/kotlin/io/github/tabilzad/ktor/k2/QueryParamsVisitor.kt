@@ -14,9 +14,9 @@ import org.jetbrains.kotlin.fir.expressions.impl.FirResolvedArgumentList
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.toResolvedCallableSymbol
 import org.jetbrains.kotlin.fir.resolve.toClassSymbol
+import org.jetbrains.kotlin.fir.resolve.toRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 import org.jetbrains.kotlin.fir.types.toLookupTag
-import org.jetbrains.kotlin.fir.types.toRegularClassSymbol
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
 
 class QueryParamsVisitor(private val session: FirSession) : FirDefaultVisitor<Unit, MutableList<String>>() {
@@ -47,8 +47,7 @@ class QueryParamsVisitor(private val session: FirSession) : FirDefaultVisitor<Un
         }
     }
 
-
-    override fun <T> visitLiteralExpression(literalExpression: FirLiteralExpression<T>, data: MutableList<String>) {
+    override fun visitLiteralExpression(literalExpression: FirLiteralExpression, data: MutableList<String>) {
         val element = literalExpression.value
         element?.let { data.add(it.toString()) }
     }
@@ -62,12 +61,13 @@ class QueryParamsVisitor(private val session: FirSession) : FirDefaultVisitor<Un
         if (fir is FirProperty) {
             val init = fir.initializer
 
-            if (init is FirLiteralExpression<*>) {
+            if (init is FirLiteralExpression) {
                 init.accept(this, data)
             }
         }
     }
 
+    @OptIn(PrivateConstantEvaluatorAPI::class)
     override fun visitArgumentList(argumentList: FirArgumentList, data: MutableList<String>) {
 
         if (argumentList is FirResolvedArgumentList) {
@@ -77,7 +77,7 @@ class QueryParamsVisitor(private val session: FirSession) : FirDefaultVisitor<Un
                     FirExpressionEvaluator.evaluateExpression(it, session)
                 }.filterIsInstance<FirEvaluatorResult.Evaluated>().map {
                     it.result
-                }.filterIsInstance<FirLiteralExpression<*>>()
+                }.filterIsInstance<FirLiteralExpression>()
 
             g.forEach { it.accept(this, data) }
 
@@ -111,7 +111,7 @@ class QueryParamsVisitor(private val session: FirSession) : FirDefaultVisitor<Un
                 v?.resolvedArgumentMapping?.values?.find { it.name.asString() == enumEntryAccessor?.asString() }
             val paramLiteral = v?.resolvedArgumentMapping?.entries?.find { it.value == paramName }?.key
 
-            val queryParam = (paramLiteral as? FirLiteralExpression<*>)?.value
+            val queryParam = (paramLiteral as? FirLiteralExpression)?.value
             queryParam?.let {
                 data.add(queryParam.toString())
             }
@@ -122,7 +122,7 @@ class QueryParamsVisitor(private val session: FirSession) : FirDefaultVisitor<Un
                 if (fir is FirProperty) {
                     val init = fir.initializer
 
-                    if (init is FirLiteralExpression<*>) {
+                    if (init is FirLiteralExpression) {
                         init.accept(this, data)
                     }
                 }

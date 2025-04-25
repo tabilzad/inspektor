@@ -13,7 +13,7 @@ internal class StringArrayLiteralVisitor : FirDefaultVisitor<List<String>, List<
         return emptyList()
     }
 
-    override fun <T> visitLiteralExpression(literalExpression: FirLiteralExpression<T>, data: List<String>): List<String> =
+    override fun visitLiteralExpression(literalExpression: FirLiteralExpression, data: List<String>): List<String> =
         listOf(literalExpression.value.toString())
 
     override fun visitArrayLiteral(arrayLiteral: FirArrayLiteral, data: List<String>): List<String> {

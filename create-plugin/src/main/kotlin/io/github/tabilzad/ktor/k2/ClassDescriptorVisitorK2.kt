@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.fir.declarations.utils.isSealed
 import org.jetbrains.kotlin.fir.expressions.FirExpressionEvaluator
 import org.jetbrains.kotlin.fir.resolve.defaultType
 import org.jetbrains.kotlin.fir.resolve.toClassSymbol
+import org.jetbrains.kotlin.fir.resolve.toRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
@@ -257,7 +258,7 @@ internal class ClassDescriptorVisitorK2(
     }
 
     private fun ConeKotlinType.toNestedSwagger(): ObjectType {
-        val arrayItems = type.typeArguments.mapNotNull { it.type }.map {
+        val arrayItems = typeArguments.mapNotNull { it.type }.map {
             convertSubTree(it)
         }
         return ObjectType("array", items = arrayItems.firstOrNull())// list only take a single generic type
@@ -325,7 +326,7 @@ internal class ClassDescriptorVisitorK2(
             summary = summary?.accept(StringResolutionVisitor(), ""),
             descr = descr?.accept(StringResolutionVisitor(), ""),
             isRequired = required?.accept(StringResolutionVisitor(), "")?.toBooleanStrictOrNull()
-                ?: (returnTypeRef.isMarkedNullable == false)
+                ?: (returnTypeRef.coneType.isNullableAny == false)
         )
     }
 
@@ -347,7 +348,7 @@ internal class ClassDescriptorVisitorK2(
             required?.add(name) ?: run {
                 required = mutableListOf(name)
             }
-        } else if ((isRequiredFromExplicitDesc == null && fir.returnTypeRef.isMarkedNullable == false)
+        } else if ((isRequiredFromExplicitDesc == null && fir.returnTypeRef.coneType.isNullableAny == false)
             && config.deriveFieldRequirementFromTypeNullability
         ) {
             required?.add(name) ?: run {

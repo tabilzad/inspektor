@@ -14,6 +14,6 @@ class StringResolutionVisitor : FirDefaultVisitor<String, String>() {
             data + dr.accept(this, data)
         } ?: data
 
-    override fun <T> visitLiteralExpression(literalExpression: FirLiteralExpression<T>, data: String): String =
+    override fun visitLiteralExpression(literalExpression: FirLiteralExpression, data: String): String =
         literalExpression.value.toString()
 }

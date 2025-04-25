@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.fqName
 import org.jetbrains.kotlin.fir.resolve.toClassSymbol
+import org.jetbrains.kotlin.fir.resolve.toRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 import org.jetbrains.kotlin.fir.symbols.impl.FirEnumEntrySymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
@@ -95,15 +96,6 @@ internal val FirElement.allChildren: MutableSet<FirElement>
         val elements = mutableSetOf<FirElement>()
         acceptChildren(AllNestedNodeCollector(elements))
         return elements
-    }
-
-
-internal val FirTypeRef.getKotlinTypeFqName
-    get(): String? {
-        // Ensure the type is resolved
-        val coneType = coneTypeSafe<ConeKotlinType>() ?: return null
-        val classId = coneType.classId
-        return classId?.internalName
     }
 
 fun FirFunction.hasAnnotation(session: FirSession, name: String): Boolean {
@@ -200,7 +192,7 @@ fun ConeKotlinType.isMap(): Boolean {
 
 private fun ConeKotlinType.isBuiltinType(classId: ClassId, isNullable: Boolean?): Boolean {
     if (this !is ConeClassLikeType) return false
-    return lookupTag.classId == classId && (isNullable == null || type.isNullable == isNullable)
+    return lookupTag.classId == classId && (isNullable == null || this.isNullableAny == isNullable)
 }
 
 fun FirRegularClassSymbol.resolveEnumEntries(): List<String> {

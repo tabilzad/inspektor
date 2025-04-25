@@ -17,11 +17,11 @@ internal class RespondsAnnotationVisitor : FirDefaultVisitor<List<KtorK2Response
     override fun visitFunctionCall(functionCall: FirFunctionCall, data: KtorK2ResponseBag?): List<KtorK2ResponseBag> {
 
 
-        val status = functionCall.resolvedArgumentMapping?.findValueOfField("status") as? FirLiteralExpression<*>
+        val status = functionCall.resolvedArgumentMapping?.findValueOfField("status") as? FirLiteralExpression
         val type = functionCall.resolvedArgumentMapping?.findValueOfField("type") as? FirGetClassCall
-        val isCollection = functionCall.resolvedArgumentMapping?.findValueOfField("isCollection") as? FirLiteralExpression<*>
+        val isCollection = functionCall.resolvedArgumentMapping?.findValueOfField("isCollection") as? FirLiteralExpression
         val description =
-            functionCall.resolvedArgumentMapping?.findValueOfField("description") as? FirLiteralExpression<*>
+            functionCall.resolvedArgumentMapping?.findValueOfField("description") as? FirLiteralExpression
 
 
         return listOf(
