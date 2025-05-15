@@ -11,7 +11,7 @@ detekt = "1.23.7"
 
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokkaVersion" }
-mavenPublish-base = { id = "com.vanniktech.maven.publish.base", version = "0.30.0" }
+mavenPublish-base = { id = "com.vanniktech.maven.publish.base", version = "0.32.0" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 mavenShadow = { id = "com.gradleup.shadow", version = "9.0.0-beta4" }
 

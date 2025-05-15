@@ -53,7 +53,7 @@ subprojects {
 
     plugins.withId(rootProject.libs.plugins.mavenPublish.base.get().pluginId) {
         configure<MavenPublishBaseExtension> {
-            publishToMavenCentral(SonatypeHost.S01, automaticRelease = false)
+            publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = false)
             coordinates(
                 groupId = project.group.toString(),
                 artifactId = project.properties["POM_ARTIFACT_ID"].toString(),
@@ -68,6 +68,7 @@ subprojects {
                     license {
                         name.set("The Apache License, Version 2.0")
                         url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        distribution.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
                     }
                 }
                 developers {
