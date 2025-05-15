@@ -42,7 +42,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "serial_annotated_constructor_parameter", "notAnnotated", "serial_annotated_constructor_derived_property", "serial_annotated_lateinit_var" ]
+        "required" : [ "serial_annotated_constructor_parameter", "notAnnotated" ]
       }
     }
   }

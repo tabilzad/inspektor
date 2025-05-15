@@ -42,7 +42,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "moshi_annotated_constructor_parameter", "notMoshiAnnotated", "moshi_annotated_constructor_derived_property", "moshi_annotated_lateinit_var" ]
+        "required" : [ "moshi_annotated_constructor_parameter", "notMoshiAnnotated" ]
       }
     }
   }

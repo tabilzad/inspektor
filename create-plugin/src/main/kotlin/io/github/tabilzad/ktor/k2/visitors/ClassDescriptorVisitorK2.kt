@@ -18,6 +18,8 @@ import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.SealedClassInheritorsProviderInternals
 import org.jetbrains.kotlin.fir.declarations.sealedInheritorsAttr
+import org.jetbrains.kotlin.fir.declarations.utils.correspondingValueParameterFromPrimaryConstructor
+import org.jetbrains.kotlin.fir.declarations.utils.isAbstract
 import org.jetbrains.kotlin.fir.declarations.utils.isEnumClass
 import org.jetbrains.kotlin.fir.declarations.utils.isSealed
 import org.jetbrains.kotlin.fir.resolve.defaultType
@@ -210,8 +212,9 @@ internal class ClassDescriptorVisitorK2(
             required?.add(name) ?: run {
                 required = mutableListOf(name)
             }
-        } else if ((isRequiredFromExplicitDesc == null && !fir.returnTypeRef.coneType.isMarkedNullable) &&
-            config.deriveFieldRequirementFromTypeNullability
+        } else if ((isRequiredFromExplicitDesc == null && !fir.returnTypeRef.coneType.isMarkedNullable)
+            && config.deriveFieldRequirementFromTypeNullability
+            && (fir.shouldBeRequiredByInitializer() || fir.isAbstract)
         ) {
             required?.add(name) ?: run {
                 required = mutableListOf(name)
@@ -225,6 +228,15 @@ internal class ClassDescriptorVisitorK2(
         }
     }
 
+    private fun FirProperty.shouldBeRequiredByInitializer(): Boolean {
+        val derivedParamFromPrimaryCtor = correspondingValueParameterFromPrimaryConstructor
+        return if (derivedParamFromPrimaryCtor != null) {
+            !derivedParamFromPrimaryCtor.hasDefaultValue
+        } else {
+            false
+        }
+    }
+
     private fun FirProperty.findName(): String {
         return getCustomNameFromAnnotation(this, session) ?: name.asString()
     }
@@ -232,8 +244,9 @@ internal class ClassDescriptorVisitorK2(
 
 internal fun FirProperty.findDocsDescription(session: FirSession): KtorDescriptionBag? {
     val docsAnnotation =
-        findAnnotationNamed(KtorDescription::class.simpleName) ?: findAnnotationNamed(KtorFieldDescription::class.simpleName)
-        ?: return null
+        findAnnotationNamed(KtorDescription::class.simpleName)
+            ?: findAnnotationNamed(KtorFieldDescription::class.simpleName)
+            ?: return null
 
     val dataBag = docsAnnotation.extractDescription(session)
     return dataBag.copy(
