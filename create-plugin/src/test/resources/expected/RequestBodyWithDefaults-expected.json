@@ -1,0 +1,58 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/payloadsWithNonNullableCollectionsWithDefaults" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.requests.MembersWithDefaults"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.requests.MembersWithDefaults" : {
+        "type" : "object",
+        "properties" : {
+          "myArray" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "myList" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "myMap" : {
+            "type" : "object",
+            "properties" : { },
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "mySet" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

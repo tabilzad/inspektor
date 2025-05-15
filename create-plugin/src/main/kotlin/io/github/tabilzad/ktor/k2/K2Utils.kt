@@ -203,7 +203,7 @@ fun ConeKotlinType.isMap(): Boolean {
 
 private fun ConeKotlinType.isBuiltinType(classId: ClassId, isNullable: Boolean?): Boolean {
     if (this !is ConeClassLikeType) return false
-    return lookupTag.classId == classId && (isNullable == null || isNullableAny == isNullable)
+    return lookupTag.classId == classId && (isNullable == null || this.isMarkedNullable == isNullable)
 }
 
 fun FirRegularClassSymbol.resolveEnumEntries(): List<String> {

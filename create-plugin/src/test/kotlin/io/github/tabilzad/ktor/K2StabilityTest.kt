@@ -148,6 +148,26 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should resolve built-in nullable collections as swagger arrays`() {
+        val (source, expected) = loadSourceAndExpected("RequestBodyWithNullableCollections")
+        generateCompilerTest(testFile, source)
+
+        testFile.readText().let { generatedSwagger ->
+            generatedSwagger.assertWith(expected)
+        }
+    }
+
+    @Test
+    fun `should resolve members with defaults as optional`() {
+        val (source, expected) = loadSourceAndExpected("RequestBodyWithDefaults")
+        generateCompilerTest(testFile, source)
+
+        testFile.readText().let { generatedSwagger ->
+            generatedSwagger.assertWith(expected)
+        }
+    }
+
+    @Test
     fun `should generate correct endpoint descriptions`() {
         val (source, expected) = loadSourceAndExpected("EndpointDescription")
         generateCompilerTest(testFile, source)

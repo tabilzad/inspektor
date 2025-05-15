@@ -1,0 +1,102 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/nullableCollections" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.requests.NullableCollections"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/nullableCollectionsWithDefaults" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.requests.NullableCollectionsWithDefaults"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.requests.NullableCollections" : {
+        "type" : "object",
+        "properties" : {
+          "myArray" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "myList" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "myMap" : {
+            "type" : "object",
+            "properties" : { },
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "mySet" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "sources.requests.NullableCollectionsWithDefaults" : {
+        "type" : "object",
+        "properties" : {
+          "myArray" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "myList" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "myMap" : {
+            "type" : "object",
+            "properties" : { },
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "mySet" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

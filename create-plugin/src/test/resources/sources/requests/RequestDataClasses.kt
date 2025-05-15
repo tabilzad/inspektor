@@ -35,6 +35,27 @@ data class ComplexRequest(
     val complexMapValueMap: Map<String, Map<String, ComplexMapValue>>
 )
 
+data class NullableCollections(
+    val myList: List<String>?,
+    val myMap: Map<String, String>?,
+    val mySet: Set<String>?,
+    val myArray: Array<String>?,
+)
+
+data class NullableCollectionsWithDefaults(
+    val myList: List<String>? = emptyList(),
+    val myMap: Map<String, String>? = emptyMap(),
+    val mySet: Set<String>? = emptySet(),
+    val myArray: Array<String>? = emptyArray(),
+)
+
+data class MembersWithDefaults(
+    val myList: List<String> = emptyList(),
+    val myMap: Map<String, String> = emptyMap(),
+    val mySet: Set<String> = emptySet(),
+    val myArray: Array<String> = emptyArray(),
+)
+
 data class ComplexMapValue(
     val something: String
 )
