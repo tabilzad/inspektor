@@ -1,8 +1,6 @@
 package io.github.tabilzad.ktor.k2
 
 import io.github.tabilzad.ktor.*
-import io.github.tabilzad.ktor.annotations.KtorDescription
-import io.github.tabilzad.ktor.annotations.KtorResponds
 import io.github.tabilzad.ktor.k1.visitors.KtorDescriptionBag
 import io.github.tabilzad.ktor.k1.visitors.toSwaggerType
 import io.github.tabilzad.ktor.k2.visitors.*
@@ -13,7 +11,6 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
-import org.jetbrains.kotlin.fir.analysis.checkers.isValueClass
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.references.resolved
@@ -40,7 +37,7 @@ internal class ExpressionsVisitorK2(
         println("BeginK2 Visitor")
     }
 
-    val classNames = mutableListOf<OpenApiSpec.ObjectType>()
+    val classNames = mutableListOf<OpenApiSpec.TypeDescriptor>()
 
     override fun visitElement(expression: FirElement, parent: KtorElement?): List<KtorElement> {
         return parent.wrapAsList()
@@ -82,10 +79,10 @@ internal class ExpressionsVisitorK2(
             if (receiveCall != null) {
                 val kotlinType = receiveCall.resolvedType
                 if (kotlinType.isStringOrPrimitive()) {
-                    parent.body = OpenApiSpec.ObjectType(type = kotlinType.toString().toSwaggerType())
+                    parent.body = OpenApiSpec.TypeDescriptor(type = kotlinType.toString().toSwaggerType())
                 } else {
                     if (config.requestBody) {
-                        parent.body = kotlinType.generateTypeAndVisitMemberDescriptors()
+                        parent.body = kotlinType.generateDescriptor()
                     }
                 }
             }
@@ -95,51 +92,12 @@ internal class ExpressionsVisitorK2(
     }
 
     @OptIn(SymbolInternals::class)
-    private fun ConeKotlinType.generateTypeAndVisitMemberDescriptors(): OpenApiSpec.ObjectType {
-
-        val jetTypeFqName = fqNameStr()
-
-        val kdocs = toRegularClassSymbol(session)
-            ?.fir
-            ?.getKDocComments(config)
-
-        val annotatedDescription = findDocsDescription(session)
-
-        val objectType = OpenApiSpec.ObjectType(
-            type = "object",
-            properties = mutableMapOf(),
-            fqName = jetTypeFqName,
-            description = kdocs ?: annotatedDescription?.description ?: annotatedDescription?.summary,
-            contentBodyRef = "#/components/schemas/$jetTypeFqName",
-        )
-
-        if (isValueClass(session)) {
-            return objectType.copy(
-                type = properties(session)?.firstOrNull()
-                    ?.resolvedReturnType
-                    ?.className()
-                    ?.toSwaggerType(),
-                properties = null
-            ).also {
-                if (!classNames.names.contains(jetTypeFqName)) {
-                    classNames.add(it)
-                }
-            }
-        } else {
-
-            if (!classNames.names.contains(jetTypeFqName)) {
-
-                classNames.add(objectType)
-
-                getMembers(session, config).forEach { d ->
-
-                    val classDescriptorVisitor = ClassDescriptorVisitorK2(config, session, context)
-                    d.accept(classDescriptorVisitor, objectType)
-                    classNames.addAll(classDescriptorVisitor.classNames)
-                }
-            }
-            return objectType
-        }
+    private fun ConeKotlinType.generateDescriptor(): OpenApiSpec.TypeDescriptor? {
+        val annotatedDescription = findDocsDescriptionOnType(session)
+        val classDescriptorVisitor = ClassDescriptorVisitorK2(config, session, context)
+        val visited = classDescriptorVisitor.collectDataTypes(annotatedDescription?.serializedAs ?: this)
+        classNames.addAll(classDescriptorVisitor.classNames)
+        return visited
     }
 
     private fun List<FirStatement>.findQueryParameterExpression(): List<ParamSpec> {
@@ -149,10 +107,12 @@ internal class ExpressionsVisitorK2(
                 it.accept(
                     ParametersVisitor(
                         session,
-                        listOf(ClassIds.KTOR_QUERY_PARAM,
+                        listOf(
+                            ClassIds.KTOR_QUERY_PARAM,
                             ClassIds.KTOR_RAW_QUERY_PARAM,
                             ClassIds.KTOR_3_QUERY_PARAM,
-                            ClassIds.KTOR_3_RAW_QUERY_PARAM,)
+                            ClassIds.KTOR_3_RAW_QUERY_PARAM,
+                        )
                     ),
                     queryParams
                 )
@@ -167,10 +127,12 @@ internal class ExpressionsVisitorK2(
                 it.accept(
                     ParametersVisitor(
                         session,
-                        listOf(ClassIds.KTOR_HEADER_PARAM,
+                        listOf(
+                            ClassIds.KTOR_HEADER_PARAM,
                             ClassIds.KTOR_3_HEADER_PARAM,
                             ClassIds.KTOR_HEADER_ACCESSOR,
-                            ClassIds.KTOR_3_HEADER_ACCESSOR,)
+                            ClassIds.KTOR_3_HEADER_ACCESSOR,
+                        )
                     ),
                     headerParams
                 )
@@ -390,9 +352,9 @@ internal class ExpressionsVisitorK2(
                     type = kotlinType.toString().toSwaggerType()
                 )
             } else {
-                val typeRef = response.type?.generateTypeAndVisitMemberDescriptors()
+                val typeRef = response.type?.generateDescriptor()
                 OpenApiSpec.SchemaType(
-                    `$ref` = "${typeRef?.contentBodyRef}"
+                    `$ref` = "${typeRef?.ref}"
                 )
             }
 
@@ -406,10 +368,7 @@ internal class ExpressionsVisitorK2(
                             "schema" to if (response.isCollection) {
                                 OpenApiSpec.SchemaType(
                                     type = "array",
-                                    items = OpenApiSpec.SchemaRef(
-                                        type = schema.type,
-                                        `$ref` = schema.`$ref`
-                                    )
+                                    items = OpenApiSpec.SchemaRef(`$ref` = schema.`$ref`)
                                 )
                             } else {
                                 schema
@@ -436,12 +395,12 @@ internal class ExpressionsVisitorK2(
         data: KtorElement?
     ): List<KtorElement> = anonymousFunction.body?.accept(this, data) ?: data.wrapAsList()
 
-    private fun ConeKotlinType.toEndpointBody(): OpenApiSpec.ObjectType? {
+    private fun ConeKotlinType.toEndpointBody(): OpenApiSpec.TypeDescriptor? {
         return if (isStringOrPrimitive()) {
-            OpenApiSpec.ObjectType(type = toString().toSwaggerType())
+            OpenApiSpec.TypeDescriptor(type = toString().toSwaggerType())
         } else {
             if (config.requestBody) {
-                generateTypeAndVisitMemberDescriptors()
+                generateDescriptor()
             } else {
                 null
             }
@@ -469,7 +428,7 @@ internal class ExpressionsVisitorK2(
     }
 
     private fun FirFunctionCall.findDocsDescription(session: FirSession): KtorDescriptionBag {
-        val docsAnnotation = findAnnotationNamed(KtorDescription::class.simpleName!!)
+        val docsAnnotation = findAnnotationNamed(ClassIds.KTOR_DESCRIPTION)
             ?: return KtorDescriptionBag()
 
         return docsAnnotation.extractDescription(session)
@@ -477,7 +436,7 @@ internal class ExpressionsVisitorK2(
 
     @OptIn(PrivateForInline::class)
     private fun FirFunctionCall.findRespondsAnnotation(session: FirSession): List<KtorK2ResponseBag>? {
-        val annotation = findAnnotationNamed(KtorResponds::class.simpleName!!)
+        val annotation = findAnnotationNamed(ClassIds.KTOR_RESPONDS)
         return annotation?.let {
             val resolved = FirExpressionEvaluator.evaluateAnnotationArguments(annotation, session)
             val mapping = resolved?.entries?.find { it.key.asString() == "mapping" }?.value?.result

@@ -1,0 +1,51 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/requestWithDescribedFieldsInClass" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.DescribedClassWithFields"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.DescribedClassWithFields" : {
+        "type" : "object",
+        "properties" : {
+          "field2" : {
+            "type" : "string"
+          },
+          "myInstant" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "password" : {
+            "description" : "description on a property",
+            "$ref" : "#/components/schemas/sources.ValueClassLike"
+          }
+        },
+        "description" : "This has described fields",
+        "required" : [ "myInstant", "field2", "password" ]
+      },
+      "sources.ValueClassLike" : {
+        "type" : "string",
+        "description" : "description on the type",
+        "format" : "password"
+      }
+    }
+  }
+}

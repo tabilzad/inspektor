@@ -2,12 +2,10 @@ package io.github.tabilzad.ktor.output
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.sun.security.ntlm.Server
 import io.github.tabilzad.ktor.ContentType
 import io.github.tabilzad.ktor.OpenApiSpecParam
 import io.github.tabilzad.ktor.model.Info
 import io.github.tabilzad.ktor.model.SecurityScheme
-import java.nio.file.Path
 
 internal typealias ContentSchema = Map<String, OpenApiSpec.SchemaType>
 
@@ -44,23 +42,32 @@ data class OpenApiSpec(
         var fqName: String?
     }
 
-    data class ObjectType(
+    data class TypeDescriptor(
         var type: String?,
-        var properties: MutableMap<String, ObjectType>? = null,
-        var items: ObjectType? = null,
+        var properties: MutableMap<String, TypeDescriptor>? = null,
+        var items: TypeDescriptor? = null,
         var enum: List<String>? = null,
         @JsonIgnore
         override var fqName: String? = null,
         var description: String? = null,
         @JsonProperty("\$ref")
         var ref: String? = null,
-        @JsonIgnore
-        var contentBodyRef: String? = null,
-        var additionalProperties: ObjectType? = null,
+        var additionalProperties: TypeDescriptor? = null,
         var oneOf: List<SchemaRef>? = null,
         var required: MutableList<String>? = null,
         var format: String? = null
-    ) : NamedObject
+    ) : NamedObject {
+        override fun equals(other: Any?): Boolean {
+            return when {
+                this === other -> true
+                other !is TypeDescriptor -> false
+                other.fqName == fqName -> true
+                else -> false
+            }
+        }
+
+        override fun hashCode() = fqName.hashCode()
+    }
 
     data class Parameter(
         override val name: String,
@@ -72,13 +79,13 @@ data class OpenApiSpec(
 
     data class SchemaRef(
         @Suppress("ConstructorParameterNaming")
-        val `$ref`: String? = null,
-        val type: String? = null
+        val `$ref`: String? = null
     )
 
     data class SchemaType(
         val type: String? = null,
         val items: SchemaRef? = null,
+        val description: String? = null,
         @Suppress("ConstructorParameterNaming")
         val `$ref`: String? = null,
     )
@@ -89,7 +96,7 @@ data class OpenApiSpec(
     )
 
     data class OpenApiComponents(
-        val schemas: Map<String, ObjectType>,
+        val schemas: Map<String, TypeDescriptor>,
         val securitySchemes: Map<String, SecurityScheme>? = null
     )
 }

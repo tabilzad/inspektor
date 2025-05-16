@@ -1,0 +1,33 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/requestWithDescribedFields" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.DescribedClass"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.DescribedClass" : {
+        "type" : "string",
+        "description" : "This is serialized as ISO8601 formated time string",
+        "format" : "iso8601"
+      }
+    }
+  }
+}

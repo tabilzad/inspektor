@@ -6,7 +6,7 @@ import org.jetbrains.kotlin.name.StandardClassIds
 internal fun convertInternalToOpenSpec(
     routes: List<DocRoute>,
     configuration: PluginConfiguration,
-    schemas: Map<String, OpenApiSpec.ObjectType>
+    schemas: Map<String, OpenApiSpec.TypeDescriptor>
 ): OpenApiSpec {
     val reducedRoutes = routes
         .map {

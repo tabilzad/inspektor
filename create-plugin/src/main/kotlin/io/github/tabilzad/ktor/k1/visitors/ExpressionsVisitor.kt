@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
+import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.js.descriptorUtils.getKotlinTypeFqName
 import org.jetbrains.kotlin.js.resolve.diagnostics.findPsi
 import org.jetbrains.kotlin.psi.*
@@ -37,7 +38,7 @@ internal class ExpressionsVisitor(
         println("BeginVisitor")
     }
 
-    val classNames = mutableListOf<OpenApiSpec.ObjectType>()
+    val classNames = mutableListOf<OpenApiSpec.TypeDescriptor>()
     override fun visitProperty(property: KtProperty, data: KtorElement?): List<KtorElement> {
         val dotQualified = property.children.filterIsInstance<KtDotQualifiedExpression>()
         val arrayAccess = property.children.filterIsInstance<KtArrayAccessExpression>()
@@ -330,7 +331,7 @@ internal class ExpressionsVisitor(
                                 parent.body = kotlinType.generateTypeAndVisitMemberDescriptors()
                             }
                         } else {
-                            parent.body = OpenApiSpec.ObjectType(type = kotlinType.toString().toSwaggerType())
+                            parent.body = OpenApiSpec.TypeDescriptor(type = kotlinType.toString().toSwaggerType())
                         }
                     }
                 } else {
@@ -359,12 +360,12 @@ internal class ExpressionsVisitor(
         return parent?.let { listOf(it) } ?: emptyList()
     }
 
-    private fun KotlinType.generateTypeAndVisitMemberDescriptors(): OpenApiSpec.ObjectType {
+    private fun KotlinType.generateTypeAndVisitMemberDescriptors(): OpenApiSpec.TypeDescriptor {
         val jetTypeFqName = getKotlinTypeFqName(false)
-        val r = OpenApiSpec.ObjectType(
+        val r = OpenApiSpec.TypeDescriptor(
             type = "object",
             fqName = jetTypeFqName,
-            contentBodyRef = "#/components/schemas/$jetTypeFqName",
+            ref = "#/components/schemas/$jetTypeFqName",
         )
         if (!classNames.names.contains(jetTypeFqName)) {
 
@@ -517,7 +518,7 @@ internal class ExpressionsVisitor(
                                     mapOf(
                                         ContentType.APPLICATION_JSON to mapOf(
                                             "schema" to OpenApiSpec.SchemaType(
-                                                `$ref` = "${typeRef.contentBodyRef}"
+                                                `$ref` = "${typeRef.ref}"
                                             )
                                         )
                                     )
@@ -531,7 +532,7 @@ internal class ExpressionsVisitor(
                                             "schema" to OpenApiSpec.SchemaType(
                                                 type = "array",
                                                 items = OpenApiSpec.SchemaRef(
-                                                    "${typeRef.contentBodyRef}"
+                                                    "${typeRef.ref}"
                                                 )
                                             )
                                         )
@@ -632,6 +633,7 @@ internal data class KtorDescriptionBag(
     val operationId: String? = null,
     val isRequired: Boolean? = false,
     val explicitType: String? = null,
+    val serializedAs: ConeKotlinType? = null,
     val format: String? = null
 )
 

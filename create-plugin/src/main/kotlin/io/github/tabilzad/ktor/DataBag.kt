@@ -37,7 +37,7 @@ internal data class KtorRouteSpec(
     val path: String,
     val parameters: List<ParamSpec>?,
     val method: String,
-    val body: OpenApiSpec.ObjectType,
+    val body: OpenApiSpec.TypeDescriptor,
     val summary: String?,
     val description: String?,
     val operationId: String?,
@@ -61,7 +61,7 @@ enum class ExpType(val labels: List<String>) {
 internal data class EndPoint(
     override var path: String?,
     val method: String = "",
-    var body: OpenApiSpec.ObjectType? = null,
+    var body: OpenApiSpec.TypeDescriptor? = null,
     var parameters: Set<ParamSpec>? = null,
     var description: String? = null,
     var operationId: String? = null,

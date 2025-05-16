@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
 import org.jetbrains.kotlin.load.kotlin.internalName
 import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.StandardClassIds
 
 internal class FirstLevelNodeCollector(private val elements: MutableSet<FirElement>) : FirVisitorVoid() {
@@ -112,14 +113,14 @@ internal val FirTypeRef.getKotlinTypeFqName
 fun FirFunction.hasAnnotationNamed(session: FirSession, name: String): Boolean =
     annotations.any { it.fqName(session)?.shortName()?.asString() == name }
 
-fun FirStatement.findAnnotationNamed(name: String) = annotations.firstOrNull {
-    it.annotationTypeRef.coneType.fqNameStr()?.contains(name) == true
+fun FirStatement.findAnnotationNamed(name: FqName) = annotations.firstOrNull {
+    it.annotationTypeRef.coneType.classId?.asSingleFqName() == name
 }
 
-fun FirProperty.findAnnotationNamed(name: String?): FirAnnotation? {
+fun FirProperty.findPropAnnotationNamed(name: FqName?): FirAnnotation? {
     if (name == null) return null
     return backingField?.annotations?.firstOrNull {
-        it.annotationTypeRef.coneType.fqNameStr()?.contains(name) == true
+        it.annotationTypeRef.coneType.classId?.asSingleFqName() == name
     }
 }
 
@@ -167,13 +168,9 @@ internal fun ConeKotlinType.getMembers(session: FirSession, config: PluginConfig
         .toList()
 }
 
-fun ConeKotlinType.className(): String? {
-    return (this as? ConeClassLikeType)?.lookupTag?.name?.asString()
-}
-
-fun ConeKotlinType.fqNameStr(): String? {
-    return (this as? ConeClassLikeType)?.lookupTag?.classId?.asFqNameString()
-}
+fun ConeKotlinType.className(): String? = classId?.asString()
+fun ConeKotlinType.fqNameStr(): String? = classId?.asFqNameString()
+fun ConeKotlinType.fqName(): FqName? = classId?.asSingleFqName()
 
 @Suppress("CyclomaticComplexMethod")
 fun ConeKotlinType.isIterable(): Boolean {

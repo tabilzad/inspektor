@@ -1,12 +1,13 @@
 package sources
 
 import io.github.tabilzad.ktor.annotations.GenerateOpenApi
-import io.github.tabilzad.ktor.annotations.KtorFieldDescription
+import io.github.tabilzad.ktor.annotations.KtorSchema
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 
 @JvmInline
+@KtorSchema(description = "from propDescription")
 value class Dollars(private val amount: Int)
 
 @JvmInline
@@ -15,7 +16,7 @@ value class Dollars(private val amount: Int)
  */
 value class Cents(private val amount: Int)
 
-@KtorFieldDescription("Description")
+@KtorSchema(description = "Description")
 data class ValueWrapper(
     val value: Dollars
 )

@@ -1,8 +1,6 @@
 package io.github.tabilzad.ktor.k2
 
-import io.github.tabilzad.ktor.annotations.GenerateOpenApi
-import io.github.tabilzad.ktor.annotations.KtorFieldDescription
-import io.github.tabilzad.ktor.annotations.Tag
+import io.github.tabilzad.ktor.annotations.*
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -42,6 +40,10 @@ object ClassIds {
 
     val TRANSIENT_ANNOTATION_FQ = Transient::class.asQualifiedFqName()
     val KTOR_FIELD_DESCRIPTION = KtorFieldDescription::class.asQualifiedFqName()
+    val KTOR_DESCRIPTION = KtorDescription::class.asQualifiedFqName()
+    val KTOR_SCHEMA = KtorSchema::class.asQualifiedFqName()
+    val KTOR_FIELD = KtorField::class.asQualifiedFqName()
+    val KTOR_RESPONDS = KtorResponds::class.asQualifiedFqName()
 }
 
 private fun KClass<*>.asSimpleFqName(): FqName = FqName(

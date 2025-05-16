@@ -72,7 +72,7 @@ internal class ResourceClassVisitor(
     private fun List<Pair<FirProperty, FirRegularClassSymbol>>.mapParams(
         resourcePath: String?
     ) = mapToSetOrEmpty { (property, _) ->
-        val description = property.findDocsDescription(session)
+        val description = property.findDocsDescriptionOnProperty(session)
         if (property.isPathParamFrom(resourcePath ?: "")) {
             PathParamSpec(
                 name = property.name.asString(),

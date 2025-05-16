@@ -57,7 +57,7 @@ internal fun MemberScope.forEachVariable(configuration: PluginConfiguration, pre
         .toList().forEach { predicate(it) }
 }
 
-internal val Iterable<OpenApiSpec.ObjectType>.names get() = mapNotNull { it.fqName }
+internal val Iterable<OpenApiSpec.TypeDescriptor>.names get() = mapNotNull { it.fqName }
 
 fun String?.addLeadingSlash() = when {
     this == null -> null
@@ -80,7 +80,7 @@ internal fun reduce(e: DocRoute): List<KtorRouteSpec> = e.children.flatMap { chi
                 KtorRouteSpec(
                     path = e.path + (child.path.addLeadingSlash() ?: ""),
                     method = child.method,
-                    body = child.body ?: OpenApiSpec.ObjectType("object"),
+                    body = child.body ?: OpenApiSpec.TypeDescriptor("object"),
                     summary = child.summary,
                     description = child.description,
                     parameters = child.parameters?.toList(),
@@ -181,13 +181,13 @@ internal fun ConeKotlinType.isStringOrPrimitive(): Boolean =
     isPrimitiveOrNullablePrimitive || isString || isNullableString || isPrimitive
 
 private fun addPostBody(it: KtorRouteSpec): OpenApiSpec.RequestBody? {
-    return if (it.method != "get" && it.body.contentBodyRef != null) {
+    return if (it.method != "get" && it.body.ref != null) {
         OpenApiSpec.RequestBody(
             required = true,
             content = mapOf(
                 ContentType.APPLICATION_JSON to mapOf(
                     "schema" to OpenApiSpec.SchemaType(
-                        `$ref` = "${it.body.contentBodyRef}"
+                        `$ref` = "${it.body.ref}"
                     )
                 )
             )
@@ -198,7 +198,8 @@ private fun addPostBody(it: KtorRouteSpec): OpenApiSpec.RequestBody? {
             content = mapOf(
                 ContentType.TEXT_PLAIN to mapOf(
                     "schema" to OpenApiSpec.SchemaType(
-                        type = "${it.body.type}"
+                        type = "${it.body.type}",
+                        description = it.body.description
                     )
                 )
             )
@@ -235,7 +236,7 @@ internal fun FirDeclaration.getKDocComments(configuration: PluginConfiguration):
         ?.sanitizeKDoc()
 }
 
-private fun OpenApiSpec.ObjectType.isPrimitive() = listOf("string", "number", "integer").contains(type)
+private fun OpenApiSpec.TypeDescriptor.isPrimitive() = listOf("string", "number", "integer").contains(type)
 
 internal fun CompilerConfiguration?.buildPluginConfiguration(): PluginConfiguration = PluginConfiguration.createDefault(
     isEnabled = this?.get(SwaggerConfigurationKeys.ARG_ENABLED),
@@ -261,9 +262,10 @@ internal fun FirAnnotation.extractDescription(session: FirSession): KtorDescript
     val required = resolved?.entries?.find { it.key.asString() == "required" }?.value?.result
     val operationId = resolved?.entries?.find { it.key.asString() == "operationId" }?.value?.result
     val tags = resolved?.entries?.find { it.key.asString() == "tags" }?.value?.result
-    val explicitType = resolved?.entries?.find { it.key.asString() == "explicitType" }?.value?.result
-    val format = resolved?.entries?.find { it.key.asString() == "format" }?.value?.result
+    val explicitType = resolved?.entries
+        ?.find { it.key.asString() == "explicitType" || it.key.asString() == "type" }?.value?.result
 
+    val format = resolved?.entries?.find { it.key.asString() == "format" }?.value?.result
     return KtorDescriptionBag(
         summary = summary?.accept(StringResolutionVisitor(session), ""),
         description = descr?.accept(StringResolutionVisitor(session), ""),
@@ -274,3 +276,9 @@ internal fun FirAnnotation.extractDescription(session: FirSession): KtorDescript
         format = format?.accept(StringResolutionVisitor(session), "")
     )
 }
+
+internal fun KtorDescriptionBag.toObjectType(): OpenApiSpec.TypeDescriptor = OpenApiSpec.TypeDescriptor(
+    type = explicitType,
+    description = description,
+    format = format,
+)

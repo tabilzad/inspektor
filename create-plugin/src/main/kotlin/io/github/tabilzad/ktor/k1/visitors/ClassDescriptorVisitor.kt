@@ -4,7 +4,7 @@ import io.github.tabilzad.ktor.PluginConfiguration
 import io.github.tabilzad.ktor.annotations.KtorDescription
 import io.github.tabilzad.ktor.forEachVariable
 import io.github.tabilzad.ktor.names
-import io.github.tabilzad.ktor.output.OpenApiSpec.ObjectType
+import io.github.tabilzad.ktor.output.OpenApiSpec.TypeDescriptor
 import org.jetbrains.kotlin.builtins.DefaultBuiltIns
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
@@ -30,15 +30,15 @@ import org.jetbrains.kotlin.types.typeUtil.supertypes
 import org.jetbrains.kotlin.util.removeSuffixIfPresent
 
 internal class ClassDescriptorVisitor(val config: PluginConfiguration, val context: BindingContext) :
-    DeclarationDescriptorVisitorEmptyBodies<ObjectType, ObjectType>() {
+    DeclarationDescriptorVisitorEmptyBodies<TypeDescriptor, TypeDescriptor>() {
 
-    val classNames = mutableListOf<ObjectType>()
+    val classNames = mutableListOf<TypeDescriptor>()
 
     @Suppress("CyclomaticComplexMethod", "LongMethod", "NestedBlockDepth")
     override fun visitPropertyDescriptor(
         descriptor: PropertyDescriptor,
-        parent: ObjectType
-    ): ObjectType {
+        parent: TypeDescriptor
+    ): TypeDescriptor {
 
         ForceResolveUtil.forceResolveAllContents(descriptor.annotations)
         val type = descriptor.type
@@ -50,7 +50,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
                 if (parent.type == "object") {
                     parent.properties?.put(
                         propertyName,
-                        ObjectType(
+                        TypeDescriptor(
                             type.toString().toSwaggerType(),
                             description = docsDescription
                         )
@@ -58,7 +58,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
                 }
                 if (parent.type == "array") {
 
-                    val thisPrimitiveObj = ObjectType(
+                    val thisPrimitiveObj = TypeDescriptor(
                         type.toString().toSwaggerType(),
                         description = docsDescription
                     )
@@ -85,7 +85,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
                         val enumValues = type.memberScope.resolveEnumValues()
 
                         parent.properties?.put(
-                            propertyName, ObjectType(
+                            propertyName, TypeDescriptor(
                                 "string",
                                 enum = enumValues,
                                 description = docsDescription
@@ -98,17 +98,17 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
 
                         val valueType = type.arguments.last()
 
-                        fun TypeProjection.createMapDefinition(): ObjectType {
+                        fun TypeProjection.createMapDefinition(): TypeDescriptor {
                             val classDescriptor = DescriptorUtils.getClassDescriptorForType(this.type)
                             val valueClassType = classDescriptor.defaultType
-                            val acc = ObjectType("object", mutableMapOf())
+                            val acc = TypeDescriptor("object", mutableMapOf())
 
                             when {
                                 KotlinBuiltIns.isPrimitiveType(valueClassType) || KotlinBuiltIns.isString(
                                     valueClassType
                                 ) -> {
                                     acc.additionalProperties =
-                                        ObjectType(classDescriptor.name.asString().toSwaggerType())
+                                        TypeDescriptor(classDescriptor.name.asString().toSwaggerType())
                                 }
 
                                 valueClassType.isIterable() || valueClassType.isArrayOrNullableArray() -> {
@@ -121,7 +121,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
 
                                 valueClassType.isEnum() -> {
                                     acc.type = "object"
-                                    acc.additionalProperties = ObjectType("string",
+                                    acc.additionalProperties = TypeDescriptor("string",
                                         enum = valueClassType.memberScope.getClassifierNames()?.map { it.asString() }
                                             ?.minus("Companion")
                                     )
@@ -134,7 +134,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
                                 else -> {
                                     val gName = valueClassType.getKotlinTypeFqName(false)
                                     if (!classNames.names.contains(gName)) {
-                                        val q = ObjectType(
+                                        val q = TypeDescriptor(
                                             "object",
                                             mutableMapOf(),
                                             fqName = gName,
@@ -148,7 +148,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
                                             }
                                     }
 
-                                    acc.additionalProperties = ObjectType(
+                                    acc.additionalProperties = TypeDescriptor(
                                         type = null,
                                         ref = "#/components/schemas/$gName"
                                     )
@@ -173,7 +173,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
                     else -> {
 
                         if (!classNames.names.contains(fqClassName)) {
-                            val internal = ObjectType(
+                            val internal = TypeDescriptor(
                                 "object",
                                 mutableMapOf(),
                                 fqName = fqClassName
@@ -187,7 +187,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
                         if (parent.properties != null) {
                             parent.properties?.put(
                                 propertyName,
-                                ObjectType(
+                                TypeDescriptor(
                                     type = null,
                                     fqName = fqClassName,
                                     description = docsDescription,
@@ -197,7 +197,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
                         } else {
                             parent.properties = mutableMapOf(
                                 propertyName to
-                                        ObjectType(
+                                        TypeDescriptor(
                                             type = null,
                                             fqName = fqClassName,
                                             description = docsDescription,
@@ -216,18 +216,18 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
     private fun listObjectType(
         type: KotlinType,
         docsDescription: String?
-    ): ObjectType {
+    ): TypeDescriptor {
         val types = type.unfoldNestedParameters().reversed().map {
             DescriptorUtils.getClassDescriptorForType(it.type)
         }
 
         return types.fold(
-            ObjectType(
+            TypeDescriptor(
                 "object",
                 mutableMapOf(),
                 description = docsDescription
             )
-        ) { acc: ObjectType, d: ClassDescriptor ->
+        ) { acc: TypeDescriptor, d: ClassDescriptor ->
             val classType = d.defaultType
             var t = acc
             while (t.items != null) {
@@ -238,7 +238,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
                 t.properties = null
             } else if (classType.isIterable() || classType.isArrayOrNullableArray()) {
                 t.type = "array"
-                t.items = ObjectType(null, mutableMapOf())
+                t.items = TypeDescriptor(null, mutableMapOf())
             } else if (classType.isEnum()) {
                 t.type = "string"
                 t.enum = classType.memberScope.resolveEnumValues()
@@ -248,7 +248,7 @@ internal class ClassDescriptorVisitor(val config: PluginConfiguration, val conte
 
                 if (!classNames.names.contains(jetTypeFqName)) {
 
-                    val q = ObjectType(
+                    val q = TypeDescriptor(
                         "object",
                         properties = mutableMapOf(),
                         fqName = jetTypeFqName,

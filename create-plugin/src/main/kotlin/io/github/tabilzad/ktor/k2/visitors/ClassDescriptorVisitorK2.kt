@@ -1,15 +1,16 @@
 package io.github.tabilzad.ktor.k2.visitors
 
 import io.github.tabilzad.ktor.*
-import io.github.tabilzad.ktor.annotations.KtorDescription
-import io.github.tabilzad.ktor.annotations.KtorFieldDescription
 import io.github.tabilzad.ktor.k1.visitors.KtorDescriptionBag
 import io.github.tabilzad.ktor.k1.visitors.toSwaggerType
 import io.github.tabilzad.ktor.k2.*
+import io.github.tabilzad.ktor.k2.ClassIds.KTOR_DESCRIPTION
+import io.github.tabilzad.ktor.k2.ClassIds.KTOR_FIELD
 import io.github.tabilzad.ktor.k2.ClassIds.KTOR_FIELD_DESCRIPTION
+import io.github.tabilzad.ktor.k2.ClassIds.KTOR_SCHEMA
 import io.github.tabilzad.ktor.k2.JsonNameResolver.getCustomNameFromAnnotation
 import io.github.tabilzad.ktor.output.OpenApiSpec
-import io.github.tabilzad.ktor.output.OpenApiSpec.ObjectType
+import io.github.tabilzad.ktor.output.OpenApiSpec.TypeDescriptor
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
@@ -42,122 +43,150 @@ internal class ClassDescriptorVisitorK2(
     private val session: FirSession,
     private val context: CheckerContext,
     private val genericParameters: List<GenericParameter> = emptyList(),
-    val classNames: MutableList<ObjectType> = mutableListOf(),
-) : FirDefaultVisitor<ObjectType, ObjectType>() {
+    val classNames: MutableSet<TypeDescriptor> = mutableSetOf(),
+) : FirDefaultVisitor<TypeDescriptor, TypeDescriptor>() {
 
-    override fun visitProperty(property: FirProperty, data: ObjectType): ObjectType {
+    override fun visitProperty(property: FirProperty, data: TypeDescriptor): TypeDescriptor {
         val coneTypeOrNull = property.returnTypeRef.coneTypeOrNull!!
         val type = if (coneTypeOrNull is ConeTypeParameterType && genericParameters.isNotEmpty()) {
             genericParameters.find { it.genericName == coneTypeOrNull.renderReadable() }?.genericTypeRef!!
         } else {
             coneTypeOrNull
         }
-        val resolvedDescription = property.findDocsDescription(session)
-        return if (resolvedDescription != null && resolvedDescription.explicitType?.isNotEmpty() == true) {
-            data.apply { addProperty(property, null, resolvedDescription) }
+        val propertyDescription = property.findDocsDescriptionOnProperty(session)
+        return if (propertyDescription != null && propertyDescription.explicitType?.isNotEmpty() == true) {
+            data.apply { addProperty(property, propertyDescription.toObjectType(), propertyDescription) }
         } else {
-            data.apply { addProperty(property, type.collectDataTypes(), resolvedDescription) }
+            data.apply {
+                addProperty(
+                    property,
+                    typeDescriptor = collectDataTypes(propertyDescription?.serializedAs ?: type),
+                    propertyDescription
+                )
+            }
         }
+    }
+
+    fun TypeDescriptor.withReferenceBy(fqName: String?, computeRef: () -> TypeDescriptor): TypeDescriptor {
+        if (fqName == null) return this
+        // type not allowed alongside ref
+        type = null
+        if (!classNames.names.contains(fqName)) {
+            classNames.add(computeRef())
+        }
+        return copy(type = null, ref = "#/components/schemas/$fqName")
     }
 
     @OptIn(SealedClassInheritorsProviderInternals::class, SymbolInternals::class)
     @Suppress("LongMethod", "NestedBlockDepth", "CyclomaticComplexMethod")
-    private fun ConeKotlinType.collectDataTypes(): ObjectType? {
-        val fqClassName = fqNameStr()
-        val typeSymbol = toRegularClassSymbol(session)
+    fun collectDataTypes(parentType: ConeKotlinType): TypeDescriptor? {
+
+        val kdocs = parentType.toRegularClassSymbol(session)
+            ?.fir
+            ?.getKDocComments(config)
+
+        val typeDescription = parentType.findDocsDescriptionOnType(session)
+        val fqClassName = parentType.fqNameStr()
+        val typeSymbol = parentType.toRegularClassSymbol(session)
+
+        val baseType = TypeDescriptor(
+            type = "object",
+            fqName = fqClassName,
+            description = kdocs ?: typeDescription?.description ?: typeDescription?.summary,
+        )
 
         return when {
-            isStringOrPrimitive() -> {
-                ObjectType(type = className()?.toSwaggerType() ?: "Unknown")
+
+            typeDescription?.explicitType != null -> {
+                TypeDescriptor(
+                    type = null,
+                ).withReferenceBy(fqClassName) { typeDescription.toObjectType().copy(fqName = fqClassName) }
             }
 
-            isMap() -> {
+            parentType.isStringOrPrimitive() -> {
+                baseType.copy(type = parentType.className()?.toSwaggerType() ?: "Unknown", ref = null)
+            }
+
+            parentType.isMap() -> {
                 // map keys are assumed to be strings,
                 // so getting the last type which is the value type
-                val valueType = typeArguments.last()
+                val valueType = parentType.typeArguments.last()
                 valueType.type?.let { valueClassType ->
-                    ObjectType("object", mutableMapOf()).apply {
-                        additionalProperties = valueClassType.collectDataTypes()
-                    }
-                }
+                    baseType.copy(
+                        properties = mutableMapOf(),
+                        additionalProperties = collectDataTypes(valueClassType)
+                    )
+                } ?: baseType
             }
 
-            isIterable() -> {
-                val arrayItemType = typeArguments.firstNotNullOfOrNull { it.type }
+            parentType.isIterable() -> {
+                val arrayItemType = parentType.typeArguments.firstNotNullOfOrNull { it.type }
                 // lists only take a single generic type
-                ObjectType("array", items = arrayItemType?.collectDataTypes())
+                baseType.copy("array", items = arrayItemType?.let { collectDataTypes(it) })
             }
 
-            isEnum || typeSymbol?.isEnumClass == true -> {
+            parentType.isEnum || typeSymbol?.isEnumClass == true -> {
                 val enumValues = typeSymbol?.resolveEnumEntries()
-                ObjectType(type = "string", enum = enumValues)
+                baseType.copy(type = "string", enum = enumValues)
             }
 
             typeSymbol?.isSealed == true -> {
 
-                if (!classNames.names.contains(fqClassName)) {
+                baseType.withReferenceBy(fqClassName) {
                     val inheritorClassIds = typeSymbol.fir.sealedInheritorsAttr?.getValueOrNull()
-                    val internal = ObjectType(
+                    val internal = TypeDescriptor(
                         "object",
                         fqName = fqClassName,
                         oneOf = inheritorClassIds?.map { OpenApiSpec.SchemaRef("#/components/schemas/${it.asFqNameString()}") }
                     )
-                    classNames.add(internal)
-                    getMembers(session, config).forEach { nestedDescr ->
+                    parentType.getMembers(session, config).forEach { nestedDescr ->
                         nestedDescr.accept(this@ClassDescriptorVisitorK2, internal)
                     }
 
                     inheritorClassIds?.forEach { it: ClassId ->
-
-                        val inheritorType = ObjectType(
+                        val fqName1 = it.asFqNameString()
+                        val inheritorType = TypeDescriptor(
                             "object",
-                            fqName = it.asFqNameString(),
+                            fqName = fqName1,
                         )
-                        classNames.add(inheritorType)
+                        if (!classNames.names.contains(fqName1)) {
+                            classNames.add(inheritorType)
+                        }
                         val fir: FirClass? = it.toLookupTag().toClassSymbol(session)?.fir
                         fir?.accept(this@ClassDescriptorVisitorK2, inheritorType)
                     }
+                    internal
                 }
-
-                ObjectType(
-                    type = null,
-                    fqName = fqClassName,
-                    ref = "#/components/schemas/$fqClassName"
-                )
             }
 
-            isAny -> {
-                ObjectType("object")
-            }
+            parentType.isAny -> baseType
 
-            isValueClass(session) -> {
-                ObjectType(
-                    properties(session)?.firstOrNull()?.resolvedReturnType?.className()?.toSwaggerType(),
+            parentType.isValueClass(session) -> {
+                baseType.copy(
+                    parentType.properties(session)?.firstOrNull()?.resolvedReturnType?.className()?.toSwaggerType(),
                     fqName = fqClassName
                 )
             }
 
             else -> {
 
-                if (!classNames.names.contains(fqClassName)) {
-                    val internal = ObjectType(
+                baseType.withReferenceBy(fqClassName) {
+                    val internal = baseType.copy(
                         "object",
                         fqName = fqClassName
                     )
-                    classNames.add(internal)
-
-                    if (typeArguments.isEmpty()) {
-                        getMembers(session, config).forEach { nestedDescr ->
+                    if (parentType.typeArguments.isEmpty()) {
+                        parentType.getMembers(session, config).forEach { nestedDescr ->
                             nestedDescr.accept(this@ClassDescriptorVisitorK2, internal)
                         }
                     } else {
-                        getMembers(session, config)
+                        parentType.getMembers(session, config)
                             .map { nestedDescr ->
                                 nestedDescr.accept(
                                     ClassDescriptorVisitorK2(
                                         config, session, context,
                                         classNames = classNames,
-                                        genericParameters = typeArguments.zip(
+                                        genericParameters = parentType.typeArguments.zip(
                                             typeSymbol?.typeParameterSymbols ?: emptyList()
                                         ).map { (specifiedType, genericType) ->
                                             GenericParameter(
@@ -170,61 +199,49 @@ internal class ClassDescriptorVisitorK2(
                                 )
                             }
                     }
+                    internal
                 }
-
-                ObjectType(
-                    type = null,
-                    fqName = fqClassName,
-                    // description = docsDescription,
-                    ref = "#/components/schemas/$fqClassName"
-                )
             }
         }
     }
 
-    override fun visitClass(klass: FirClass, data: ObjectType): ObjectType {
+    override fun visitClass(klass: FirClass, data: TypeDescriptor): TypeDescriptor {
         klass.defaultType().getMembers(session, config).forEach { it.accept(this, data) }
         return data
     }
 
-    override fun visitElement(element: FirElement, data: ObjectType) = data
+    override fun visitElement(element: FirElement, data: TypeDescriptor) = data
 
     @Suppress("CyclomaticComplexMethod")
-    private fun ObjectType.addProperty(
+    private fun TypeDescriptor.addProperty(
         fir: FirProperty,
-        objectType: ObjectType?,
-        resolvedDescription: KtorDescriptionBag?
+        typeDescriptor: TypeDescriptor?,
+        propertyDescription: KtorDescriptionBag?
     ) {
         val kdoc = fir.getKDocComments(config)
-        val docsDescription = resolvedDescription.let { it?.summary ?: it?.description }
-        val name = fir.findName()
-        val spec = objectType ?: ObjectType("object")
+        val docsDescription = propertyDescription.let { it?.summary ?: it?.description }
+        val propertyName = fir.findName()
+        val spec = typeDescriptor ?: TypeDescriptor(type = "object")
         if (properties == null) {
-            properties = mutableMapOf(name to spec)
+            properties = mutableMapOf(propertyName to spec)
         } else {
-            properties?.put(name, spec)
+            properties?.put(propertyName, spec)
         }
 
-        spec.description = docsDescription ?: kdoc
+        spec.description = docsDescription ?: spec.description ?: kdoc
 
-        val isRequiredFromExplicitDesc = resolvedDescription?.isRequired
+        val isRequiredFromExplicitDesc = propertyDescription?.isRequired
         if (isRequiredFromExplicitDesc != null && isRequiredFromExplicitDesc) {
-            required?.add(name) ?: run {
-                required = mutableListOf(name)
+            required?.add(propertyName) ?: run {
+                required = mutableListOf(propertyName)
             }
         } else if ((isRequiredFromExplicitDesc == null && !fir.returnTypeRef.coneType.isMarkedNullable)
             && config.deriveFieldRequirementFromTypeNullability
             && (fir.shouldBeRequiredByInitializer() || fir.isAbstract)
         ) {
-            required?.add(name) ?: run {
-                required = mutableListOf(name)
+            required?.add(propertyName) ?: run {
+                required = mutableListOf(propertyName)
             }
-        }
-        if (resolvedDescription?.format != null) {
-            spec.format = resolvedDescription.format
-        }
-        if (resolvedDescription?.explicitType != null) {
-            spec.type = resolvedDescription.explicitType
         }
     }
 
@@ -242,10 +259,12 @@ internal class ClassDescriptorVisitorK2(
     }
 }
 
-internal fun FirProperty.findDocsDescription(session: FirSession): KtorDescriptionBag? {
+internal fun FirProperty.findDocsDescriptionOnProperty(session: FirSession): KtorDescriptionBag? {
     val docsAnnotation =
-        findAnnotationNamed(KtorDescription::class.simpleName)
-            ?: findAnnotationNamed(KtorFieldDescription::class.simpleName)
+        findPropAnnotationNamed(KTOR_DESCRIPTION)
+            ?: findPropAnnotationNamed(KTOR_FIELD_DESCRIPTION)
+            ?: findPropAnnotationNamed(KTOR_SCHEMA)
+            ?: findPropAnnotationNamed(KTOR_FIELD)
             ?: return null
 
     val dataBag = docsAnnotation.extractDescription(session)
@@ -254,9 +273,13 @@ internal fun FirProperty.findDocsDescription(session: FirSession): KtorDescripti
     )
 }
 
-internal fun ConeKotlinType.findDocsDescription(session: FirSession): KtorDescriptionBag? {
+internal fun ConeKotlinType.findDocsDescriptionOnType(session: FirSession): KtorDescriptionBag? {
     val docsAnnotation = toRegularClassSymbol(session)?.annotations
-        ?.find { it.fqName(session) == KTOR_FIELD_DESCRIPTION }
+        ?.find {
+            it.fqName(session) == KTOR_FIELD_DESCRIPTION
+                    || it.fqName(session) == KTOR_SCHEMA
+                    || it.fqName(session) == KTOR_FIELD
+        }
 
     if (docsAnnotation == null) return null
     val dataBag = docsAnnotation.extractDescription(session)

@@ -403,6 +403,22 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should collect type metadata from @KtorSchema annotation`() {
+        val (source, expected) = loadSourceAndExpected("KtorSchemaOnClass")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
+    fun `should collect field metadata from @KtorField annotation`() {
+        val (source, expected) = loadSourceAndExpected("KtorSchemaOnField")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should resolve request body schema directly from http method parameter if it's not a resource`() {
         val (source, expected) = loadSourceAndExpected("RequestBodyParam")
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault())

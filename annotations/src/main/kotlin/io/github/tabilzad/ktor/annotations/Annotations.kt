@@ -63,6 +63,29 @@ annotation class KtorDescription(
  * )
  * ```
  */
+
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
+annotation class KtorSchema(
+    val type: String = "",
+    val description: String = "",
+    val serializedAs: KClass<*> = Nothing::class,
+    val format: String = "",
+)
+
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.FIELD, AnnotationTarget.FIELD)
+annotation class KtorField(
+    val type: String = "",
+    val format: String = "",
+    val required: Boolean = false,
+    val description: String = "",
+)
+
+@Deprecated(
+    message = "Please use @KtorSchema for classes and KtorField for class properties",
+    replaceWith = ReplaceWith("KtorField")
+)
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FIELD, AnnotationTarget.CLASS)
 annotation class KtorFieldDescription(

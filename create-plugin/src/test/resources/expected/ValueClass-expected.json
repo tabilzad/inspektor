@@ -25,9 +25,10 @@
         "requestBody" : {
           "required" : true,
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
-                "$ref" : "#/components/schemas/sources.Cents"
+                "type" : "integer",
+                "description" : "Value class"
               }
             }
           }
@@ -37,15 +38,12 @@
   },
   "components" : {
     "schemas" : {
-      "sources.Cents" : {
-        "type" : "integer",
-        "description" : "Value class"
-      },
       "sources.ValueWrapper" : {
         "type" : "object",
         "properties" : {
           "value" : {
-            "type" : "integer"
+            "type" : "integer",
+            "description" : "from propDescription"
           }
         },
         "description" : "Description",
