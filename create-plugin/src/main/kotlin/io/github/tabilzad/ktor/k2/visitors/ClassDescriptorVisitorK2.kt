@@ -23,7 +23,6 @@ import org.jetbrains.kotlin.fir.declarations.utils.correspondingValueParameterFr
 import org.jetbrains.kotlin.fir.declarations.utils.isAbstract
 import org.jetbrains.kotlin.fir.declarations.utils.isEnumClass
 import org.jetbrains.kotlin.fir.declarations.utils.isSealed
-import org.jetbrains.kotlin.fir.resolve.defaultType
 import org.jetbrains.kotlin.fir.resolve.fqName
 import org.jetbrains.kotlin.fir.resolve.toClassSymbol
 import org.jetbrains.kotlin.fir.resolve.toRegularClassSymbol
@@ -221,7 +220,7 @@ internal class ClassDescriptorVisitorK2(
         find { it.genericName == generic.renderReadable() }?.genericTypeRef
 
     override fun visitClass(klass: FirClass, data: TypeDescriptor): TypeDescriptor {
-        klass.defaultType().getMembers(session, config).forEach { it.accept(this, data) }
+        klass.defaultTypeOf().getMembers(session, config).forEach { it.accept(this, data) }
         return data
     }
 

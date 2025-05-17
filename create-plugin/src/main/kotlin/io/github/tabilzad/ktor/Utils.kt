@@ -9,11 +9,16 @@ import io.github.tabilzad.ktor.output.OpenApiSpec
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.result
 import org.jetbrains.kotlin.fir.expressions.FirAnnotation
 import org.jetbrains.kotlin.fir.expressions.FirExpressionEvaluator
+import org.jetbrains.kotlin.fir.symbols.SymbolInternals
+import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
+import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 import org.jetbrains.kotlin.kdoc.lexer.KDocTokens
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.stubs.elements.KtModifierListElementType
@@ -282,6 +287,21 @@ internal fun KtorDescriptionBag.toObjectType(): OpenApiSpec.TypeDescriptor = Ope
     description = description,
     format = format,
 )
+
+@OptIn(SymbolInternals::class)
+fun FirClassSymbol<*>.defaultTypeOf(): ConeClassLikeType = fir.defaultTypeOf()
+
+fun FirClass.defaultTypeOf(): ConeClassLikeType =
+    ConeClassLikeTypeImpl(
+        symbol.toLookupTag(),
+        typeParameters.map {
+            ConeTypeParameterTypeImpl(
+                it.symbol.toLookupTag(),
+                isMarkedNullable = false
+            )
+        }.toTypedArray(),
+        isMarkedNullable = false
+    )
 
 fun String.toGenericPostFixClassifier(): String {
     // 1. Trim and remove outer angle brackets if they wrap the whole string

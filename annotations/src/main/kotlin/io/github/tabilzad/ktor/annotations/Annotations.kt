@@ -90,11 +90,12 @@ annotation class KtorSchema(
  * ```
  */
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY)
+@Target(AnnotationTarget.FIELD)
 annotation class KtorField(
     val description: String = "",
     val type: String = "",
     val format: String = "",
+    val pattern: String = "",
     val required: Boolean = false,
 )
 

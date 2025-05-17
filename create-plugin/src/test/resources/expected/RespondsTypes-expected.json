@@ -10,7 +10,7 @@
       "post" : {
         "responses" : {
           "200" : {
-            "description" : "hello",
+            "description" : "",
             "content" : {
               "application/json" : {
                 "schema" : {

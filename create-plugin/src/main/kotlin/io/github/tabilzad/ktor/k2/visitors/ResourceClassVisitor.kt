@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.fir.analysis.checkers.toRegularClassSymbol
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.hasAnnotation
-import org.jetbrains.kotlin.fir.resolve.defaultType
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
@@ -30,7 +29,7 @@ internal class ResourceClassVisitor(
         val resourceAnnotation = regularClass.findAnnotation(ClassIds.KTOR_RESOURCE_ANNOTATION, session)
         val resourcePath = resourceAnnotation?.accept(ResourceAnnotationVisitor(session), null)
 
-        val (parents, params) = regularClass.symbol.defaultType()
+        val (parents, params) = regularClass.symbol.defaultTypeOf()
             .getMembers(session, config)
             .filterIsInstance<FirProperty>()
             .mapNotNull {
