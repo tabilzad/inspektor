@@ -93,7 +93,6 @@
         "properties" : {
           "complexEnumValueMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "array",
               "items" : {
@@ -110,7 +109,6 @@
           },
           "complexListMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "array",
               "items" : {
@@ -120,7 +118,6 @@
           },
           "complexListStringMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "array",
               "items" : {
@@ -130,10 +127,8 @@
           },
           "complexMapValueMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "object",
-              "properties" : { },
               "additionalProperties" : {
                 "$ref" : "#/components/schemas/sources.requests.ComplexMapValue"
               }
@@ -150,7 +145,6 @@
           },
           "complexNestedListMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "array",
               "items" : {
@@ -163,14 +157,12 @@
           },
           "complexValueMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "$ref" : "#/components/schemas/sources.requests.ComplexMapValue"
             }
           },
           "enumValueMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "string",
               "enum" : [ "ONE", "TWO", "THREE" ]
@@ -181,7 +173,6 @@
           },
           "intValueMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "integer"
             }
@@ -218,7 +209,6 @@
           },
           "stringMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "string"
             }

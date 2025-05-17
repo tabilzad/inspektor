@@ -1,0 +1,61 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/nestedGenerics" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.NestedGenerics_Of_String_and_Int"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.NestedGenerics_Of_String_and_Int" : {
+        "type" : "object",
+        "properties" : {
+          "genericValueMap" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "integer"
+            }
+          },
+          "map" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "array",
+              "items" : {
+                "type" : "integer"
+              }
+            }
+          },
+          "types" : {
+            "type" : "array",
+            "items" : {
+              "type" : "array",
+              "items" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        },
+        "required" : [ "types", "map", "genericValueMap" ]
+      }
+    }
+  }
+}

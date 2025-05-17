@@ -23,7 +23,7 @@
   },
   "components" : {
     "schemas" : {
-      "sources.GenericType" : {
+      "sources.GenericType_Of_Int" : {
         "type" : "object",
         "properties" : {
           "other" : {
@@ -43,7 +43,7 @@
             "items" : {
               "type" : "array",
               "items" : {
-                "$ref" : "#/components/schemas/sources.GenericType"
+                "$ref" : "#/components/schemas/sources.GenericType_Of_Int"
               }
             }
           }

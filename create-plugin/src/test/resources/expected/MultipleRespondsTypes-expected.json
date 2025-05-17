@@ -1,0 +1,109 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/multipleResponseWithSameClassButDifferentGenerics" : {
+      "post" : {
+        "responses" : {
+          "200" : {
+            "description" : "hello",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/sources.MyGenericRespondsType_Of_String_and_Int"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "hello",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/sources.MyGenericRespondsType_Of_Boolean_and_List_Of_Boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.MyAmount_Of_Boolean" : {
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "amount" ]
+      },
+      "sources.MyAmount_Of_String" : {
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "amount" ]
+      },
+      "sources.MyCurrency_Of_Int" : {
+        "type" : "object",
+        "properties" : {
+          "curr" : {
+            "type" : "integer"
+          }
+        },
+        "required" : [ "curr" ]
+      },
+      "sources.MyCurrency_Of_List_Of_Boolean" : {
+        "type" : "object",
+        "properties" : {
+          "curr" : {
+            "type" : "array",
+            "items" : {
+              "type" : "boolean"
+            }
+          }
+        },
+        "required" : [ "curr" ]
+      },
+      "sources.MyGenericRespondsType_Of_Boolean_and_List_Of_Boolean" : {
+        "type" : "object",
+        "properties" : {
+          "amounts" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/sources.MyAmount_Of_Boolean"
+            }
+          },
+          "currency" : {
+            "$ref" : "#/components/schemas/sources.MyCurrency_Of_List_Of_Boolean"
+          }
+        },
+        "required" : [ "amounts", "currency" ]
+      },
+      "sources.MyGenericRespondsType_Of_String_and_Int" : {
+        "type" : "object",
+        "properties" : {
+          "amounts" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/sources.MyAmount_Of_String"
+            }
+          },
+          "currency" : {
+            "$ref" : "#/components/schemas/sources.MyCurrency_Of_Int"
+          }
+        },
+        "required" : [ "amounts", "currency" ]
+      }
+    }
+  }
+}

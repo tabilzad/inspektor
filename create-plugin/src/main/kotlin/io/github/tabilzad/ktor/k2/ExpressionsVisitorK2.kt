@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.*
+import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.resolved
 import org.jetbrains.kotlin.fir.references.toResolvedFunctionSymbol
 import org.jetbrains.kotlin.fir.resolve.fqName
@@ -68,13 +69,34 @@ internal class ExpressionsVisitorK2(
 
         if (parent is EndPoint && parent.body == null) {
 
-            val receiveCall = block.statements.findReceiveCallExpression()
+            val receiveCall = block.statements.findCallExpressionWith(ClassIds.KTOR_RECEIVE)
+            val respondsDsl = block.statements.filterCallExpressionWith(ClassIds.KTOR_RESPONDS_NO_OP)
 
             val queryParam = block.statements.findQueryParameterExpression()
             if (queryParam.isNotEmpty()) parent.parameters = parent.parameters merge queryParam.toSet()
 
             val headerParam = block.statements.findHeaderParameterExpression()
             if (headerParam.isNotEmpty()) parent.parameters = parent.parameters merge headerParam.toSet()
+
+            if (respondsDsl.isNotEmpty()) {
+
+                val responses = respondsDsl.flatMap { respondsCallable ->
+
+                    val type = (respondsCallable.typeArguments.first() as FirTypeProjectionWithVariance).typeRef.coneType
+                    val code = ((respondsCallable.arguments.first() as? FirPropertyAccessExpression)
+                        ?.calleeReference as? FirResolvedNamedReference)
+                        ?.name?.asString()
+                    val status = HttpCodeResolver.resolve(code)
+                    KtorK2ResponseBag(
+                        descr = "", // TODO(resolve from comment and or inline descriptor)
+                        status = status,
+                        type = type,
+                        isCollection = false
+                    ).wrapAsList()
+                }.resolveToOpenSpecFormat()
+
+                parent.responses = parent.responses?.plus(responses) ?: responses
+            }
 
             if (receiveCall != null) {
                 val kotlinType = receiveCall.resolvedType
@@ -149,16 +171,28 @@ internal class ExpressionsVisitorK2(
         return headerParams.map { HeaderParamSpec(it) }
     }
 
-    private fun List<FirStatement>.findReceiveCallExpression(): FirFunctionCall? {
+    private fun List<FirStatement>.findCallExpressionWith(callable: FqName): FirFunctionCall? {
 
         val receiveFunctionCall = filterIsInstance<FirFunctionCall>()
-            .find { it.toResolvedCallableSymbol()?.callableId?.asSingleFqName() == ClassIds.KTOR_RECEIVE }
+            .find { it.toResolvedCallableSymbol()?.callableId?.asSingleFqName() == callable }
 
         if (receiveFunctionCall == null) {
             return flatMap { it.allChildren }.filterIsInstance<FirFunctionCall>()
-                .find { it.toResolvedCallableSymbol()?.callableId?.asSingleFqName() == ClassIds.KTOR_RECEIVE }
+                .find { it.toResolvedCallableSymbol()?.callableId?.asSingleFqName() == callable }
         }
         return receiveFunctionCall
+    }
+
+    private fun List<FirStatement>.filterCallExpressionWith(callable: FqName): List<FirFunctionCall> {
+
+        val callables = filterIsInstance<FirFunctionCall>()
+            .filter { it.toResolvedCallableSymbol()?.callableId?.asSingleFqName() == callable }
+
+        if (callables.isEmpty()) {
+            return flatMap { it.allChildren }.filterIsInstance<FirFunctionCall>()
+                .filter { it.toResolvedCallableSymbol()?.callableId?.asSingleFqName() == callable }
+        }
+        return callables
     }
 
     private fun FirQualifiedAccessExpression?.isARouteDefinition(): Boolean {

@@ -47,20 +47,18 @@ internal class ClassDescriptorVisitorK2(
 ) : FirDefaultVisitor<TypeDescriptor, TypeDescriptor>() {
 
     override fun visitProperty(property: FirProperty, data: TypeDescriptor): TypeDescriptor {
-        val coneTypeOrNull = property.returnTypeRef.coneTypeOrNull!!
-        val type = if (coneTypeOrNull is ConeTypeParameterType && genericParameters.isNotEmpty()) {
-            genericParameters.find { it.genericName == coneTypeOrNull.renderReadable() }?.genericTypeRef!!
-        } else {
-            coneTypeOrNull
-        }
+        val coneTypeOrNull = property.returnTypeRef.coneTypeOrNull
         val propertyDescription = property.findDocsDescriptionOnProperty(session)
+
         return if (propertyDescription != null && propertyDescription.explicitType?.isNotEmpty() == true) {
             data.apply { addProperty(property, propertyDescription.toObjectType(), propertyDescription) }
         } else {
             data.apply {
                 addProperty(
                     property,
-                    typeDescriptor = collectDataTypes(propertyDescription?.serializedAs ?: type),
+                    typeDescriptor = collectDataTypes(
+                        propertyDescription?.serializedAs ?: coneTypeOrNull?.resolveGeneric()
+                    ),
                     propertyDescription
                 )
             }
@@ -79,8 +77,9 @@ internal class ClassDescriptorVisitorK2(
 
     @OptIn(SealedClassInheritorsProviderInternals::class, SymbolInternals::class)
     @Suppress("LongMethod", "NestedBlockDepth", "CyclomaticComplexMethod")
-    fun collectDataTypes(parentType: ConeKotlinType): TypeDescriptor? {
+    fun collectDataTypes(parentType: ConeKotlinType?): TypeDescriptor? {
 
+        if (parentType == null) return null
         val kdocs = parentType.toRegularClassSymbol(session)
             ?.fir
             ?.getKDocComments(config)
@@ -111,18 +110,13 @@ internal class ClassDescriptorVisitorK2(
                 // map keys are assumed to be strings,
                 // so getting the last type which is the value type
                 val valueType = parentType.typeArguments.last()
-                valueType.type?.let { valueClassType ->
-                    baseType.copy(
-                        properties = mutableMapOf(),
-                        additionalProperties = collectDataTypes(valueClassType)
-                    )
-                } ?: baseType
+                baseType.copy(additionalProperties = collectDataTypes(valueType.type?.resolveGeneric()))
             }
 
             parentType.isIterable() -> {
                 val arrayItemType = parentType.typeArguments.firstNotNullOfOrNull { it.type }
                 // lists only take a single generic type
-                baseType.copy("array", items = arrayItemType?.let { collectDataTypes(it) })
+                baseType.copy("array", items = collectDataTypes(arrayItemType?.resolveGeneric()))
             }
 
             parentType.isEnum || typeSymbol?.isEnumClass == true -> {
@@ -170,16 +164,31 @@ internal class ClassDescriptorVisitorK2(
 
             else -> {
 
-                baseType.withReferenceBy(fqClassName) {
-                    val internal = baseType.copy(
-                        "object",
-                        fqName = fqClassName
-                    )
-                    if (parentType.typeArguments.isEmpty()) {
+                if (parentType.typeArguments.isEmpty()) {
+                    baseType.withReferenceBy(fqClassName) {
+                        val internal = baseType.copy(
+                            "object",
+                            fqName = fqClassName
+                        )
                         parentType.getMembers(session, config).forEach { nestedDescr ->
                             nestedDescr.accept(this@ClassDescriptorVisitorK2, internal)
                         }
-                    } else {
+                        internal
+                    }
+                } else {
+                    val classifiers = parentType.typeArguments.joinToString(prefix = "<", postfix = ">") {
+                        if (it is ConeClassLikeType) {
+                            it.renderReadable()
+                        } else {
+                            it.type?.resolveGeneric()?.renderReadable() ?: "UNKNOWN"
+                        }
+                    }.toGenericPostFixClassifier()
+                    val qualifiedGenericReference = fqClassName + classifiers
+                    baseType.withReferenceBy(qualifiedGenericReference) {
+                        val internal = baseType.copy(
+                            "object",
+                            fqName = qualifiedGenericReference
+                        )
                         parentType.getMembers(session, config)
                             .map { nestedDescr ->
                                 nestedDescr.accept(
@@ -190,7 +199,7 @@ internal class ClassDescriptorVisitorK2(
                                             typeSymbol?.typeParameterSymbols ?: emptyList()
                                         ).map { (specifiedType, genericType) ->
                                             GenericParameter(
-                                                genericTypeRef = specifiedType.type,
+                                                genericTypeRef = specifiedType.type?.resolveGeneric(),
                                                 genericName = genericType.name.asString()
                                             )
                                         }
@@ -198,12 +207,18 @@ internal class ClassDescriptorVisitorK2(
                                     internal
                                 )
                             }
+                        internal
                     }
-                    internal
                 }
             }
         }
     }
+
+    private fun ConeKotlinType.resolveGeneric() =
+        if (this is ConeTypeParameterType) genericParameters.findTypeRefOf(this) else this
+
+    fun List<GenericParameter>.findTypeRefOf(generic: ConeTypeParameterType) =
+        find { it.genericName == generic.renderReadable() }?.genericTypeRef
 
     override fun visitClass(klass: FirClass, data: TypeDescriptor): TypeDescriptor {
         klass.defaultType().getMembers(session, config).forEach { it.accept(this, data) }

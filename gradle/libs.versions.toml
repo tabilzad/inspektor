@@ -35,6 +35,7 @@ compilerTest = { module = "dev.zacsweers.kctfork:core", version.ref = "compilerT
 jacksonKotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jacksonVersion" }
 jacksonYaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jacksonVersion" }
 ktor = { module = "io.ktor:ktor-server-core", version.ref = "ktorVersion" }
+ktor-http = { module = "io.ktor:ktor-http", version.ref = "ktorVersion" }
 ktorNetty = { module = "io.ktor:ktor-server-netty", version.ref = "ktorVersion" }
 ktorResources = { module = "io.ktor:ktor-server-resources", version.ref = "ktorVersion" }
 kotlinGradleApi = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin-api", version.ref = "kotlinVersion" }

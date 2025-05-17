@@ -27,12 +27,12 @@
         "type" : "object",
         "properties" : {
           "generic" : {
-            "$ref" : "#/components/schemas/sources.MyGenericType"
+            "$ref" : "#/components/schemas/sources.MyGenericType_Of_Int"
           }
         },
         "required" : [ "generic" ]
       },
-      "sources.MyGenericType" : {
+      "sources.MyGenericType_Of_Int" : {
         "type" : "object",
         "properties" : {
           "other" : {

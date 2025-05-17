@@ -99,7 +99,7 @@ internal fun generateCompilerTest(
         classpaths = deps.map { classpathOf(it) }
         sources = loadBaseSources(testSubjectSource)
         kotlincArguments = emptyList()
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         messageOutputStream =
             object : PrintStream(System.out) {
 

@@ -54,7 +54,6 @@
           },
           "myMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "string"
             }
@@ -84,7 +83,6 @@
           },
           "myMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "string"
             }

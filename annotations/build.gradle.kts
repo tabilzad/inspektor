@@ -6,6 +6,10 @@ plugins {
     alias(libs.plugins.mavenPublish.base)
 }
 
+dependencies {
+    implementation(libs.ktor)
+}
+
 mavenPublishing {
     configure(
         KotlinJvm(

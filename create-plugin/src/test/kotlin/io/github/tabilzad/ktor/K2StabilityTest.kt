@@ -483,6 +483,30 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should resolve a single response from inline responds endpoint extension`() {
+        val (source, expected) = loadSourceAndExpected("RespondsTypes")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
+    fun `should resolve multiple responses with nested generics from inline responds endpoint extension`() {
+        val (source, expected) = loadSourceAndExpected("MultipleRespondsTypes")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
+    fun `should resolve complex generics on endpoint receive`() {
+        val (source, expected) = loadSourceAndExpected("Abstractions4")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should append servers from gradle config`() {
         val source = loadSourceCodeFrom("BlankSource")
         val input = listOf("server1", "server2")

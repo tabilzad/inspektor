@@ -282,3 +282,52 @@ internal fun KtorDescriptionBag.toObjectType(): OpenApiSpec.TypeDescriptor = Ope
     description = description,
     format = format,
 )
+
+fun String.toGenericPostFixClassifier(): String {
+    // 1. Trim and remove outer angle brackets if they wrap the whole string
+    val trimmed = trim()
+    val content = if (trimmed.startsWith("<") && trimmed.endsWith(">")) {
+        trimmed.substring(1, trimmed.length - 1)
+    } else {
+        trimmed
+    }
+
+    // 2. Recursive processor for comma‐separated and nested generics
+    fun process(content: String): String {
+        val parts = mutableListOf<String>()
+        var depth = 0
+        var startIdx = 0
+
+        // 2a. Split on commas at depth 0
+        for ((i, ch) in content.withIndex()) {
+            when (ch) {
+                '<' -> depth++
+                '>' -> depth--
+                ',' -> if (depth == 0) {
+                    parts += content.substring(startIdx, i).trim()
+                    startIdx = i + 1
+                }
+            }
+        }
+        // Add the final segment
+        parts += content.substring(startIdx).trim()
+
+        // 2b. Process each part: if it has its own <…>, recurse
+        val processed = parts.map { part ->
+            val genStart = part.indexOf('<')
+            if (genStart != -1 && part.endsWith(">")) {
+                val base = part.substring(0, genStart)
+                val inner = part.substring(genStart + 1, part.length - 1)
+                val innerProcessed = process(inner)
+                "${base}_Of_$innerProcessed"
+            } else {
+                part
+            }
+        }
+
+        // 3. Join top‐level parameters with “_and_”
+        return processed.joinToString("_and_")
+    }
+
+    return "_Of_" + process(content)
+}

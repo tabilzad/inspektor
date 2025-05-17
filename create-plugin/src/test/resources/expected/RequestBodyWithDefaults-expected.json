@@ -40,7 +40,6 @@
           },
           "myMap" : {
             "type" : "object",
-            "properties" : { },
             "additionalProperties" : {
               "type" : "string"
             }

@@ -41,25 +41,17 @@ annotation class KtorDescription(
 /**
  * Annotation to describe fields in generated OpenAPI schemas.
  *
- * @property summary A description that will be added to 'description' property of a corresponding schema field in OpenAPI.
- * @property description Optional and the same as summary. Can be used as an alternative description in code.
- * @property required Optional parameter that indicates whether the field is required. Overrides the automatic detection based on field nullability.
- * @property explicitType An optional explicit field type in OpenAPI. Can be used to override the automatic field type definition.
+ * @property description A description that will be added to 'description' property of a corresponding schema field in OpenAPI.
+ * @property type An optional explicit field type in OpenAPI. Can be used to override the automatic field type definition.
  *      Note: Automatic schema generation will NOT run for this field if the explicitType is not empty.
  * @property format An optional format of the data type (e.g., "date-time", "int32").
+ * @property serializedAs Not currently implemented
  *
  * Example usage:
  * ```
- * data class UserResponse(
- *     @KtorFieldDescription("Example field description")
- *     val id: String,
- *     val name: String,
- *     @KtorFieldDescription(
- *         summary = "Example registration date",
- *         type = "string",
- *         format = "iso8601"
- *     )
- *     val registrationDate: Instant
+ * @KtorSchema(description = "my user response", type="number")
+ * data class DollarAmount(
+ *     val value: Int
  * )
  * ```
  */
@@ -67,19 +59,43 @@ annotation class KtorDescription(
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 annotation class KtorSchema(
-    val type: String = "",
     val description: String = "",
-    val serializedAs: KClass<*> = Nothing::class,
+    val type: String = "",
     val format: String = "",
+    val serializedAs: KClass<*> = Nothing::class,
 )
 
+/**
+ * Annotation to describe fields in generated OpenAPI schemas.
+ *
+ * @property description A description that will be added to 'description' property of a corresponding schema field in OpenAPI.
+ * @property required Optional parameter that indicates whether the field is required. Overrides the automatic detection based on field nullability.
+ * @property type An optional explicit field type in OpenAPI. Can be used to override the automatic field type definition.
+ *      Note: Automatic schema generation will NOT run for this field if the explicitType is not empty.
+ * @property format An optional format of the data type (e.g., "date-time", "int32").
+ *
+ * Example usage:
+ * ```
+ * data class UserResponse(
+ *     @KtorField("Example field description")
+ *     val id: String,
+ *     val name: String,
+ *     @KtorField(
+ *         description = "Example registration date",
+ *         type = "string",
+ *         format = "iso8601"
+ *     )
+ *     val registrationDate: Instant
+ * )
+ * ```
+ */
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.FIELD, AnnotationTarget.FIELD)
+@Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY)
 annotation class KtorField(
+    val description: String = "",
     val type: String = "",
     val format: String = "",
     val required: Boolean = false,
-    val description: String = "",
 )
 
 @Deprecated(
