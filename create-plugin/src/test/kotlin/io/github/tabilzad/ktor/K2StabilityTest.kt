@@ -491,6 +491,14 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should resolve enum objects as a response body`() {
+        val (source, expected) = loadSourceAndExpected("EnumResponse")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should resolve multiple responses with nested generics from inline responds endpoint extension`() {
         val (source, expected) = loadSourceAndExpected("MultipleRespondsTypes")
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault())

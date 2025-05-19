@@ -9,7 +9,6 @@ import io.github.tabilzad.ktor.k2.ClassIds.KTOR_FIELD
 import io.github.tabilzad.ktor.k2.ClassIds.KTOR_FIELD_DESCRIPTION
 import io.github.tabilzad.ktor.k2.ClassIds.KTOR_SCHEMA
 import io.github.tabilzad.ktor.k2.JsonNameResolver.getCustomNameFromAnnotation
-import io.github.tabilzad.ktor.output.OpenApiSpec
 import io.github.tabilzad.ktor.output.OpenApiSpec.TypeDescriptor
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
@@ -139,10 +138,12 @@ internal class ClassDescriptorVisitorK2(
                     val internal = TypeDescriptor(
                         "object",
                         fqName = fqClassName,
-                        oneOf = inheritorClassIds?.map { OpenApiSpec.SchemaRef("#/components/schemas/${it.asFqNameString()}") }
+                        oneOf = inheritorClassIds?.map {
+                            TypeDescriptor(ref = "#/components/schemas/${it.asFqNameString()}", type = null)
+                        }
                     )
                     parentType.getMembers(session, config).forEach { nestedDescr ->
-                        nestedDescr.accept(this@ClassDescriptorVisitorK2, internal)
+                        nestedDescr.accept(this, internal)
                     }
 
                     inheritorClassIds?.forEach { it: ClassId ->
@@ -155,7 +156,7 @@ internal class ClassDescriptorVisitorK2(
                             classNames.add(inheritorType)
                         }
                         val fir: FirClass? = it.toLookupTag().toClassSymbol(session)?.fir
-                        fir?.accept(this@ClassDescriptorVisitorK2, inheritorType)
+                        fir?.accept(this, inheritorType)
                     }
                     internal
                 }
@@ -179,7 +180,7 @@ internal class ClassDescriptorVisitorK2(
                             fqName = fqClassName
                         )
                         parentType.getMembers(session, config).forEach { nestedDescr ->
-                            nestedDescr.accept(this@ClassDescriptorVisitorK2, internal)
+                            nestedDescr.accept(this, internal)
                         }
                         internal
                     }

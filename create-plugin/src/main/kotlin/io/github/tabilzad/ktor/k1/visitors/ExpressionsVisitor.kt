@@ -517,8 +517,9 @@ internal class ExpressionsVisitor(
                                     response.descr,
                                     mapOf(
                                         ContentType.APPLICATION_JSON to mapOf(
-                                            "schema" to OpenApiSpec.SchemaType(
-                                                `$ref` = "${typeRef.ref}"
+                                            "schema" to OpenApiSpec.TypeDescriptor(
+                                                type = null,
+                                                ref = "${typeRef.ref}"
                                             )
                                         )
                                     )
@@ -529,10 +530,11 @@ internal class ExpressionsVisitor(
                                     response.descr,
                                     mapOf(
                                         ContentType.APPLICATION_JSON to mapOf(
-                                            "schema" to OpenApiSpec.SchemaType(
+                                            "schema" to OpenApiSpec.TypeDescriptor(
                                                 type = "array",
-                                                items = OpenApiSpec.SchemaRef(
-                                                    "${typeRef.ref}"
+                                                items = OpenApiSpec.TypeDescriptor(
+                                                    type = null,
+                                                    ref = "${typeRef.ref}"
                                                 )
                                             )
                                         )

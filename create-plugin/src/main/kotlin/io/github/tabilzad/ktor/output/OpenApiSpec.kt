@@ -7,7 +7,7 @@ import io.github.tabilzad.ktor.OpenApiSpecParam
 import io.github.tabilzad.ktor.model.Info
 import io.github.tabilzad.ktor.model.SecurityScheme
 
-internal typealias ContentSchema = Map<String, OpenApiSpec.SchemaType>
+internal typealias ContentSchema = Map<String, OpenApiSpec.TypeDescriptor>
 
 internal typealias BodyContent = Map<ContentType, ContentSchema>
 
@@ -53,7 +53,7 @@ data class OpenApiSpec(
         @JsonProperty("\$ref")
         var ref: String? = null,
         var additionalProperties: TypeDescriptor? = null,
-        var oneOf: List<SchemaRef>? = null,
+        var oneOf: List<TypeDescriptor>? = null,
         var required: MutableList<String>? = null,
         var format: String? = null
     ) : NamedObject {
@@ -74,21 +74,8 @@ data class OpenApiSpec(
         override val `in`: String,
         override val required: Boolean = true,
         override val description: String? = null,
-        val schema: SchemaType,
+        val schema: TypeDescriptor,
     ) : OpenApiSpecParam
-
-    data class SchemaRef(
-        @Suppress("ConstructorParameterNaming")
-        val `$ref`: String? = null
-    )
-
-    data class SchemaType(
-        val type: String? = null,
-        val items: SchemaRef? = null,
-        val description: String? = null,
-        @Suppress("ConstructorParameterNaming")
-        val `$ref`: String? = null,
-    )
 
     data class ResponseDetails(
         val description: String,

@@ -34,10 +34,6 @@ internal class ExpressionsVisitorK2(
     private val log: MessageCollector?
 ) : FirDefaultVisitor<List<KtorElement>, KtorElement?>() {
 
-    init {
-        println("BeginK2 Visitor")
-    }
-
     val classNames = mutableListOf<OpenApiSpec.TypeDescriptor>()
 
     override fun visitElement(expression: FirElement, parent: KtorElement?): List<KtorElement> {
@@ -82,7 +78,8 @@ internal class ExpressionsVisitorK2(
 
                 val responses = respondsDsl.map { respondsCallable ->
                     val docs = respondsCallable.source?.findCorrespondingComment()
-                    val type = (respondsCallable.typeArguments.first() as FirTypeProjectionWithVariance).typeRef.coneType
+                    val type =
+                        (respondsCallable.typeArguments.first() as FirTypeProjectionWithVariance).typeRef.coneType
                     val code = ((respondsCallable.arguments.first() as? FirPropertyAccessExpression)
                         ?.calleeReference as? FirResolvedNamedReference)
                         ?.name?.asString()
@@ -381,31 +378,21 @@ internal class ExpressionsVisitorK2(
     private fun List<KtorK2ResponseBag>.resolveToOpenSpecFormat() =
         associate { response ->
             val kotlinType = response.type
-            val schema = if (kotlinType?.isStringOrPrimitive() == true) {
-                OpenApiSpec.SchemaType(
-                    type = kotlinType.toString().toSwaggerType()
-                )
-            } else {
-                val typeRef = response.type?.generateDescriptor()
-                OpenApiSpec.SchemaType(
-                    `$ref` = "${typeRef?.ref}"
-                )
-            }
-
             if (kotlinType?.isNothing == true) {
                 response.status to OpenApiSpec.ResponseDetails(response.descr, null)
             } else {
+                val schema = response.type?.generateDescriptor()
                 response.status to OpenApiSpec.ResponseDetails(
                     response.descr,
                     mapOf(
                         ContentType.APPLICATION_JSON to mapOf(
                             "schema" to if (response.isCollection) {
-                                OpenApiSpec.SchemaType(
+                                OpenApiSpec.TypeDescriptor(
                                     type = "array",
-                                    items = OpenApiSpec.SchemaRef(`$ref` = schema.`$ref`)
+                                    items = OpenApiSpec.TypeDescriptor(type = null, ref = schema?.ref)
                                 )
                             } else {
-                                schema
+                                schema ?: OpenApiSpec.TypeDescriptor("object")
                             }
                         )
                     )
