@@ -11,6 +11,7 @@ plugins {
 
 dependencies {
     compileOnly(libs.bundles.kotlinGradle)
+    compileOnly(gradleApi())
 
     shadow(projects.common)
     implementation(libs.serialization.json)

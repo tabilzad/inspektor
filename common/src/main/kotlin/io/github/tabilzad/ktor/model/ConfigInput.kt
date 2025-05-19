@@ -1,13 +1,45 @@
 package io.github.tabilzad.ktor.model
 
 import kotlinx.serialization.Serializable
+import org.gradle.api.Named
 
 @Serializable
 data class ConfigInput(
     val securityConfig: List<Map<String, List<String>>> = emptyList(),
     val securitySchemes: Map<String, SecurityScheme> = emptyMap(),
-    val info: Info? = null
+    val info: Info? = null,
+    val overrides: List<TypeOverride> = emptyList(),
 )
+
+/**
+ * Configuration for one type‐override entry.
+ *
+ * @param fqName – fully‐qualified Java/Kotlin class name to override
+ */
+@Serializable
+open class TypeOverride(
+
+    /**
+     * The fully-qualified name of the type being overridden.
+     */
+    val fqName: String,
+    /**
+     * How the type is actually serialized (e.g. "integer", "string", "object").
+     */
+    var serializedAs: String? = null,
+
+    /** The JSON Schema “format” (e.g. "int64", "date-time", etc.) */
+    var format: String? = null,
+
+    /**
+     * Human‐readable description to emit in the schema.
+     */
+    var description: String? = null,
+) : Named {
+    override fun getName(): String {
+        return fqName
+    }
+}
 
 @Serializable
 data class Info(

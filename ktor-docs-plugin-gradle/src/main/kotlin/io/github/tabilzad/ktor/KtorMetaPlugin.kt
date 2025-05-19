@@ -3,18 +3,22 @@ package io.github.tabilzad.ktor
 import io.github.tabilzad.ktor.model.ConfigInput
 import kotlinx.serialization.json.Json
 import org.gradle.api.Project
+import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import java.io.File
+import javax.inject.Inject
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 const val PLUGIN_ID = "io.github.tabilzad.inspektor"
 
-open class KtorMetaPlugin : KotlinCompilerPluginSupportPlugin {
+class KtorMetaPlugin @Inject constructor(
+    private val objects: ObjectFactory
+) : KotlinCompilerPluginSupportPlugin {
 
     override fun getCompilerPluginId() = PLUGIN_ID
     override fun getPluginArtifact(): SubpluginArtifact =
@@ -29,17 +33,18 @@ open class KtorMetaPlugin : KotlinCompilerPluginSupportPlugin {
     }
 
     override fun apply(target: Project) {
-        target.extensions.create("swagger", KtorInspectorGradleConfig::class.java).apply {
-            documentation = target.extensions.create("documentation", DocumentationOptions::class.java)
-            pluginOptions = target.extensions.create("pluginOptions", PluginOptions::class.java)
-        }
+        target.extensions.create(
+            "swagger",
+            KtorInspectorGradleConfig::class.java,
+            objects
+        )
     }
 
     @OptIn(ExperimentalEncodingApi::class)
     @Suppress("LongMethod")
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
-        val swaggerExtension = project.extensions.findByType(KtorInspectorGradleConfig::class.java) ?: KtorInspectorGradleConfig()
+        val swaggerExtension = project.extensions.getByType(KtorInspectorGradleConfig::class.java)
 
         kotlinCompilation.dependencies {
             compileOnly("io.github.tabilzad.inspektor:ktor-docs-plugin:$ktorDocsVersion")
@@ -70,7 +75,8 @@ open class KtorMetaPlugin : KotlinCompilerPluginSupportPlugin {
         val initialConfig = ConfigInput(
             securityConfig = swaggerExtension.documentation.getSecurityConfig(),
             securitySchemes = swaggerExtension.documentation.getSecuritySchemes(),
-            info = swaggerExtension.documentation.getInfo()
+            info = swaggerExtension.documentation.getInfo(),
+            overrides = swaggerExtension.documentation.serialOverrides.getOverrides().map { it }
         )
 
         val subpluginOptions = listOf(

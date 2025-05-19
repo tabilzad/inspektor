@@ -245,6 +245,7 @@ internal fun FirDeclaration.getKDocComments(configuration: PluginConfiguration):
 
 private fun OpenApiSpec.TypeDescriptor.isPrimitive() = listOf("string", "number", "integer").contains(type)
 
+@Suppress("LoopWithTooManyJumpStatements")
 fun KtSourceElement.findCorrespondingComment(): String? {
     val tree = treeStructure
     val root = tree.root
@@ -266,7 +267,7 @@ fun KtSourceElement.findCorrespondingComment(): String? {
     // 3) scan *backwards*, collecting EOL_COMMENTs, skipping single-line whitespace,
     val accumulated = mutableListOf<String>()
     for (node in beforeCall.asReversed()) {
-        when(node.tokenType) {
+        when (node.tokenType) {
             KtTokens.EOL_COMMENT -> {
                 // strip the ‘//’ and keep the raw text
                 val line = node.toString()

@@ -69,7 +69,16 @@ internal class ClassDescriptorVisitorK2(
         // type not allowed alongside ref
         type = null
         if (!classNames.names.contains(fqName)) {
-            classNames.add(computeRef())
+            val element = computeRef()
+            val override = config.initConfig.overrides.find { it.fqName == fqName }
+            if (override != null) {
+                element.apply {
+                    type = override.serializedAs ?: type
+                    description = override.description ?: description
+                    format = override.format ?: format
+                }
+            }
+            classNames.add(element)
         }
         return copy(type = null, ref = "#/components/schemas/$fqName")
     }
