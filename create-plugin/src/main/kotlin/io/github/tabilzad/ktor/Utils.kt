@@ -6,6 +6,8 @@ import io.github.tabilzad.ktor.k2.visitors.StringArrayLiteralVisitor
 import io.github.tabilzad.ktor.k2.visitors.StringResolutionVisitor
 import io.github.tabilzad.ktor.model.ConfigInput
 import io.github.tabilzad.ktor.output.OpenApiSpec
+import org.jetbrains.kotlin.KtSourceElement
+import org.jetbrains.kotlin.com.intellij.lang.LighterASTNode
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
 import org.jetbrains.kotlin.fir.FirSession
@@ -242,6 +244,72 @@ internal fun FirDeclaration.getKDocComments(configuration: PluginConfiguration):
 }
 
 private fun OpenApiSpec.TypeDescriptor.isPrimitive() = listOf("string", "number", "integer").contains(type)
+
+fun KtSourceElement.findCorrespondingComment(): String? {
+    val tree = treeStructure
+    val root = tree.root
+
+    // 1) collect all leaf nodes in document order
+    val leaves = mutableListOf<LighterASTNode>()
+    fun dfs(node: LighterASTNode) {
+        if (node.getChildren(tree).isEmpty()) {
+            leaves += node
+        } else {
+            for (child in node.getChildren(tree)) dfs(child)
+        }
+    }
+    dfs(root)
+
+    // 2) take only those leaves that start before our call
+    val beforeCall = leaves.filter { it.startOffset < startOffset }
+
+    // 3) scan *backwards*, collecting EOL_COMMENTs, skipping single-line whitespace,
+    val accumulated = mutableListOf<String>()
+    for (node in beforeCall.asReversed()) {
+        when(node.tokenType) {
+            KtTokens.EOL_COMMENT -> {
+                // strip the ‘//’ and keep the raw text
+                val line = node.toString()
+                    .removePrefix("//")
+                    .trimEnd()
+                accumulated += line
+            }
+
+            KtTokens.BLOCK_COMMENT -> {
+                // /* multi-line comment */
+                val raw = node.toString()
+                // strip delimiters
+                val inner = raw
+                    .removePrefix("/*")
+                    .removeSuffix("*/")
+                    // clean up leading '*' on each line
+                    .lines()
+                    .map { it.trim().removePrefix("*").trim() }
+                accumulated += inner.joinToString("\n")
+            }
+
+           KtTokens.WHITE_SPACE -> {
+                // if there's a blank line (2+ newlines), stop collecting
+                val ws = node.toString()
+                if (ws.contains("\n\n")) break
+                // otherwise just skip over single-line whitespace
+            }
+
+            else -> {
+                // ignore others
+                break
+            }
+        }
+    }
+
+    if (accumulated.isEmpty()) return null
+
+    // 4) we collected bottom-up → reverse and join
+    return accumulated
+        .asReversed()
+        .joinToString("\n")
+        .trimStart()
+}
 
 internal fun CompilerConfiguration?.buildPluginConfiguration(): PluginConfiguration = PluginConfiguration.createDefault(
     isEnabled = this?.get(SwaggerConfigurationKeys.ARG_ENABLED),

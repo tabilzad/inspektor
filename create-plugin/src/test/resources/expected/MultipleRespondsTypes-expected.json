@@ -10,7 +10,7 @@
       "post" : {
         "responses" : {
           "200" : {
-            "description" : "",
+            "description" : "This is a success response\n next line of the description",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -20,7 +20,7 @@
             }
           },
           "400" : {
-            "description" : "",
+            "description" : "This is a 400 bad request\nnext line after 400\n",
             "content" : {
               "application/json" : {
                 "schema" : {

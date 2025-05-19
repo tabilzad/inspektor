@@ -80,19 +80,19 @@ internal class ExpressionsVisitorK2(
 
             if (respondsDsl.isNotEmpty()) {
 
-                val responses = respondsDsl.flatMap { respondsCallable ->
-
+                val responses = respondsDsl.map { respondsCallable ->
+                    val docs = respondsCallable.source?.findCorrespondingComment()
                     val type = (respondsCallable.typeArguments.first() as FirTypeProjectionWithVariance).typeRef.coneType
                     val code = ((respondsCallable.arguments.first() as? FirPropertyAccessExpression)
                         ?.calleeReference as? FirResolvedNamedReference)
                         ?.name?.asString()
                     val status = HttpCodeResolver.resolve(code)
                     KtorK2ResponseBag(
-                        descr = "", // TODO(resolve from comment and or inline descriptor)
+                        descr = docs ?: "",
                         status = status,
                         type = type,
                         isCollection = false
-                    ).wrapAsList()
+                    )
                 }.resolveToOpenSpecFormat()
 
                 parent.responses = parent.responses?.plus(responses) ?: responses

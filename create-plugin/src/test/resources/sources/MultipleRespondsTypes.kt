@@ -14,6 +14,7 @@ class MyGenericRespondsType<T, S>(
     val amounts: List<MyAmount<T>>,
     val currency: MyCurrency<S>
 )
+
 class MyAmount<T>(val amount: T)
 class MyCurrency<T>(val curr: T)
 
@@ -22,9 +23,14 @@ fun Application.multipleResponds() {
     routing {
         route("/v1") {
             post("/multipleResponseWithSameClassButDifferentGenerics") {
+                // This is a success response
+                // next line of the description
                 responds<MyGenericRespondsType<String, Int>>(HttpStatusCode.OK)
+                /* This is a 400 bad request
+                  next line after 400
+                 */
                 responds<MyGenericRespondsType<Boolean, List<Boolean>>>(HttpStatusCode.BadRequest)
-                //call.receive<SimpleRequest>()
+                // call.receive<SimpleRequest>() ignore comment
             }
         }
     }
