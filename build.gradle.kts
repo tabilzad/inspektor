@@ -59,7 +59,10 @@ subprojects {
                 artifactId = project.properties["POM_ARTIFACT_ID"].toString(),
                 version = project.version.toString()
             )
-            signAllPublications()
+            // dont sign for mavenLocal
+            if (!gradle.startParameter.taskNames.any { it.contains("mavenLocal", ignoreCase = true) }) {
+                signAllPublications()
+            }
             pom {
                 name.set(project.name)
                 description.set("Open API (Swagger) specification Generator for Ktor")
