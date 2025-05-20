@@ -443,6 +443,14 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should resolve resources with paths from external object consts`() {
+        val (source, expected) = loadSourceAndExpected("Resources2")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should resolve endpoint spec from type-safe ktor resources with body params`() {
         val (source, expected) = loadSourceAndExpected("ResourcesWithBody")
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault())

@@ -27,9 +27,9 @@ class StringResolutionVisitor(private val session: FirSession) : FirDefaultVisit
         stringConcatenationCall: FirStringConcatenationCall,
         data: String
     ): String {
-        return data + (stringConcatenationCall.argumentList.arguments.map { acc ->
+        return data + (stringConcatenationCall.argumentList.arguments.joinToString("") { acc ->
             acc.accept(this@StringResolutionVisitor, data)
-        }.joinToString(""))
+        })
     }
 
     override fun visitFunctionCall(functionCall: FirFunctionCall, data: String): String {

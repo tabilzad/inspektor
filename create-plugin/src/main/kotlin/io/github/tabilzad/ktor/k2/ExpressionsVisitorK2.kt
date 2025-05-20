@@ -42,22 +42,19 @@ internal class ExpressionsVisitorK2(
 
     // Evaluation Order 1
     override fun visitSimpleFunction(simpleFunction: FirSimpleFunction, parent: KtorElement?): List<KtorElement> {
-
         val extractedTags = simpleFunction.findTags(session)
         val c = parent ?: DocRoute("/", tags = extractedTags)
-
         simpleFunction.acceptChildren(this, c)
         return c.wrapAsList()
     }
 
     // Evaluation Order 2
-    override fun visitDeclaration(declaration: FirDeclaration, parent: KtorElement?): List<KtorElement> {
-        return if (declaration is FirSimpleFunction) {
+    override fun visitDeclaration(declaration: FirDeclaration, parent: KtorElement?): List<KtorElement> =
+        if (declaration is FirSimpleFunction) {
             declaration.body?.accept(this, parent) ?: emptyList()
         } else {
             emptyList()
         }
-    }
 
     // Evaluation Order 3
     @Suppress("NestedBlockDepth")
@@ -95,20 +92,149 @@ internal class ExpressionsVisitorK2(
                 parent.responses = parent.responses?.plus(responses) ?: responses
             }
 
-            if (receiveCall != null) {
-                val kotlinType = receiveCall.resolvedType
-                if (kotlinType.isStringOrPrimitive()) {
-                    parent.body = OpenApiSpec.TypeDescriptor(type = kotlinType.toString().toSwaggerType())
-                } else {
-                    if (config.requestBody) {
-                        parent.body = kotlinType.generateDescriptor()
-                    }
-                }
+            if (receiveCall != null && config.requestBody) {
+                parent.body = receiveCall.resolvedType.generateDescriptor()
             }
         }
 
         return block.statements.flatMap { it.accept(this, parent) }
     }
+
+    @OptIn(SymbolInternals::class)
+    override fun visitFunctionCall(functionCall: FirFunctionCall, parent: KtorElement?): List<KtorElement> {
+
+        val tagsFromAnnotation = functionCall.findTags(session)
+        val resultElement = functionCall.lookForKtorElements(parent, tagsFromAnnotation)
+        functionCall.findLambda()?.accept(this, resultElement ?: parent) ?: run {
+            val declaration = functionCall.calleeReference.toResolvedFunctionSymbol()?.fir
+            val tagsFromDeclaration = declaration?.findTags(session)
+
+            if (parent is DocRoute) {
+                val acceptedElements = declaration?.accept(this, null)?.onEach {
+                    it.tags = it.tags merge tagsFromAnnotation merge tagsFromDeclaration
+                }
+                parent.children.addAll(acceptedElements ?: emptyList())
+            } else {
+                declaration?.accept(this, parent)
+            }
+        }
+
+        return listOfNotNull(resultElement ?: parent)
+    }
+
+    @Suppress("LongMethod", "NestedBlockDepth", "CyclomaticComplexMethod")
+    private fun FirFunctionCall.lookForKtorElements(
+        parent: KtorElement?,
+        tagsFromAnnotation: Set<String>?
+    ): KtorElement? {
+        val resolvedExp = toResolvedCallableReference(session)
+        val expName = resolvedExp?.name?.asString() ?: ""
+        if (isARouteDefinition() || ExpType.METHOD.labels.contains(expName)) {
+            val pathValue = resolvePath()
+
+            when {
+                ExpType.ROUTE.labels.contains(expName) -> {
+                    when (parent) {
+                        null -> {
+                            return pathValue?.let {
+                                DocRoute(it, tags = tagsFromAnnotation)
+                            } ?: DocRoute(expName, tags = tagsFromAnnotation)
+                        }
+
+                        is DocRoute -> {
+                            val newElement = DocRoute(
+                                pathValue.toString(),
+                                tags = parent.tags merge tagsFromAnnotation
+                            )
+                            parent.children.add(newElement)
+                            return newElement
+                        }
+
+                        is EndPoint -> log?.report(
+                            CompilerMessageSeverity.WARNING,
+                            "Route definition found under the endpoint",
+                            getLocation()
+                        )
+                    }
+                }
+
+                ExpType.METHOD.labels.contains(expName) -> {
+                    val descr = findDocsDescription(session)
+                    val responses = findRespondsAnnotation(session)?.resolveToOpenSpecFormat()
+                    val params = typeArguments
+
+                    val endpoint = EndPoint(
+                        path = null,
+                        method = expName,
+                        description = descr.description,
+                        summary = descr.summary,
+                        operationId = descr.operationId,
+                        tags = descr.tags merge tagsFromAnnotation,
+                        responses = responses
+                    )
+
+                    val resource = findResource(endpoint)
+                    val type = params.firstOrNull()?.toConeTypeProjection()?.type
+                    val newElement = resource ?: endpoint.copy(path = pathValue, body = type?.toEndpointBody())
+
+                    when (parent) {
+                        null -> {
+                            return if (resource != null && newElement is DocRoute) {
+                                newElement
+                            } else {
+                                DocRoute("/", children = mutableListOf(newElement))
+                            }
+                        }
+
+                        is DocRoute -> {
+                            parent.children.add(newElement)
+                            return if (resource != null && newElement is DocRoute) {
+                                newElement.findFirstEndpoint()
+                            } else {
+                                newElement
+                            }
+                        }
+
+                        else -> {
+                            log?.report(
+                                CompilerMessageSeverity.WARNING,
+                                "Endpoints can't have Endpoint as routes",
+                                getLocation()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        return null
+    }
+
+    private fun KtorElement.findFirstEndpoint(): EndPoint? {
+        if (this is EndPoint) return this
+        if (this is DocRoute) {
+            for (child in this.children) {
+                child.findFirstEndpoint()?.let { return it }
+            }
+        }
+        return null
+    }
+
+    override fun visitReturnExpression(returnExpression: FirReturnExpression, data: KtorElement?): List<KtorElement> {
+        val funCall = returnExpression.result as? FirFunctionCall
+        funCall?.accept(this, data)
+        return super.visitReturnExpression(returnExpression, data)
+    }
+
+    override fun visitAnonymousFunctionExpression(
+        anonymousFunctionExpression: FirAnonymousFunctionExpression,
+        data: KtorElement?
+    ): List<KtorElement> = anonymousFunctionExpression.anonymousFunction.body?.accept(this, data) ?: data.wrapAsList()
+
+    override fun visitAnonymousFunction(
+        anonymousFunction: FirAnonymousFunction,
+        data: KtorElement?
+    ): List<KtorElement> = anonymousFunction.body?.accept(this, data) ?: data.wrapAsList()
 
     @OptIn(SymbolInternals::class)
     private fun ConeKotlinType.generateDescriptor(): OpenApiSpec.TypeDescriptor? {
@@ -117,6 +243,131 @@ internal class ExpressionsVisitorK2(
         val visited = classDescriptorVisitor.collectDataTypes(annotatedDescription?.serializedAs ?: this)
         classNames.addAll(classDescriptorVisitor.classNames)
         return visited
+    }
+
+    private fun ConeKotlinType.toEndpointBody(): OpenApiSpec.TypeDescriptor? {
+        return if (isStringOrPrimitive()) {
+            OpenApiSpec.TypeDescriptor(type = toString().toSwaggerType())
+        } else {
+            if (config.requestBody) {
+                generateDescriptor()
+            } else {
+                null
+            }
+        }
+    }
+
+    @OptIn(SymbolInternals::class)
+    private fun FirFunctionCall.resolvePath(): String? {
+        val expression = this
+        val pathExpressionIndex = (expression.calleeReference.resolved?.resolvedSymbol?.fir as FirFunction)
+            .valueParameters.indexOfFirst { it.name.asString() == "path" }
+
+        val pathExpression = expression.arguments.getOrElse(pathExpressionIndex) {
+            expression.arguments.find { it is FirLiteralExpression }
+        }
+        val resolvedPathValue = pathExpression?.accept(StringResolutionVisitor(session), "")
+        return resolvedPathValue
+    }
+
+    private fun FirFunctionCall.findLambda(): FirAnonymousFunctionExpression? {
+        return arguments
+            .filterIsInstance<FirAnonymousFunctionExpression>()
+            .lastOrNull()
+    }
+
+    private fun FirFunctionCall.getLocation(): CompilerMessageLocation? {
+        val psi = source?.psi
+        val filePath = psi?.containingFile?.virtualFile?.path
+        val textRange = psi?.textRange
+        val document = psi?.containingFile?.viewProvider?.document
+
+        return if (filePath != null && textRange != null && document != null) {
+            val startOffset = textRange.startOffset
+            val lineNumber = document.getLineNumber(startOffset) + 1
+            val columnNumber = startOffset - document.getLineStartOffset(lineNumber - 1) + 1
+            CompilerMessageLocation.create(
+                path = filePath,
+                line = lineNumber,
+                column = columnNumber,
+                lineContent = null
+            )
+        } else {
+            null
+        }
+    }
+
+    private fun List<KtorK2ResponseBag>.resolveToOpenSpecFormat() =
+        associate { response ->
+            val kotlinType = response.type
+            if (kotlinType?.isNothing == true) {
+                response.status to OpenApiSpec.ResponseDetails(response.descr, null)
+            } else {
+                val schema = response.type?.generateDescriptor()
+                response.status to OpenApiSpec.ResponseDetails(
+                    response.descr,
+                    mapOf(
+                        ContentType.APPLICATION_JSON to mapOf(
+                            "schema" to if (response.isCollection) {
+                                OpenApiSpec.TypeDescriptor(
+                                    type = "array",
+                                    items = OpenApiSpec.TypeDescriptor(type = null, ref = schema?.ref)
+                                )
+                            } else {
+                                schema ?: OpenApiSpec.TypeDescriptor("object")
+                            }
+                        )
+                    )
+                )
+            }
+        }
+
+    @OptIn(SymbolInternals::class)
+    private fun FirFunctionCall.findResource(
+        endpoint: EndPoint
+    ): KtorElement? {
+        val params = typeArguments
+        return if (isInPackage(ClassIds.KTOR_RESOURCES)) {
+            when (params.size) {
+                1 -> {
+                    val type = params.firstOrNull()?.toConeTypeProjection()?.type
+                    when {
+                        type.isKtorResourceAnnotated() -> {
+                            type?.toRegularClassSymbol(session)
+                                ?.fir
+                                ?.accept(ResourceClassVisitor(session, config, endpoint), null)
+                        }
+
+                        else -> null
+                    }
+                }
+
+                2 -> {
+                    val firstType = params.firstOrNull()?.toConeTypeProjection()?.type
+                    val secondType = params.lastOrNull()?.toConeTypeProjection()?.type
+                    firstType?.toRegularClassSymbol(session)
+                        ?.fir
+                        ?.accept(
+                            ResourceClassVisitor(
+                                session,
+                                config,
+                                endpoint.copy(body = secondType?.toEndpointBody())
+                            ), null
+                        )
+                }
+
+                else -> {
+                    log?.report(
+                        CompilerMessageSeverity.WARNING,
+                        "Unknown Ktor function ${toResolvedCallableReference(session)?.name}",
+                        getLocation()
+                    )
+                    null
+                }
+            }
+        } else {
+            null
+        }
     }
 
     private fun List<FirStatement>.findQueryParameterExpression(): List<ParamSpec> {
@@ -194,238 +445,6 @@ internal class ExpressionsVisitorK2(
 
     private fun FirQualifiedAccessExpression?.isARouteDefinition(): Boolean {
         return this?.resolvedType?.classId == ClassIds.KTOR_ROUTE
-    }
-
-    @OptIn(SymbolInternals::class)
-    private fun FirFunctionCall.resolvePath(): String? {
-        val expression = this
-        val pathExpressionIndex = (expression.calleeReference.resolved?.resolvedSymbol?.fir as FirFunction)
-            .valueParameters.indexOfFirst { it.name.asString() == "path" }
-
-        val pathExpression = expression.arguments.getOrElse(pathExpressionIndex) {
-            expression.arguments.find { it is FirLiteralExpression }
-        }
-        val resolvedPathValue = pathExpression?.accept(StringResolutionVisitor(session), "")
-        return resolvedPathValue
-    }
-
-    private fun FirFunctionCall.findLambda(): FirAnonymousFunctionExpression? {
-        return arguments
-            .filterIsInstance<FirAnonymousFunctionExpression>()
-            .lastOrNull()
-    }
-
-    @OptIn(SymbolInternals::class)
-    @Suppress("LongMethod", "NestedBlockDepth", "CyclomaticComplexMethod")
-    override fun visitFunctionCall(functionCall: FirFunctionCall, parent: KtorElement?): List<KtorElement> {
-        val resolvedExp = functionCall.toResolvedCallableReference(session)
-        val expName = resolvedExp?.name?.asString() ?: ""
-        val tagsFromAnnotation = functionCall.findTags(session)
-
-        val resultElement = if (functionCall.isARouteDefinition() || ExpType.METHOD.labels.contains(expName)) {
-            val pathValue = functionCall.resolvePath()
-
-            when {
-                ExpType.ROUTE.labels.contains(expName) -> {
-                    when (parent) {
-                        null -> {
-                            pathValue?.let {
-                                DocRoute(it, tags = tagsFromAnnotation)
-                            } ?: DocRoute(expName, tags = tagsFromAnnotation)
-                        }
-
-                        is DocRoute -> {
-                            val newElement = DocRoute(
-                                pathValue.toString(),
-                                tags = parent.tags merge tagsFromAnnotation
-                            )
-                            parent.children.add(newElement)
-                            newElement
-                        }
-
-                        else -> null
-                    }
-                }
-
-                ExpType.METHOD.labels.contains(expName) -> {
-                    val descr = functionCall.findDocsDescription(session)
-                    val responses = functionCall.findRespondsAnnotation(session)?.resolveToOpenSpecFormat()
-                    val params = functionCall.typeArguments
-
-                    val endpoint = EndPoint(
-                        path = null,
-                        method = expName,
-                        description = descr.description,
-                        summary = descr.summary,
-                        operationId = descr.operationId,
-                        tags = descr.tags merge tagsFromAnnotation,
-                        responses = responses
-                    )
-
-                    val resource = functionCall.findResource(endpoint)
-                    val type = params.firstOrNull()?.toConeTypeProjection()?.type
-                    val newElement = resource ?: endpoint.copy(path = pathValue, body = type?.toEndpointBody())
-                    when (parent) {
-                        null -> newElement
-                        is DocRoute -> {
-                            parent.children.add(newElement)
-                            newElement
-                        }
-
-                        else -> {
-                            log?.report(
-                                CompilerMessageSeverity.WARNING,
-                                "Endpoints can't have Endpoint as routes",
-                                functionCall.getLocation()
-                            )
-                            null
-                        }
-                    }
-                }
-
-                else -> null
-            }
-        } else {
-            null
-        }
-
-        functionCall.findLambda()?.accept(this, resultElement ?: parent) ?: run {
-            val declaration = functionCall.calleeReference.toResolvedFunctionSymbol()?.fir
-            val tagsFromDeclaration = declaration?.findTags(session)
-
-            if (parent is DocRoute) {
-                val acceptedElements = declaration?.accept(this, null)?.onEach {
-                    it.tags = it.tags merge tagsFromAnnotation merge tagsFromDeclaration
-                }
-                parent.children.addAll(acceptedElements ?: emptyList())
-            } else {
-                declaration?.accept(this, parent)
-            }
-        }
-
-        return listOfNotNull(resultElement ?: parent)
-    }
-
-    @OptIn(SymbolInternals::class)
-    private fun FirFunctionCall.findResource(
-        endpoint: EndPoint
-    ): KtorElement? {
-        val params = typeArguments
-        return if (isInPackage(ClassIds.KTOR_RESOURCES)) {
-            when (params.size) {
-                1 -> {
-                    val type = params.firstOrNull()?.toConeTypeProjection()?.type
-                    when {
-                        type.isKtorResourceAnnotated() -> {
-                            type?.toRegularClassSymbol(session)
-                                ?.fir
-                                ?.accept(ResourceClassVisitor(session, config, endpoint), null)
-                        }
-
-                        else -> null
-                    }
-                }
-
-                2 -> {
-                    val firstType = params.firstOrNull()?.toConeTypeProjection()?.type
-                    val secondType = params.lastOrNull()?.toConeTypeProjection()?.type
-                    firstType?.toRegularClassSymbol(session)
-                        ?.fir
-                        ?.accept(
-                            ResourceClassVisitor(
-                                session,
-                                config,
-                                endpoint.copy(body = secondType?.toEndpointBody())
-                            ), null
-                        )
-                }
-
-                else -> {
-                    log?.report(
-                        CompilerMessageSeverity.WARNING,
-                        "Unknown Ktor function ${toResolvedCallableReference(session)?.name}",
-                        getLocation()
-                    )
-                    null
-                }
-            }
-        } else {
-            null
-        }
-    }
-
-    private fun FirFunctionCall.getLocation(): CompilerMessageLocation? {
-        val psi = source?.psi
-        val filePath = psi?.containingFile?.virtualFile?.path
-        val textRange = psi?.textRange
-        val document = psi?.containingFile?.viewProvider?.document
-
-        return if (filePath != null && textRange != null && document != null) {
-            val startOffset = textRange.startOffset
-            val lineNumber = document.getLineNumber(startOffset) + 1
-            val columnNumber = startOffset - document.getLineStartOffset(lineNumber - 1) + 1
-            CompilerMessageLocation.create(
-                path = filePath,
-                line = lineNumber,
-                column = columnNumber,
-                lineContent = null
-            )
-        } else {
-            null
-        }
-    }
-
-    private fun List<KtorK2ResponseBag>.resolveToOpenSpecFormat() =
-        associate { response ->
-            val kotlinType = response.type
-            if (kotlinType?.isNothing == true) {
-                response.status to OpenApiSpec.ResponseDetails(response.descr, null)
-            } else {
-                val schema = response.type?.generateDescriptor()
-                response.status to OpenApiSpec.ResponseDetails(
-                    response.descr,
-                    mapOf(
-                        ContentType.APPLICATION_JSON to mapOf(
-                            "schema" to if (response.isCollection) {
-                                OpenApiSpec.TypeDescriptor(
-                                    type = "array",
-                                    items = OpenApiSpec.TypeDescriptor(type = null, ref = schema?.ref)
-                                )
-                            } else {
-                                schema ?: OpenApiSpec.TypeDescriptor("object")
-                            }
-                        )
-                    )
-                )
-            }
-        }
-
-    override fun visitReturnExpression(returnExpression: FirReturnExpression, data: KtorElement?): List<KtorElement> {
-        val funCall = returnExpression.result as? FirFunctionCall
-        funCall?.accept(this, data)
-        return super.visitReturnExpression(returnExpression, data)
-    }
-
-    override fun visitAnonymousFunctionExpression(
-        anonymousFunctionExpression: FirAnonymousFunctionExpression,
-        data: KtorElement?
-    ): List<KtorElement> = anonymousFunctionExpression.anonymousFunction.body?.accept(this, data) ?: data.wrapAsList()
-
-    override fun visitAnonymousFunction(
-        anonymousFunction: FirAnonymousFunction,
-        data: KtorElement?
-    ): List<KtorElement> = anonymousFunction.body?.accept(this, data) ?: data.wrapAsList()
-
-    private fun ConeKotlinType.toEndpointBody(): OpenApiSpec.TypeDescriptor? {
-        return if (isStringOrPrimitive()) {
-            OpenApiSpec.TypeDescriptor(type = toString().toSwaggerType())
-        } else {
-            if (config.requestBody) {
-                generateDescriptor()
-            } else {
-                null
-            }
-        }
     }
 
     private fun ConeKotlinType?.isKtorResourceAnnotated(): Boolean =
