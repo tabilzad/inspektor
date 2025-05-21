@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import com.tschuchort.compiletesting.addPreviousResultToClasspath
 import io.github.classgraph.ClassGraph
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import kotlinx.serialization.json.Json
@@ -37,6 +38,11 @@ object TestUtils {
     private fun loadExpectation(fileName: String): String =
         this.javaClass.getResource("/expected/$fileName.json")?.readText()
             ?: throw FileNotFoundException("$fileName does not exist")
+
+    fun precompiledSourceOf(source: List<String>): List<SourceFile> = source.map { file ->
+        val file = this.javaClass.getResource("/sources/precompiled/$file") ?: throw FileNotFoundException("file $file doesn't exist")
+        SourceFile.kotlin(file.file, file.readText().trimMargin())
+    }
 }
 
 fun String.removeTrailingNewLine(): String =
@@ -88,7 +94,8 @@ fun File.parseSpec(): OpenApiSpec {
 internal fun generateCompilerTest(
     testFile: File,
     testSubjectSource: String,
-    config: PluginConfiguration = PluginConfiguration.createDefault()
+    config: PluginConfiguration = PluginConfiguration.createDefault(),
+    precompiledSources: List<String> = emptyList(),
 ) {
 
     val testFilePath = testFile.path
@@ -97,7 +104,6 @@ internal fun generateCompilerTest(
         compilerPluginRegistrars = listOf(KtorMetaPluginRegistrar())
         commandLineProcessors = listOf(clp)
         classpaths = deps.map { classpathOf(it) }
-        sources = loadBaseSources(testSubjectSource)
         kotlincArguments = emptyList()
         jvmTarget = "11"
         messageOutputStream =
@@ -160,6 +166,22 @@ internal fun generateCompilerTest(
                 )
             )
         )
+    }
+
+    val precompiled = if (precompiledSources.isNotEmpty()) {
+        compilationData.apply {
+            sources = TestUtils.precompiledSourceOf(precompiledSources)
+        }
+        compilationData.compile()
+    } else {
+        null
+    }
+
+    compilationData.apply {
+        sources = loadBaseSources(testSubjectSource)
+        if (precompiled != null) {
+            addPreviousResultToClasspath(precompiled)
+        }
     }
     compilationData.compile()
 }

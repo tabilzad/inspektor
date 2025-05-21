@@ -1,0 +1,83 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/base/orders/queryAll" : {
+      "post" : {
+        "summary" : "will query all",
+        "responses" : {
+          "200" : {
+            "description" : "success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "bad reqeust",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/base/orders/queryLatest" : {
+      "post" : {
+        "summary" : "will query latest",
+        "responses" : {
+          "200" : {
+            "description" : "success 2",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "bad request 2",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.requests.SimpleRequest" : {
+        "type" : "object",
+        "properties" : {
+          "float" : {
+            "type" : "number"
+          },
+          "integer" : {
+            "type" : "integer"
+          },
+          "string" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "string", "integer", "float" ]
+      }
+    }
+  }
+}

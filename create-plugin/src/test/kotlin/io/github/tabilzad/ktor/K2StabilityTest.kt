@@ -451,6 +451,15 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should resolve resources define in external modules`() {
+        val (source, expected) = loadSourceAndExpected("Resources3")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault(),
+            precompiledSources = listOf("ResourceConstants.kt"))
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should resolve endpoint spec from type-safe ktor resources with body params`() {
         val (source, expected) = loadSourceAndExpected("ResourcesWithBody")
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
