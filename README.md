@@ -123,12 +123,13 @@ fun Route.routeTwo() {
 Describe endpoints or schema fields.
 
 ```kotlin
+@KtorSchema("this is my request")
 data class RequestSample(
-    @KtorFieldDescription("this is a string")
+    @KtorField("this is a string")
     val string: String,
     val int: Int,
     val double: Double,
-    @KtorFieldDescription(summary = "this is instant", explicitType = "string", format = "date-time")
+    @KtorField(description = "this is instant", typr = "string", format = "date-time")
     val date: Instant
 )
 
@@ -155,8 +156,7 @@ fun Route.ordersRouting() {
 ```
 
 ### Responses
-Defining response schemas and their corresponding HTTP status codes are done via `@KtorResponds` annotation on an endpoint. 
-`kotlin.Nothing` is treated specially and will result in empty response body.
+Defining response schemas and their corresponding HTTP status codes are done via `@KtorResponds` annotation on an endpoint or `responds<T>(HttpStatusCode)` inline extension ona a `RouteContext`. `kotlin.Nothing` is treated specially and will result in empty response body for statutes like `204 NO_CONTENT`.
 
 ```kotlin
 @GenerateOpenApi
@@ -170,8 +170,28 @@ fun Route.ordersRouting() {
                ]
         )
         post("/create") { /*...*/ }
-        @KtorResponds([ResponseEntry("200", Order::class, isCollection=true, description = "All orders")])
+        @KtorResponds([ResponseEntry("200", Order::class, isCollection=true, description = "Get all orders")])
         get("/orders") { /*...*/ }
+    }
+}
+```
+```kotlin
+@GenerateOpenApi
+fun Route.ordersRouting() {
+    route("/v1") {
+        post("/create") {
+          // Creates order
+          responds<Order>(HttpStatusCode.Ok)
+          responds<Nothing>(HttpStatusCode.NoContent)
+          // Invalid order payload
+          responds<ErrorResponseSample>(HttpStatusCode.BadRequest)
+          /*...*/
+        }
+        get("/orders"){
+           // Get all orders
+           responds<List<Order>>(HttpStatusCode.NoContent)
+           /*...*/
+        }
     }
 }
 ```
