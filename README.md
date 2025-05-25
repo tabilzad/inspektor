@@ -14,7 +14,7 @@ Take a look at the [Sample Project](https://github.com/tabilzad/ktor-inspektor-e
 
 ```groovy
 plugins {
-    id("io.github.tabilzad.inspektor") version "0.7.2-alpha"
+    id("io.github.tabilzad.inspektor") version "0.8.2-alpha"
 }
 
 swagger {
