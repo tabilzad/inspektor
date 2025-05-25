@@ -156,7 +156,7 @@ fun Route.ordersRouting() {
 ```
 
 ### Responses
-Defining response schemas and their corresponding HTTP status codes are done via `@KtorResponds` annotation on an endpoint or `responds<T>(HttpStatusCode)` inline extension ona a `RouteContext`. `kotlin.Nothing` is treated specially and will result in empty response body for statutes like `204 NO_CONTENT`.
+Defining response schemas and their corresponding HTTP status codes are done via `@KtorResponds` annotation on an endpoint or `responds<T>(HttpStatusCode)` inline extension on a `RouteContext`. The latter is the preferred way since it is capable of defining types with generics. `kotlin.Nothing` is treated specially and will result in empty response body for statutes like `204 NO_CONTENT`.
 
 ```kotlin
 @GenerateOpenApi
