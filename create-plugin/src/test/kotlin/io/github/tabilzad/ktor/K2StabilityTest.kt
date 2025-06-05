@@ -379,6 +379,15 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should resolve required and optional fields from external types`() {
+        val (source, expected) = loadSourceAndExpected("ExternalTypesWithNullables")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault(),
+            precompiledSources = listOf("ExternalTypes.kt"))
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should handle Moshi annotated properties and data class constructor parameters`() {
         val (source, expected) = loadSourceAndExpected("MoshiAnnotated")
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault())

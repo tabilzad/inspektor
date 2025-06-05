@@ -14,18 +14,17 @@ import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.isValueClass
-import org.jetbrains.kotlin.fir.declarations.FirClass
-import org.jetbrains.kotlin.fir.declarations.FirProperty
-import org.jetbrains.kotlin.fir.declarations.SealedClassInheritorsProviderInternals
-import org.jetbrains.kotlin.fir.declarations.sealedInheritorsAttr
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.utils.correspondingValueParameterFromPrimaryConstructor
 import org.jetbrains.kotlin.fir.declarations.utils.isAbstract
 import org.jetbrains.kotlin.fir.declarations.utils.isEnumClass
 import org.jetbrains.kotlin.fir.declarations.utils.isSealed
 import org.jetbrains.kotlin.fir.resolve.fqName
+import org.jetbrains.kotlin.fir.resolve.getContainingClass
 import org.jetbrains.kotlin.fir.resolve.toClassSymbol
 import org.jetbrains.kotlin.fir.resolve.toRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
+import org.jetbrains.kotlin.fir.symbols.impl.FirValueParameterSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
 import org.jetbrains.kotlin.name.ClassId
@@ -255,27 +254,45 @@ internal class ClassDescriptorVisitorK2(
         spec.description = docsDescription ?: spec.description ?: kdoc
 
         val isRequiredFromExplicitDesc = propertyDescription?.isRequired
-        if (isRequiredFromExplicitDesc != null && isRequiredFromExplicitDesc) {
+        resolvedPropertyRequirement(isRequiredFromExplicitDesc, propertyName, fir)
+    }
+
+    private fun TypeDescriptor.resolvedPropertyRequirement(
+        isRequiredFromExplicitDesc: Boolean?,
+        propertyName: String,
+        fir: FirProperty
+    ) {
+        if (isRequiredFromExplicitDesc == true) {
             required?.add(propertyName) ?: run {
                 required = mutableListOf(propertyName)
             }
-        } else if ((isRequiredFromExplicitDesc == null && !fir.returnTypeRef.coneType.isMarkedNullable)
-            && config.deriveFieldRequirementFromTypeNullability
-            && (fir.shouldBeRequiredByInitializer() || fir.isAbstract)
+        } else if (
+            isRequiredFromExplicitDesc == null // not specified on annotation explicitly with true or false
+            && config.deriveFieldRequirementFromTypeNullability // opted in to derive from type
+            && !fir.isNullable() // not nullable
         ) {
-            required?.add(propertyName) ?: run {
-                required = mutableListOf(propertyName)
+            fir.correspondingValueParameterFromPrimaryConstructor
+            val symbolFromCtor = fir.findSymbolFromPrimaryCtor()
+            if (symbolFromCtor != null && !symbolFromCtor.hasDefaultValue) {
+                required?.add(propertyName) ?: run {
+                    required = mutableListOf(propertyName)
+                }
+            } else if (fir.isAbstract) {
+                required?.add(propertyName) ?: run {
+                    required = mutableListOf(propertyName)
+                }
             }
         }
     }
 
-    private fun FirProperty.shouldBeRequiredByInitializer(): Boolean {
-        val derivedParamFromPrimaryCtor = correspondingValueParameterFromPrimaryConstructor
-        return if (derivedParamFromPrimaryCtor != null) {
-            !derivedParamFromPrimaryCtor.hasDefaultValue
-        } else {
-            false
-        }
+    private fun FirProperty.isNullable() = returnTypeRef.coneType.isMarkedNullable
+    private fun FirProperty.findSymbolFromPrimaryCtor(): FirValueParameterSymbol? {
+        return getContainingClass()
+            ?.constructors(session)
+            ?.firstOrNull { it.isPrimary }
+            ?.valueParameterSymbols
+            ?.associateBy { it.name.asString() }
+            ?.get(name.asString())
     }
 
     private fun FirProperty.findName(): String {

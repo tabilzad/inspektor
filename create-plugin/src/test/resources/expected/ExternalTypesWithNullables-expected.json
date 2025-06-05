@@ -1,0 +1,84 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/requiredOrOptionalFieldsOnLocalType" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.MyLocalType"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/requiredOrOptionalFieldsOnExternalType" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.precompiled.MyExternalType"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.MyLocalType" : {
+        "type" : "object",
+        "properties" : {
+          "externalType" : {
+            "$ref" : "#/components/schemas/sources.precompiled.MyExternalType"
+          },
+          "optionalField" : {
+            "type" : "string"
+          },
+          "optionalWithInitializer" : {
+            "type" : "string"
+          },
+          "optionalWithInitializerFromOther" : {
+            "type" : "string"
+          },
+          "requiredField" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "requiredField", "externalType" ]
+      },
+      "sources.precompiled.MyExternalType" : {
+        "type" : "object",
+        "properties" : {
+          "externalDerivedProperty" : {
+            "type" : "string"
+          },
+          "externalOptionalField" : {
+            "type" : "string"
+          },
+          "externalOptionalWithInitializer" : {
+            "type" : "string"
+          },
+          "externalOptionalWithInitializerFromOther" : {
+            "type" : "string"
+          },
+          "externalRequiredField" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "externalRequiredField" ]
+      }
+    }
+  }
+}
