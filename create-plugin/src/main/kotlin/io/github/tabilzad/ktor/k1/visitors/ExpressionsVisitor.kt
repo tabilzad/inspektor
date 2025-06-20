@@ -50,7 +50,7 @@ internal class ExpressionsVisitor(
         parent: KtorElement?
     ): List<KtorElement> {
 
-        if (expression.isKtorQueryParam() && parent is EndPoint) {
+        if (expression.isKtorQueryParam() && parent is EndpointDescriptor) {
 
             val queryParamValue = resolveQueryParamFromArrayAccessIndex(expression, this@ExpressionsVisitor.context)
 
@@ -76,7 +76,7 @@ internal class ExpressionsVisitor(
         expression: KtBlockExpression,
         parent: KtorElement?
     ): List<KtorElement> {
-        return if (parent is EndPoint) {
+        return if (parent is EndpointDescriptor) {
             expression.statements
                 .flatMap {
                     it?.accept(this, parent) ?: emptyList()
@@ -317,7 +317,7 @@ internal class ExpressionsVisitor(
         if (expression.deepSearchOfAppCall()) {
             // this expression has ApplicationCall references somewhere
 
-            if (parent is EndPoint) {
+            if (parent is EndpointDescriptor) {
                 // this expression has call.receive references somewhere
                 if (expression.hasKtorReceive()) {
 
@@ -452,13 +452,13 @@ internal class ExpressionsVisitor(
         }
     }
 
-    private fun KtorElement.forEachEndpointRecursively(onEach: (EndPoint) -> Unit) {
+    private fun KtorElement.forEachEndpointRecursively(onEach: (EndpointDescriptor) -> Unit) {
         when (this) {
-            is EndPoint -> {
+            is EndpointDescriptor -> {
                 onEach(this)
             }
 
-            is DocRoute -> {
+            is RouteDescriptor -> {
                 this.children.forEach {
                     it.forEachEndpointRecursively(onEach)
                 }
@@ -489,16 +489,17 @@ internal class ExpressionsVisitor(
                 if (parent == null) {
                     println("Adding new route")
                     resultElement = routePathArg?.let {
-                        DocRoute(routePathArg)
+                        RouteDescriptor(routePathArg)
                     } ?: run {
-                        DocRoute(expName)
+                        RouteDescriptor(expName)
                     }
                 } else {
-                    if (parent is DocRoute) {
+                    if (parent is RouteDescriptor) {
                         // we are under some base route definition
-                        val newElement = DocRoute(
+                        val newElement = RouteDescriptor(
                             routePathArg.toString(),
-                            tags = parent.tags
+                            tags = parent.tags,
+                            isDeprecated = parent.isDeprecated
                         )
 
                         resultElement = newElement
@@ -545,7 +546,7 @@ internal class ExpressionsVisitor(
 
                 if (parent == null) {
                     resultElement = routePathArg?.let {
-                        EndPoint(
+                        EndpointDescriptor(
                             routePathArg,
                             expName,
                             description = descr,
@@ -553,10 +554,10 @@ internal class ExpressionsVisitor(
                             tags = tags,
                             responses = responses
                         )
-                    } ?: EndPoint(expName, description = descr, summary = summary, tags = tags, responses = responses)
+                    } ?: EndpointDescriptor(expName, description = descr, summary = summary, tags = tags, responses = responses)
                 } else {
-                    if (parent is DocRoute) {
-                        val endPoint = EndPoint(
+                    if (parent is RouteDescriptor) {
+                        val endPoint = EndpointDescriptor(
                             routePathArg,
                             expName,
                             description = descr,
@@ -571,7 +572,7 @@ internal class ExpressionsVisitor(
                     }
                 }
             } else if (parent == null) {
-                resultElement = DocRoute()
+                resultElement = RouteDescriptor()
             }
         }
 
@@ -615,7 +616,7 @@ internal class ExpressionsVisitor(
             if (parent != null) {
                 parent.tags = parent.tags merge extractedTags
             } else {
-                newParent = DocRoute("/", tags = extractedTags)
+                newParent = RouteDescriptor("/", tags = extractedTags)
             }
         }
 

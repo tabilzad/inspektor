@@ -88,6 +88,16 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should resolve deprecated route modules or set of endpoints`() {
+        val (source, expected) = loadSourceAndExpected("DeprecatedPaths")
+        generateCompilerTest(testFile, source)
+
+        testFile.readText().let { generatedSwagger ->
+            generatedSwagger.assertWith(expected)
+        }
+    }
+
+    @Test
     fun `should generate correct post request body`() {
         val (source, expected) = loadSourceAndExpected("RequestBody")
         generateCompilerTest(testFile, source)

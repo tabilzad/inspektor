@@ -71,18 +71,19 @@ fun String?.addLeadingSlash() = when {
     else -> if (this.startsWith("/")) this else "/$this"
 }
 
-internal fun reduce(e: DocRoute): List<KtorRouteSpec> = e.children.flatMap { child ->
+internal fun reduce(e: RouteDescriptor): List<KtorRouteSpec> = e.children.flatMap { child ->
     when (child) {
-        is DocRoute -> {
+        is RouteDescriptor -> {
             reduce(
                 child.copy(
                     path = e.path + child.path.addLeadingSlash(),
-                    tags = e.tags merge child.tags
+                    tags = e.tags merge child.tags,
+                    isDeprecated = (e.isDeprecated optionalAnd child.isDeprecated)
                 )
             )
         }
 
-        is EndPoint -> {
+        is EndpointDescriptor -> {
             listOf(
                 KtorRouteSpec(
                     path = e.path + (child.path.addLeadingSlash() ?: ""),
@@ -93,12 +94,16 @@ internal fun reduce(e: DocRoute): List<KtorRouteSpec> = e.children.flatMap { chi
                     parameters = child.parameters?.toList(),
                     responses = child.responses,
                     operationId = child.operationId,
-                    tags = e.tags merge child.tags
+                    tags = e.tags merge child.tags,
+                    deprecated = (e.isDeprecated optionalAnd child.isDeprecated)
                 )
             )
         }
     }
 }
+
+infix fun Boolean?.optionalAnd(other: Boolean?): Boolean? =
+    if (this != null && other != null) this && other else this ?: other
 
 internal fun List<KtorRouteSpec>.cleanPaths() = map {
     it.copy(
@@ -111,7 +116,7 @@ internal fun List<KtorRouteSpec>.cleanPaths() = map {
 internal fun List<KtorRouteSpec>.convertToSpec(): Map<String, Map<String, OpenApiSpec.Path>> = groupBy { it ->
     it.path
 }.mapValues { (_, value) ->
-    value.associate {
+    value.associate { it: KtorRouteSpec ->
         it.method to OpenApiSpec.Path(
             summary = it.summary,
             description = it.description,
@@ -119,7 +124,8 @@ internal fun List<KtorRouteSpec>.convertToSpec(): Map<String, Map<String, OpenAp
             tags = it.tags?.toList()?.sorted(),
             parameters = mapPathParams(it) merge mapQueryParams(it) merge mapHeaderParams(it),
             requestBody = addPostBody(it),
-            responses = it.responses
+            responses = it.responses,
+            deprecated = it.deprecated
         )
     }
 }
@@ -290,7 +296,7 @@ fun KtSourceElement.findCorrespondingComment(): String? {
                 accumulated += inner.joinToString("\n")
             }
 
-           KtTokens.WHITE_SPACE -> {
+            KtTokens.WHITE_SPACE -> {
                 // if there's a blank line (2+ newlines), stop collecting
                 val ws = node.toString()
                 if (ws.contains("\n\n")) break

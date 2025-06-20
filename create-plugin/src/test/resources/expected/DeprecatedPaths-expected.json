@@ -1,0 +1,51 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/getRequest1" : {
+      "get" : {
+        "summary" : "should not be deprecated"
+      },
+      "post" : {
+        "summary" : "should not be deprecated"
+      }
+    },
+    "/v3/v3a/getRequest3" : {
+      "get" : {
+        "summary" : "should be deprecated",
+        "deprecated" : true
+      },
+      "post" : {
+        "summary" : "should be deprecated",
+        "deprecated" : true
+      }
+    },
+    "/v3/getRequest3" : {
+      "get" : {
+        "summary" : "should be deprecated",
+        "deprecated" : true
+      },
+      "post" : {
+        "summary" : "should be deprecated",
+        "deprecated" : true
+      }
+    },
+    "/v2/getRequest2" : {
+      "get" : {
+        "summary" : "should be deprecated",
+        "deprecated" : true
+      },
+      "post" : {
+        "summary" : "should be deprecated",
+        "deprecated" : true
+      }
+    }
+  },
+  "components" : {
+    "schemas" : { }
+  }
+}

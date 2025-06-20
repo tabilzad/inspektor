@@ -1,7 +1,7 @@
 package io.github.tabilzad.ktor.k1
 
-import io.github.tabilzad.ktor.DocRoute
 import io.github.tabilzad.ktor.PluginConfiguration
+import io.github.tabilzad.ktor.RouteDescriptor
 import io.github.tabilzad.ktor.annotations.GenerateOpenApi
 import io.github.tabilzad.ktor.k1.visitors.ExpressionsVisitor
 import io.github.tabilzad.ktor.output.convertInternalToOpenSpec
@@ -38,12 +38,12 @@ private fun KtDeclaration.startVisiting(
         val expressionsVisitor = ExpressionsVisitor(configuration, context)
         val rawRoutes = accept(expressionsVisitor, null)
 
-        val routes: List<DocRoute> = if (rawRoutes.any { it !is DocRoute }) {
-            val (routes, endpoints) = rawRoutes.partition { it is DocRoute }
-            val docRoutes = routes as List<DocRoute>
-            docRoutes.plus(DocRoute("/", endpoints.toMutableList()))
+        val routes: List<RouteDescriptor> = if (rawRoutes.any { it !is RouteDescriptor }) {
+            val (routes, endpoints) = rawRoutes.partition { it is RouteDescriptor }
+            val docRoutes = routes as List<RouteDescriptor>
+            docRoutes.plus(RouteDescriptor("/", endpoints.toMutableList()))
         } else {
-            rawRoutes as List<DocRoute>
+            rawRoutes as List<RouteDescriptor>
         }
 
         val components = expressionsVisitor.classNames

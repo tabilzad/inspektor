@@ -45,11 +45,11 @@ class SwaggerDeclarationChecker(
         }
     }
 
-    private fun List<KtorElement>.wrapLooseEndpoints(): List<DocRoute> = map {
+    private fun List<KtorElement>.wrapLooseEndpoints(): List<RouteDescriptor> = map {
         when (it) {
-            is EndPoint -> DocRoute("/", mutableListOf(it))
+            is EndpointDescriptor -> RouteDescriptor("/", mutableListOf(it))
 
-            is DocRoute -> it
+            is RouteDescriptor -> it
         }
     }
 }

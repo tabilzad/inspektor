@@ -4,7 +4,7 @@ import io.github.tabilzad.ktor.*
 import org.jetbrains.kotlin.name.StandardClassIds
 
 internal fun convertInternalToOpenSpec(
-    routes: List<DocRoute>,
+    routes: List<RouteDescriptor>,
     configuration: PluginConfiguration,
     schemas: Map<String, OpenApiSpec.TypeDescriptor>
 ): OpenApiSpec {

@@ -43,9 +43,10 @@ internal class ExpressionsVisitorK2(
     // Evaluation Order 1
     override fun visitSimpleFunction(simpleFunction: FirSimpleFunction, parent: KtorElement?): List<KtorElement> {
         val extractedTags = simpleFunction.findTags(session)
-        val c = parent ?: DocRoute("/", tags = extractedTags)
-        simpleFunction.acceptChildren(this, c)
-        return c.wrapAsList()
+        val isDeprecated = simpleFunction.findDeprecated()
+        val descriptor = parent ?: RouteDescriptor("/", tags = extractedTags, isDeprecated = isDeprecated)
+        simpleFunction.acceptChildren(this, descriptor)
+        return descriptor.wrapAsList()
     }
 
     // Evaluation Order 2
@@ -60,7 +61,7 @@ internal class ExpressionsVisitorK2(
     @Suppress("NestedBlockDepth")
     override fun visitBlock(block: FirBlock, parent: KtorElement?): List<KtorElement> {
 
-        if (parent is EndPoint && parent.body == null) {
+        if (parent is EndpointDescriptor && parent.body == null) {
 
             val receiveCall = block.statements.findCallExpressionWith(ClassIds.KTOR_RECEIVE)
             val respondsDsl = block.statements.filterCallExpressionWith(ClassIds.KTOR_RESPONDS_NO_OP)
@@ -104,14 +105,17 @@ internal class ExpressionsVisitorK2(
     override fun visitFunctionCall(functionCall: FirFunctionCall, parent: KtorElement?): List<KtorElement> {
 
         val tagsFromAnnotation = functionCall.findTags(session)
-        val resultElement = functionCall.lookForKtorElements(parent, tagsFromAnnotation)
+        val isDeprecated = functionCall.findDeprecated()
+        val resultElement = functionCall.lookForKtorElements(parent, tagsFromAnnotation, isDeprecated)
         functionCall.findLambda()?.accept(this, resultElement ?: parent) ?: run {
             val declaration = functionCall.calleeReference.toResolvedFunctionSymbol()?.fir
             val tagsFromDeclaration = declaration?.findTags(session)
+            val deprecated = declaration?.findDeprecated()
 
-            if (parent is DocRoute) {
+            if (parent is RouteDescriptor) {
                 val acceptedElements = declaration?.accept(this, null)?.onEach {
                     it.tags = it.tags merge tagsFromAnnotation merge tagsFromDeclaration
+                    it.isDeprecated = it.isDeprecated optionalAnd deprecated optionalAnd isDeprecated
                 }
                 parent.children.addAll(acceptedElements ?: emptyList())
             } else {
@@ -125,7 +129,8 @@ internal class ExpressionsVisitorK2(
     @Suppress("LongMethod", "NestedBlockDepth", "CyclomaticComplexMethod")
     private fun FirFunctionCall.lookForKtorElements(
         parent: KtorElement?,
-        tagsFromAnnotation: Set<String>?
+        tagsFromAnnotation: Set<String>?,
+        isDeprecated: Boolean?
     ): KtorElement? {
         val resolvedExp = toResolvedCallableReference(session)
         val expName = resolvedExp?.name?.asString() ?: ""
@@ -137,20 +142,21 @@ internal class ExpressionsVisitorK2(
                     when (parent) {
                         null -> {
                             return pathValue?.let {
-                                DocRoute(it, tags = tagsFromAnnotation)
-                            } ?: DocRoute(expName, tags = tagsFromAnnotation)
+                                RouteDescriptor(it, tags = tagsFromAnnotation, isDeprecated = isDeprecated)
+                            } ?: RouteDescriptor(expName, tags = tagsFromAnnotation, isDeprecated = isDeprecated)
                         }
 
-                        is DocRoute -> {
-                            val newElement = DocRoute(
+                        is RouteDescriptor -> {
+                            val newElement = RouteDescriptor(
                                 pathValue.toString(),
-                                tags = parent.tags merge tagsFromAnnotation
+                                tags = parent.tags merge tagsFromAnnotation,
+                                isDeprecated = parent.isDeprecated optionalAnd isDeprecated
                             )
                             parent.children.add(newElement)
                             return newElement
                         }
 
-                        is EndPoint -> log?.report(
+                        is EndpointDescriptor -> log?.report(
                             CompilerMessageSeverity.WARNING,
                             "Route definition found under the endpoint",
                             getLocation()
@@ -163,7 +169,7 @@ internal class ExpressionsVisitorK2(
                     val responses = findRespondsAnnotation(session)?.resolveToOpenSpecFormat()
                     val params = typeArguments
 
-                    val endpoint = EndPoint(
+                    val endpoint = EndpointDescriptor(
                         path = null,
                         method = expName,
                         description = descr.description,
@@ -179,16 +185,16 @@ internal class ExpressionsVisitorK2(
 
                     when (parent) {
                         null -> {
-                            return if (resource != null && newElement is DocRoute) {
+                            return if (resource != null && newElement is RouteDescriptor) {
                                 newElement
                             } else {
-                                DocRoute("/", children = mutableListOf(newElement))
+                                RouteDescriptor("/", children = mutableListOf(newElement), isDeprecated = isDeprecated)
                             }
                         }
 
-                        is DocRoute -> {
+                        is RouteDescriptor -> {
                             parent.children.add(newElement)
-                            return if (resource != null && newElement is DocRoute) {
+                            return if (resource != null && newElement is RouteDescriptor) {
                                 newElement.findFirstEndpoint()
                             } else {
                                 newElement
@@ -210,9 +216,9 @@ internal class ExpressionsVisitorK2(
         return null
     }
 
-    private fun KtorElement.findFirstEndpoint(): EndPoint? {
-        if (this is EndPoint) return this
-        if (this is DocRoute) {
+    private fun KtorElement.findFirstEndpoint(): EndpointDescriptor? {
+        if (this is EndpointDescriptor) return this
+        if (this is RouteDescriptor) {
             for (child in this.children) {
                 child.findFirstEndpoint()?.let { return it }
             }
@@ -324,7 +330,7 @@ internal class ExpressionsVisitorK2(
 
     @OptIn(SymbolInternals::class)
     private fun FirFunctionCall.findResource(
-        endpoint: EndPoint
+        endpoint: EndpointDescriptor
     ): KtorElement? {
         val params = typeArguments
         return if (isInPackage(ClassIds.KTOR_RESOURCES)) {
@@ -454,6 +460,10 @@ internal class ExpressionsVisitorK2(
         return annotations.find { it.fqName(session) == classId.asSingleFqName() }
     }
 
+    private fun FirFunctionCall.findAnnotation(classId: ClassId): FirAnnotation? {
+        return annotations.find { it.fqName(session) == classId.asSingleFqName() }
+    }
+
     private fun FirFunctionCall.isInPackage(fqName: FqName): Boolean =
         toResolvedCallableSymbol()?.callableId?.packageName == fqName
 
@@ -465,6 +475,12 @@ internal class ExpressionsVisitorK2(
             StringArrayLiteralVisitor(),
             emptyList()
         )?.toSet()
+    }
+
+    private fun FirStatement.findDeprecated(): Boolean? = if (findAnnotationNamed(ClassIds.DEPRECATED) != null) {
+        true
+    } else {
+        null
     }
 
     private fun FirFunctionCall.findDocsDescription(session: FirSession): KtorDescriptionBag {

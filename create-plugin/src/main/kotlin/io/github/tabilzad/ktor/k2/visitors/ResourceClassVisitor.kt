@@ -18,7 +18,7 @@ import org.jetbrains.kotlin.utils.mapToSetOrEmpty
 internal class ResourceClassVisitor(
     private val session: FirSession,
     private val config: PluginConfiguration,
-    private val pathlessEndpoint: EndPoint,
+    private val pathlessEndpoint: EndpointDescriptor,
 ) : FirDefaultVisitor<KtorElement?, KtorElement?>() {
 
     override fun visitElement(element: FirElement, data: KtorElement?): KtorElement? = data
@@ -55,15 +55,15 @@ internal class ResourceClassVisitor(
         }
 
         val parent = parents.firstOrNull()?.let { (_, symbol) ->
-            symbol.fir.accept(this, data ?: DocRoute("/"))
+            symbol.fir.accept(this, data ?: RouteDescriptor("/"))
         }
         val next = when (parent) {
             // reached root path
             null -> pathlessEndpoint.copy(path = resourcePath)
 
-            is DocRoute -> parent.replaceLeafAsEndpoint(pathlessEndpoint.copy(path = resourcePath))
+            is RouteDescriptor -> parent.replaceLeafAsEndpoint(pathlessEndpoint.copy(path = resourcePath))
 
-            is EndPoint -> DocRoute(parent.path, children = mutableListOf(parent.copy(resourcePath)))
+            is EndpointDescriptor -> RouteDescriptor(parent.path, children = mutableListOf(parent.copy(resourcePath)))
         }
         return next
     }
@@ -92,25 +92,25 @@ internal class ResourceClassVisitor(
     }
 
     @Suppress("NestedBlockDepth")
-    private fun KtorElement.replaceLeafAsEndpoint(newEndPoint: EndPoint): KtorElement {
+    private fun KtorElement.replaceLeafAsEndpoint(newEndPoint: EndpointDescriptor): KtorElement {
         when (this) {
-            is DocRoute -> {
+            is RouteDescriptor -> {
                 if (this.children.isEmpty()) {
                     return newEndPoint
                 } else {
                     var current: KtorElement? = this
-                    while (current is DocRoute && current.children.isNotEmpty()) {
+                    while (current is RouteDescriptor && current.children.isNotEmpty()) {
                         val next = current.children.firstOrNull()
-                        if (next is EndPoint) {
+                        if (next is EndpointDescriptor) {
                             current.children.clear()
-                            current.children.add(DocRoute(next.path, children = mutableListOf(newEndPoint)))
+                            current.children.add(RouteDescriptor(next.path, children = mutableListOf(newEndPoint)))
                         }
                         current = next
                     }
                 }
             }
 
-            is EndPoint -> return newEndPoint
+            is EndpointDescriptor -> return newEndPoint
         }
         return this
     }

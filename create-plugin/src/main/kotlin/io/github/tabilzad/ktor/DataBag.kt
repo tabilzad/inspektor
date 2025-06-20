@@ -42,13 +42,14 @@ internal data class KtorRouteSpec(
     val description: String?,
     val operationId: String?,
     val tags: Set<String>?,
+    val deprecated: Boolean?,
     val responses: Map<String, OpenApiSpec.ResponseDetails>?
 )
 
 sealed class KtorElement {
     abstract var path: String?
     abstract var tags: Set<String>?
-
+    abstract var isDeprecated: Boolean?
     abstract fun newInstance(tags: Set<String>?): KtorElement
 }
 
@@ -58,7 +59,7 @@ enum class ExpType(val labels: List<String>) {
     RECEIVE(listOf("receive"))
 }
 
-internal data class EndPoint(
+internal data class EndpointDescriptor(
     override var path: String?,
     val method: String = "",
     var body: OpenApiSpec.TypeDescriptor? = null,
@@ -67,19 +68,21 @@ internal data class EndPoint(
     var operationId: String? = null,
     var summary: String? = null,
     override var tags: Set<String>? = null,
-    var responses: Map<String, OpenApiSpec.ResponseDetails>? = null
+    var responses: Map<String, OpenApiSpec.ResponseDetails>? = null,
+    override var isDeprecated: Boolean? = null
 ) : KtorElement() {
-    override fun newInstance(tags: Set<String>?): EndPoint {
+    override fun newInstance(tags: Set<String>?): EndpointDescriptor {
         return copy(tags = tags)
     }
 }
 
-data class DocRoute(
+data class RouteDescriptor(
     override var path: String? = "/",
     val children: MutableList<KtorElement> = mutableListOf(),
-    override var tags: Set<String>? = null
+    override var tags: Set<String>? = null,
+    override var isDeprecated: Boolean? = null
 ) : KtorElement() {
-    override fun newInstance(tags: Set<String>?): DocRoute {
+    override fun newInstance(tags: Set<String>?): RouteDescriptor {
         return copy(tags = tags)
     }
 }
