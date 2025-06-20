@@ -1,5 +1,6 @@
 package io.github.tabilzad.ktor.k2
 
+import io.github.tabilzad.ktor.k2.ClassIds.KTOR_RESPONDS_NOTHING_NO_OP
 import io.github.tabilzad.ktor.k2.ClassIds.KTOR_RESPONDS_NO_OP
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
@@ -26,7 +27,8 @@ class ResponseSchemaIrLoweringExtension : IrGenerationExtension {
             object : IrElementTransformerVoid() {
                 override fun visitCall(expression: IrCall): IrExpression {
                     val call = super.visitCall(expression) as IrCall
-                    if (call.symbol.owner.fqNameWhenAvailable == KTOR_RESPONDS_NO_OP) {
+                    val fqNameWhenAvailable = call.symbol.owner.fqNameWhenAvailable
+                    if (fqNameWhenAvailable == KTOR_RESPONDS_NO_OP || fqNameWhenAvailable == KTOR_RESPONDS_NOTHING_NO_OP) {
                         return IrBlockImpl(
                             call.startOffset, call.endOffset,
                             pluginContext.irBuiltIns.unitType, null, emptyList()

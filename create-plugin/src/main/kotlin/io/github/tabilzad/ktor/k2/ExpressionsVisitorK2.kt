@@ -8,6 +8,7 @@ import io.github.tabilzad.ktor.output.OpenApiSpec
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
+import org.jetbrains.kotlin.fir.BuiltinTypes
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
@@ -64,7 +65,8 @@ internal class ExpressionsVisitorK2(
         if (parent is EndpointDescriptor && parent.body == null) {
 
             val receiveCall = block.statements.findCallExpressionWith(ClassIds.KTOR_RECEIVE)
-            val respondsDsl = block.statements.filterCallExpressionWith(ClassIds.KTOR_RESPONDS_NO_OP)
+            val respondsDsl = block.statements.filterCallExpressionWith(ClassIds.KTOR_RESPONDS_NO_OP) +
+                    block.statements.filterCallExpressionWith(ClassIds.KTOR_RESPONDS_NOTHING_NO_OP)
 
             val queryParam = block.statements.findQueryParameterExpression()
             if (queryParam.isNotEmpty()) parent.parameters = parent.parameters merge queryParam.toSet()
@@ -76,8 +78,12 @@ internal class ExpressionsVisitorK2(
 
                 val responses = respondsDsl.map { respondsCallable ->
                     val docs = respondsCallable.source?.findCorrespondingComment()
-                    val type =
-                        (respondsCallable.typeArguments.first() as FirTypeProjectionWithVariance).typeRef.coneType
+                    val resolvedCallableSymbol = respondsCallable.toResolvedCallableSymbol()
+                    val type = if (resolvedCallableSymbol?.callableId?.asSingleFqName() == ClassIds.KTOR_RESPONDS_NOTHING_NO_OP) {
+                            BuiltinTypes().nothingType.coneType
+                        } else {
+                            (respondsCallable.typeArguments.first() as FirTypeProjectionWithVariance).typeRef.coneType
+                        }
                     val code = ((respondsCallable.arguments.first() as? FirPropertyAccessExpression)
                         ?.calleeReference as? FirResolvedNamedReference)
                         ?.name?.asString()

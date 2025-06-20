@@ -12,6 +12,7 @@ object ClassIds {
     val KTOR_ROUTING_PACKAGE = FqName("io.ktor.server.routing")
     val KTOR_RECEIVE = FqName("io.ktor.server.request.receive")
     val KTOR_RESPONDS_NO_OP = FqName("io.github.tabilzad.ktor.annotations.responds")
+    val KTOR_RESPONDS_NOTHING_NO_OP = FqName("io.github.tabilzad.ktor.annotations.respondsNothing")
 
     val KTOR_APPLICATION = ClassId(FqName("io.ktor.server.application"), FqName("Application"), false)
 

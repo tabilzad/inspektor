@@ -23,6 +23,7 @@ fun Application.respondsDescriptors() {
         route("/v1") {
             post("/postBodyRequestSimple") {
                 responds<MyGenericRespondsType<String, Int>>(HttpStatusCode.OK)
+                respondsNothing(HttpStatusCode.NoContent)
                // call.receive<SimpleRequest>()
             }
         }
