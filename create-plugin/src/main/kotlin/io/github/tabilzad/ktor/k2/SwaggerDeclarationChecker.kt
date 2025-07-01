@@ -2,6 +2,7 @@ package io.github.tabilzad.ktor.k2
 
 import io.github.tabilzad.ktor.*
 import io.github.tabilzad.ktor.output.convertInternalToOpenSpec
+import org.jetbrains.kotlin.DeprecatedForRemovalCompilerApi
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -30,6 +31,7 @@ class SwaggerDeclarationChecker(
     }
     private val config = configuration.buildPluginConfiguration()
 
+    @OptIn(DeprecatedForRemovalCompilerApi::class)
     override fun check(declaration: FirSimpleFunction, context: CheckerContext, reporter: DiagnosticReporter) {
         if (declaration.hasAnnotation(ClassIds.KTOR_GENERATE_ANNOTATION, session)) {
             val expressionsVisitor = ExpressionsVisitorK2(config, context, session, log)

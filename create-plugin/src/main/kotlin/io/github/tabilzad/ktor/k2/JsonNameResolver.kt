@@ -8,6 +8,7 @@ import org.jetbrains.kotlin.fir.declarations.utils.isData
 import org.jetbrains.kotlin.fir.expressions.FirAnnotation
 import org.jetbrains.kotlin.fir.resolve.fqName
 import org.jetbrains.kotlin.fir.resolve.getContainingClass
+import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 
 object JsonNameResolver {
 
@@ -32,6 +33,7 @@ object JsonNameResolver {
         }
     }?.firstOrNull()
 
+    @OptIn(SymbolInternals::class)
     private fun getMoshiNameFromDataClassConstructorParamAnnotation(
         property: FirProperty,
         session: FirSession,

@@ -1,3 +1,5 @@
+@file:OptIn(DirectDeclarationsAccess::class)
+
 package io.github.tabilzad.ktor.k2
 
 import io.github.tabilzad.ktor.PluginConfiguration
@@ -5,6 +7,7 @@ import io.github.tabilzad.ktor.byFeatureFlag
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.fullyExpandedClassId
+import org.jetbrains.kotlin.fir.declarations.DirectDeclarationsAccess
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirFunction
 import org.jetbrains.kotlin.fir.declarations.FirProperty
@@ -134,10 +137,11 @@ fun FirStatement.findAnnotation(classId: ClassId, session: FirSession): FirAnnot
     }
 }
 
+@OptIn(DirectDeclarationsAccess::class)
 internal fun ConeKotlinType.properties(session: FirSession) =
     toRegularClassSymbol(session)?.declarationSymbols?.filterIsInstance<FirPropertySymbol>()
 
-@OptIn(SymbolInternals::class)
+@OptIn(SymbolInternals::class, DirectDeclarationsAccess::class)
 internal fun ConeKotlinType.getMembers(session: FirSession, config: PluginConfiguration): List<FirDeclaration> {
 
     val concreteDeclarations =

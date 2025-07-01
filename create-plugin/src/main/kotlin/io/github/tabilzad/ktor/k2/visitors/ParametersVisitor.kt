@@ -5,11 +5,11 @@ import io.ktor.http.*
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirEvaluatorResult
 import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.analysis.checkers.declaration.primaryConstructorSymbol
 import org.jetbrains.kotlin.fir.declarations.EnumValueArgumentInfo
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.collectEnumEntries
 import org.jetbrains.kotlin.fir.declarations.extractEnumValueArgumentInfo
+import org.jetbrains.kotlin.fir.declarations.primaryConstructorIfAny
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirResolvedArgumentList
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
@@ -99,13 +99,13 @@ class ParametersVisitor(
         data: MutableList<String>
     ) {
         val enumInfo: EnumValueArgumentInfo? = propertyAccessExpression.dispatchReceiver?.extractEnumValueArgumentInfo()
-        val enumEntryAccessor = propertyAccessExpression.calleeReference.toResolvedCallableSymbol()?.name
+        val enumEntryAccessor = propertyAccessExpression.toResolvedCallableSymbol()?.name
         if (propertyAccessExpression.isEnum(session)) {
 
-            val entries = enumInfo?.enumClassId?.toLookupTag()?.toClassSymbol(session)?.collectEnumEntries()
+            val entries = enumInfo?.enumClassId?.toLookupTag()?.toClassSymbol(session)?.collectEnumEntries(session)
             val v = entries?.find { it.name.asString() == enumInfo.enumEntryName.asString() }
                 ?.initializerObjectSymbol
-                ?.primaryConstructorSymbol(session)
+                ?.primaryConstructorIfAny(session)
                 ?.fir?.delegatedConstructor
 
             val paramName =
@@ -117,9 +117,9 @@ class ParametersVisitor(
                 data.add(queryParam.toString())
             }
         } else {
-            val calleeReference = propertyAccessExpression.calleeReference
-            if (calleeReference is FirResolvedNamedReference) {
-                val fir = calleeReference.resolvedSymbol.fir
+            val resolvedSymbol = propertyAccessExpression.toResolvedCallableSymbol()
+            if (resolvedSymbol != null) {
+                val fir = resolvedSymbol.fir
                 if (fir is FirProperty) {
                     val init = fir.initializer
 
@@ -130,7 +130,7 @@ class ParametersVisitor(
                         // is coming from an external library like ktor itself
 
                         val ktorHeader =
-                            HttpHeaders::class.memberProperties.find { it.name == calleeReference.name.asString() }
+                            HttpHeaders::class.memberProperties.find { it.name == resolvedSymbol.name.asString() }
 
                         if (ktorHeader != null) {
                             data.add(ktorHeader.getter.call(HttpHeaders).toString())

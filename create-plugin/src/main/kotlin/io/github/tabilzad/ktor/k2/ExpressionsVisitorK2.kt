@@ -85,8 +85,7 @@ internal class ExpressionsVisitorK2(
                             (respondsCallable.typeArguments.first() as FirTypeProjectionWithVariance).typeRef.coneType
                         }
                     val code = ((respondsCallable.arguments.first() as? FirPropertyAccessExpression)
-                        ?.calleeReference as? FirResolvedNamedReference)
-                        ?.name?.asString()
+                        ?.toResolvedCallableSymbol()?.name?.asString())
                     val status = HttpCodeResolver.resolve(code)
                     KtorK2ResponseBag(
                         descr = docs ?: "",
@@ -462,6 +461,7 @@ internal class ExpressionsVisitorK2(
     private fun ConeKotlinType?.isKtorResourceAnnotated(): Boolean =
         this?.toRegularClassSymbol(session)?.hasAnnotation(ClassIds.KTOR_RESOURCE_ANNOTATION, session) == true
 
+    @OptIn(SymbolInternals::class)
     private fun FirRegularClassSymbol.findAnnotation(classId: ClassId): FirAnnotation? {
         return annotations.find { it.fqName(session) == classId.asSingleFqName() }
     }
