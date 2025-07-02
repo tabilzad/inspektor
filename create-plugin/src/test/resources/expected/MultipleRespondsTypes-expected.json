@@ -28,6 +28,16 @@
                 }
               }
             }
+          },
+          "500" : {
+            "description" : "This is a custom error message",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         }
       }

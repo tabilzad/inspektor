@@ -30,6 +30,9 @@ fun Application.multipleResponds() {
                   next line after 400
                  */
                 responds<MyGenericRespondsType<Boolean, List<Boolean>>>(HttpStatusCode.BadRequest)
+
+                // should be ignored
+                responds<String>(HttpStatusCode.InternalServerError, "This is a custom error message")
                 // call.receive<SimpleRequest>() ignore comment
             }
         }

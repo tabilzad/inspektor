@@ -87,9 +87,13 @@ internal class ExpressionsVisitorK2(
                     val code = ((respondsCallable.arguments.first() as? FirPropertyAccessExpression)
                         ?.calleeReference as? FirResolvedNamedReference)
                         ?.name?.asString()
+
+                    val descriptionExpression = respondsCallable.arguments.lastOrNull()
+                    val description = descriptionExpression?.accept(StringResolutionVisitor(session), "")?.ifBlank { null }
+
                     val status = HttpCodeResolver.resolve(code)
                     KtorK2ResponseBag(
-                        descr = docs ?: "",
+                        descr = description ?: docs ?: "",
                         status = status,
                         type = type,
                         isCollection = false
