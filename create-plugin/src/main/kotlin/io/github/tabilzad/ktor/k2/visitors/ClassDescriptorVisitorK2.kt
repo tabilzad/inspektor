@@ -314,6 +314,7 @@ internal fun FirProperty.findDocsDescriptionOnProperty(session: FirSession): Kto
     )
 }
 
+@OptIn(SymbolInternals::class)
 internal fun ConeKotlinType.findDocsDescriptionOnType(session: FirSession): KtorDescriptionBag? {
     val docsAnnotation = toRegularClassSymbol(session)?.annotations
         ?.find {

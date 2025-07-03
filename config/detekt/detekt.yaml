@@ -340,8 +340,8 @@ formatting:
     active: false
     autoCorrect: true
   SpacingAroundColon:
-    active: true
-    autoCorrect: true
+    active: false
+    autoCorrect: false
   SpacingAroundComma:
     active: true
     autoCorrect: true

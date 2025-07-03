@@ -466,6 +466,7 @@ internal class ExpressionsVisitorK2(
     private fun ConeKotlinType?.isKtorResourceAnnotated(): Boolean =
         this?.toRegularClassSymbol(session)?.hasAnnotation(ClassIds.KTOR_RESOURCE_ANNOTATION, session) == true
 
+    @OptIn(SymbolInternals::class)
     private fun FirRegularClassSymbol.findAnnotation(classId: ClassId): FirAnnotation? {
         return annotations.find { it.fqName(session) == classId.asSingleFqName() }
     }

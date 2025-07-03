@@ -5,10 +5,7 @@ import io.github.tabilzad.ktor.byFeatureFlag
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.fullyExpandedClassId
-import org.jetbrains.kotlin.fir.declarations.FirDeclaration
-import org.jetbrains.kotlin.fir.declarations.FirFunction
-import org.jetbrains.kotlin.fir.declarations.FirProperty
-import org.jetbrains.kotlin.fir.declarations.hasAnnotation
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.utils.isEnumClass
 import org.jetbrains.kotlin.fir.declarations.utils.visibility
 import org.jetbrains.kotlin.fir.expressions.FirAnnotation
@@ -134,10 +131,11 @@ fun FirStatement.findAnnotation(classId: ClassId, session: FirSession): FirAnnot
     }
 }
 
+@OptIn(DirectDeclarationsAccess::class)
 internal fun ConeKotlinType.properties(session: FirSession) =
     toRegularClassSymbol(session)?.declarationSymbols?.filterIsInstance<FirPropertySymbol>()
 
-@OptIn(SymbolInternals::class)
+@OptIn(SymbolInternals::class, DirectDeclarationsAccess::class)
 internal fun ConeKotlinType.getMembers(session: FirSession, config: PluginConfiguration): List<FirDeclaration> {
 
     val concreteDeclarations =
@@ -203,10 +201,12 @@ private fun ConeKotlinType.isBuiltinType(classId: ClassId, isNullable: Boolean?)
     return lookupTag.classId == classId && (isNullable == null || this.isMarkedNullable == isNullable)
 }
 
+@OptIn(DirectDeclarationsAccess::class)
 fun FirRegularClassSymbol.resolveEnumEntries(): List<String> {
     return declarationSymbols.filterIsInstance<FirEnumEntrySymbol>().map { it.name.asString() }
 }
 
+@OptIn(DirectDeclarationsAccess::class)
 fun FirRegularClassSymbol.findEnumParamValue(value: String): List<String> {
     return declarationSymbols.filterIsInstance<FirEnumEntrySymbol>().map { it.name.asString() }
 }

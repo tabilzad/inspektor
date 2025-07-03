@@ -1,3 +1,4 @@
+@file:Suppress("NoUnusedImports")
 package io.github.tabilzad.ktor.k2
 
 import io.github.tabilzad.ktor.*
@@ -30,7 +31,8 @@ class SwaggerDeclarationChecker(
     }
     private val config = configuration.buildPluginConfiguration()
 
-    override fun check(declaration: FirSimpleFunction, context: CheckerContext, reporter: DiagnosticReporter) {
+    context(context: CheckerContext, reporter: DiagnosticReporter)
+    override fun check(declaration: FirSimpleFunction) {
         if (declaration.hasAnnotation(ClassIds.KTOR_GENERATE_ANNOTATION, session)) {
             val expressionsVisitor = ExpressionsVisitorK2(config, context, session, log)
             val ktorElements: List<KtorElement> = declaration.accept(expressionsVisitor, null)

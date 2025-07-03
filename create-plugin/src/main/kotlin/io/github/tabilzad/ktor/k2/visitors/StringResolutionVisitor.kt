@@ -4,11 +4,7 @@ import io.github.tabilzad.ktor.k2.children
 import io.github.tabilzad.ktor.k2.isEnum
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.analysis.checkers.declaration.primaryConstructorSymbol
-import org.jetbrains.kotlin.fir.declarations.EnumValueArgumentInfo
-import org.jetbrains.kotlin.fir.declarations.FirProperty
-import org.jetbrains.kotlin.fir.declarations.collectEnumEntries
-import org.jetbrains.kotlin.fir.declarations.extractEnumValueArgumentInfo
+import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirResolvedArgumentList
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
@@ -62,11 +58,11 @@ class StringResolutionVisitor(private val session: FirSession) : FirDefaultVisit
         val enumEntryAccessor = propertyAccessExpression.calleeReference.toResolvedCallableSymbol()?.name
 
         if (propertyAccessExpression.isEnum(session)) {
-            val entries = enumInfo?.enumClassId?.toLookupTag()?.toClassSymbol(session)?.collectEnumEntries()
+            val entries = enumInfo?.enumClassId?.toLookupTag()?.toClassSymbol(session)?.collectEnumEntries(session)
 
             val v = entries?.find { it.name.asString() == enumInfo.enumEntryName.asString() }
                 ?.initializerObjectSymbol
-                ?.primaryConstructorSymbol(session)
+                ?.primaryConstructorIfAny(session)
                 ?.fir?.delegatedConstructor
 
             val paramName =
