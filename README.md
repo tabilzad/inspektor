@@ -182,7 +182,7 @@ fun Route.ordersRouting() {
         post("/create") {
           // Creates order
           responds<Order>(HttpStatusCode.Ok)
-          respondsNothing(HttpStatusCode.NoContent)
+          respondsNothing(HttpStatusCode.NoContent, description = "No content for this status")
           // Invalid order payload
           responds<ErrorResponseSample>(HttpStatusCode.BadRequest)
           /*...*/
