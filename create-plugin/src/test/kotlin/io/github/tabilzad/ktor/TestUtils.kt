@@ -195,12 +195,12 @@ private fun loadBaseSources(source: String): List<SourceFile> {
 }
 
 private val deps = arrayOf(
-    "ktor-server-core:3.1.0",
-    "ktor-resources:3.1.0",
-    "ktor-server-resources:3.1.0",
-    "ktor-utils:3.1.0",
-    "ktor-server-netty:3.1.0",
-    "ktor-http:3.1.0",
+    "ktor-server-core:3.2.2",
+    "ktor-resources:3.2.2",
+    "ktor-server-resources:3.2.2",
+    "ktor-utils:3.2.2",
+    "ktor-server-netty:3.2.2",
+    "ktor-http:3.2.2",
     "kotlinx-coroutines-core:1.10.1",
     "moshi:1.14.0",
     "kotlinx-serialization-core:2.1.0",
