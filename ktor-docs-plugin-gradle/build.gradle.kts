@@ -13,7 +13,10 @@ dependencies {
     compileOnly(libs.bundles.kotlinGradle)
     compileOnly(gradleApi())
 
-    shadow(projects.common)
+    shadow(projects.common){
+        isTransitive = false
+    }
+
     implementation(libs.serialization.json)
     implementation(libs.serialization)
 }

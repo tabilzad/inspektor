@@ -13,7 +13,9 @@ dependencies {
     compileOnly(libs.kotlinCompiler)
 
     implementation(projects.annotations)
-    shadow(projects.common)
+    shadow(projects.common){
+        isTransitive = false
+    }
 
     implementation(libs.bundles.jackson)
     implementation(libs.kotlinReflect)
