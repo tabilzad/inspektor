@@ -8,7 +8,15 @@ data class ConfigInput(
     val securityConfig: List<Map<String, List<String>>> = emptyList(),
     val securitySchemes: Map<String, SecurityScheme> = emptyMap(),
     val info: Info? = null,
-    val overrides: List<TypeOverride> = emptyList(),
+    val overrides: List<TypeOverrideConfig> = emptyList(),
+)
+
+@Serializable
+data class TypeOverrideConfig(
+    val fqName: String = "",
+    val serializedAs: String? = null,
+    val format: String? = null,
+    val description: String? = null,
 )
 
 /**
@@ -16,7 +24,6 @@ data class ConfigInput(
  *
  * @param fqName – fully‐qualified Java/Kotlin class name to override
  */
-@Serializable
 open class TypeOverride(
 
     /**
@@ -39,6 +46,13 @@ open class TypeOverride(
     override fun getName(): String {
         return fqName
     }
+
+    fun toConfigInput(): TypeOverrideConfig = TypeOverrideConfig(
+        fqName = fqName,
+        serializedAs = serializedAs,
+        format = format,
+        description = description
+    )
 }
 
 @Serializable
