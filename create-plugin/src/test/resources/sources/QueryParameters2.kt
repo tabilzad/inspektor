@@ -49,6 +49,11 @@ fun Application.queryParametersTest2() {
                 }
             }
 
+            get("/unusedParams") {
+                // unused param
+                call.request.queryParameters[EMPLOYEE_ID]
+            }
+
             post("/queryWithNestedReceive") {
                 call.receive<SimpleRequest>().let {
                     call.request.queryParameters[EMPLOYEE_ID].let { param ->

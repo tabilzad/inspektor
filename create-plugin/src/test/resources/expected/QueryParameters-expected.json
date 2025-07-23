@@ -165,6 +165,18 @@
           }
         } ]
       }
+    },
+    "/v1/order10" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "unused_param_part1_my_string_query_param",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ]
+      }
     }
   },
   "components" : {

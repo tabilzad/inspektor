@@ -77,8 +77,12 @@ fun Application.queryParametersTest() {
                     println(it)
                 }
             }
+            get("/order10") {
+                // unused param
+                call.request.queryParameters["unused_param_part1_${queryParam}"]
+            }
 //           not supported yet
-//            get("/order10") {
+//            get("/order11") {
 //                call.request.queryParameters[MyQueries.ORDER_ID.param + "param2"].let{
 //                    println(it)
 //                }

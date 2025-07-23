@@ -388,7 +388,7 @@ internal class ExpressionsVisitorK2(
 
     private fun List<FirStatement>.findQueryParameterExpression(): List<ParamSpec> {
         val queryParams = mutableListOf<String>()
-        flatMap { it.allChildren }.filterIsInstance<FirFunctionCall>()
+        (this + flatMap { it.allChildren }).filterIsInstance<FirFunctionCall>()
             .forEach {
                 it.accept(
                     ParametersVisitor(
