@@ -31,6 +31,7 @@ detekt-libraries = { module = "io.gitlab.arturbosch.detekt:detekt-rules-librarie
 classGraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
 junit = { module = "org.junit:junit-bom", version = "5.10.0" }
 junitJupiter = { module = "org.junit.jupiter:junit-jupiter" }
+semver = { module = "com.vdurmont:semver4j", version = "3.1.0" }
 compilerTest = { module = "dev.zacsweers.kctfork:core", version.ref = "compilerTestingVersion" }
 jacksonKotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jacksonVersion" }
 jacksonYaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jacksonVersion" }

@@ -19,6 +19,7 @@ dependencies {
 
     implementation(libs.serialization.json)
     implementation(libs.serialization)
+    implementation(libs.semver)
 }
 
 gradlePlugin {
@@ -54,6 +55,8 @@ tasks {
         mustRunAfter("sourcesJar")
         val outputDir = file(versionDirectory)
         inputs.property("version", project.version)
+        // Track expected Kotlin version from the version catalog so a rebuild updates the generated code
+        inputs.property("kotlinVersion", libs.versions.kotlinVersion.get())
         outputs.dir(outputDir)
         doLast {
             val versionFile = file("$outputDir/io/github/tabilzad/ktor/version.kt")
@@ -62,7 +65,8 @@ tasks {
                 """ | // Generated file. Do not edit!
                 | package io.github.tabilzad.ktor
                 |            
-                | internal const val ktorDocsVersion = "${project.version}" 
+                | internal const val inspektorVersion = "${project.version}" 
+                | internal const val kotlinVersion = "${libs.versions.kotlinVersion.get()}"
                 """.trimMargin("| ")
             )
         }

@@ -1,20 +1,21 @@
 package io.github.tabilzad.ktor
 
+import com.vdurmont.semver4j.Semver
 import io.github.tabilzad.ktor.model.ConfigInput
 import kotlinx.serialization.json.Json
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
-import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
-import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
+import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
+import org.jetbrains.kotlin.tooling.core.toKotlinVersion
 import java.io.File
 import javax.inject.Inject
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 const val PLUGIN_ID = "io.github.tabilzad.inspektor"
+private val COMPATIBLE_VERSIONS = listOf<KotlinVersion>()
 
 class KtorMetaPlugin @Inject constructor(
     private val objects: ObjectFactory
@@ -25,11 +26,12 @@ class KtorMetaPlugin @Inject constructor(
         SubpluginArtifact(
             groupId = "io.github.tabilzad.inspektor",
             artifactId = "ktor-docs-plugin",
-            version = ktorDocsVersion
+            version = inspektorVersion
         )
 
-    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean {
-        return kotlinCompilation.target.project.plugins.hasPlugin(KtorMetaPlugin::class.java)
+    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>) = kotlinCompilation.target.project.run {
+        checkKotlinVersionCompatibility(this)
+        plugins.hasPlugin(KtorMetaPlugin::class.java)
     }
 
     override fun apply(target: Project) {
@@ -47,8 +49,8 @@ class KtorMetaPlugin @Inject constructor(
         val swaggerExtension = project.extensions.getByType(KtorInspectorGradleConfig::class.java)
 
         kotlinCompilation.dependencies {
-            compileOnly("io.github.tabilzad.inspektor:ktor-docs-plugin:$ktorDocsVersion")
-            implementation("io.github.tabilzad.inspektor:annotations:$ktorDocsVersion")
+            compileOnly("io.github.tabilzad.inspektor:ktor-docs-plugin:$inspektorVersion")
+            implementation("io.github.tabilzad.inspektor:annotations:$inspektorVersion")
         }
 
         val openApiOutputFile = with(swaggerExtension.pluginOptions) {
@@ -124,6 +126,19 @@ class KtorMetaPlugin @Inject constructor(
         return project.provider { subpluginOptions }
     }
 
+    private fun checkKotlinVersionCompatibility(project: Project) {
+        val projectsKotlinVersion = KotlinToolingVersion(project.getKotlinPluginVersion()).toKotlinVersion()
+        val compatibleVersions = COMPATIBLE_VERSIONS + Semver(kotlinVersion).toKotlinVersion()
+        val inCompatibleVersion = compatibleVersions
+            .any { projectsKotlinVersion.isAtLeast(it.major, it.minor, it.patch) }
+        if (!inCompatibleVersion) {
+            project.logger.warn(
+                "[inspektor] Kotlin plugin version $projectsKotlinVersion may be incompatible." +
+                        " Supported range: $compatibleVersions"
+            )
+        }
+    }
+
     private fun getOpenApiOutputFile(
         filePath: String?,
         saveInBuild: Boolean,
@@ -149,4 +164,6 @@ class KtorMetaPlugin @Inject constructor(
         )
         return resourcesDir
     }
+
+    private fun Semver.toKotlinVersion(): KotlinVersion = KotlinVersion(this.major, this.minor, this.patch)
 }
