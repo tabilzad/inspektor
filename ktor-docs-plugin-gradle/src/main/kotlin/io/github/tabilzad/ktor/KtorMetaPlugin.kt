@@ -66,12 +66,14 @@ class KtorMetaPlugin @Inject constructor(
         }
 
         kotlinCompilation.compileTaskProvider.configure { task ->
-            if (!openApiOutputFile.exists()) {
-                task.outputs.upToDateWhen { false }
+            // Only configure output if we're actually generating the file
+            // Don't break incremental builds by setting upToDateWhen { false }
+            task.doLast {
+                // Ensure the parent directory exists after compilation
+                if (!openApiOutputFile.parentFile.exists()) {
+                    openApiOutputFile.parentFile.mkdirs()
+                }
             }
-            // This should be a more correct way to do this:
-            // task.outputs.file(openApiOutputFile)
-            // However, setting a KotlinCompile output task.outputs.file("foo") always creates a *directory* named foo
         }
 
         val initialConfig = ConfigInput(
