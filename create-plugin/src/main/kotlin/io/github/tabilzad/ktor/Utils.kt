@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.result
 import org.jetbrains.kotlin.fir.expressions.FirAnnotation
 import org.jetbrains.kotlin.fir.expressions.FirExpressionEvaluator
+import org.jetbrains.kotlin.fir.expressions.FirGetClassCall
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.types.*
@@ -342,11 +343,16 @@ internal fun FirAnnotation.extractDescription(session: FirSession): KtorDescript
     val descr = resolved?.entries?.find { it.key.asString() == "description" }?.value?.result
     val required = resolved?.entries?.find { it.key.asString() == "required" }?.value?.result
     val operationId = resolved?.entries?.find { it.key.asString() == "operationId" }?.value?.result
+    val serializedAs =
+        resolved?.entries?.find { it.key.asString() == "serializedAs" }?.value?.result as? FirGetClassCall
     val tags = resolved?.entries?.find { it.key.asString() == "tags" }?.value?.result
     val explicitType = resolved?.entries
         ?.find { it.key.asString() == "explicitType" || it.key.asString() == "type" }?.value?.result
 
     val format = resolved?.entries?.find { it.key.asString() == "format" }?.value?.result
+    val serializedAsType = serializedAs?.resolvedType?.typeArguments?.firstOrNull()?.type?.let {
+        if (it.isNothing) null else it
+    }
     return KtorDescriptionBag(
         summary = summary?.accept(StringResolutionVisitor(session), ""),
         description = descr?.accept(StringResolutionVisitor(session), ""),
@@ -354,6 +360,7 @@ internal fun FirAnnotation.extractDescription(session: FirSession): KtorDescript
         tags = tags?.accept(StringArrayLiteralVisitor(), emptyList())?.toSet(),
         isRequired = required?.accept(StringResolutionVisitor(session), "")?.toBooleanStrictOrNull(),
         explicitType = explicitType?.accept(StringResolutionVisitor(session), ""),
+        serializedAs = serializedAsType,
         format = format?.accept(StringResolutionVisitor(session), "")
     )
 }

@@ -414,6 +414,22 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should capture annotations with explicit type on typealiased types`() {
+        val (source, expected) = loadSourceAndExpected("TypeAliasAnnotations")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
+    fun `should capture serializedAs on typealiased type`() {
+        val (source, expected) = loadSourceAndExpected("TypeAliasAnnotations2")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should use kdocs as property or schema descriptions by default`() {
         val (source, expected) = loadSourceAndExpected("KDocs")
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault())

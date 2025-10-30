@@ -108,6 +108,10 @@ internal class ClassDescriptorVisitorK2(
                 ).withReferenceBy(fqClassName) { typeDescription.toObjectType().copy(fqName = fqClassName) }
             }
 
+            typeDescription?.serializedAs != null -> {
+                collectDataTypes(typeDescription.serializedAs)
+            }
+
             parentType.isStringOrPrimitive() -> {
                 baseType.copy(type = parentType.className()?.toSwaggerType() ?: "Unknown", ref = null)
             }
@@ -316,8 +320,8 @@ internal fun FirProperty.findDocsDescriptionOnProperty(session: FirSession): Kto
 
 @OptIn(SymbolInternals::class)
 internal fun ConeKotlinType.findDocsDescriptionOnType(session: FirSession): KtorDescriptionBag? {
-    val docsAnnotation = toRegularClassSymbol(session)?.annotations
-        ?.find {
+    val docsAnnotation = ((toRegularClassSymbol(session)?.annotations ?: emptyList()) + typeAnnotations)
+        .find {
             it.fqName(session) == KTOR_FIELD_DESCRIPTION
                     || it.fqName(session) == KTOR_SCHEMA
                     || it.fqName(session) == KTOR_FIELD

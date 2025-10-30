@@ -57,7 +57,7 @@ annotation class KtorDescription(
  */
 
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.CLASS)
+@Target(AnnotationTarget.CLASS, AnnotationTarget.TYPEALIAS, AnnotationTarget.TYPE)
 annotation class KtorSchema(
     val description: String = "",
     val type: String = "",

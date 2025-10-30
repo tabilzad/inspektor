@@ -111,13 +111,13 @@ fun FirFunction.hasAnnotationNamed(session: FirSession, name: String): Boolean =
     annotations.any { it.fqName(session)?.shortName()?.asString() == name }
 
 fun FirStatement.findAnnotationNamed(name: FqName) = annotations.firstOrNull {
-    it.annotationTypeRef.coneType.classId?.asSingleFqName() == name
+    it.annotationTypeRef.coneType.abbreviatedTypeOrSelf.classId?.asSingleFqName() == name
 }
 
 fun FirProperty.findPropAnnotationNamed(name: FqName?): FirAnnotation? {
     if (name == null) return null
     return backingField?.annotations?.firstOrNull {
-        it.annotationTypeRef.coneType.classId?.asSingleFqName() == name
+        it.annotationTypeRef.coneType.abbreviatedTypeOrSelf.classId?.asSingleFqName() == name
     }
 }
 
@@ -127,7 +127,7 @@ fun FirFunction.getAnnotationNamed(name: String): FirAnnotation? = annotations.f
 
 fun FirStatement.findAnnotation(classId: ClassId, session: FirSession): FirAnnotation? {
     return annotations.firstOrNull {
-        it.annotationTypeRef.coneType.fullyExpandedClassId(session) == classId
+        it.annotationTypeRef.coneType.abbreviatedTypeOrSelf.fullyExpandedClassId(session) == classId
     }
 }
 
