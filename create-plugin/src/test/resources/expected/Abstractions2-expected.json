@@ -64,7 +64,15 @@
           "$ref" : "#/components/schemas/sources.SunSealedClass3"
         }, {
           "$ref" : "#/components/schemas/sources.TopSealedClass.SunSealedClass1"
-        } ]
+        } ],
+        "discriminator" : {
+          "propertyName" : "type",
+          "mapping" : {
+            "sources.SunSealedClass2" : "#/components/schemas/sources.SunSealedClass2",
+            "sources.SunSealedClass3" : "#/components/schemas/sources.SunSealedClass3",
+            "sources.TopSealedClass.SunSealedClass1" : "#/components/schemas/sources.TopSealedClass.SunSealedClass1"
+          }
+        }
       },
       "sources.TopSealedClass.SunSealedClass1" : {
         "type" : "object",

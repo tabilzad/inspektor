@@ -56,7 +56,8 @@ data class OpenApiSpec(
         var additionalProperties: TypeDescriptor? = null,
         var oneOf: List<TypeDescriptor>? = null,
         var required: MutableList<String>? = null,
-        var format: String? = null
+        var format: String? = null,
+        var discriminator: DiscriminatorDescriptor? = null
     ) : NamedObject {
         override fun equals(other: Any?): Boolean {
             return when {
@@ -69,6 +70,11 @@ data class OpenApiSpec(
 
         override fun hashCode() = fqName.hashCode()
     }
+
+    data class DiscriminatorDescriptor(
+        val propertyName: String = "type",
+        val mapping: Map<String, String>
+    )
 
     data class Parameter(
         override val name: String,

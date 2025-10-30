@@ -9,6 +9,7 @@ import io.github.tabilzad.ktor.k2.ClassIds.KTOR_FIELD
 import io.github.tabilzad.ktor.k2.ClassIds.KTOR_FIELD_DESCRIPTION
 import io.github.tabilzad.ktor.k2.ClassIds.KTOR_SCHEMA
 import io.github.tabilzad.ktor.k2.JsonNameResolver.getCustomNameFromAnnotation
+import io.github.tabilzad.ktor.output.OpenApiSpec
 import io.github.tabilzad.ktor.output.OpenApiSpec.TypeDescriptor
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
@@ -24,6 +25,7 @@ import org.jetbrains.kotlin.fir.resolve.getContainingClass
 import org.jetbrains.kotlin.fir.resolve.toClassSymbol
 import org.jetbrains.kotlin.fir.resolve.toRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
+import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirValueParameterSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
@@ -137,13 +139,21 @@ internal class ClassDescriptorVisitorK2(
             typeSymbol?.isSealed == true -> {
 
                 baseType.withReferenceBy(fqClassName) {
+
+                    val discriminator = typeSymbol.resolveDiscriminator(session)
                     val inheritorClassIds = typeSymbol.fir.sealedInheritorsAttr?.getValueOrNull()
                     val internal = TypeDescriptor(
                         "object",
                         fqName = fqClassName,
                         oneOf = inheritorClassIds?.map {
                             TypeDescriptor(ref = "#/components/schemas/${it.asFqNameString()}", type = null)
-                        }
+                        },
+                        discriminator = OpenApiSpec.DiscriminatorDescriptor(
+                            propertyName = discriminator ?: "type",
+                            mapping = inheritorClassIds?.associate {
+                                it.resolveDiscriminatorValue(session) to "#/components/schemas/${it.asFqNameString()}"
+                            } ?: emptyMap()
+                        )
                     )
                     parentType.getMembers(session, config).forEach { nestedDescr ->
                         nestedDescr.accept(this, internal)
@@ -302,6 +312,24 @@ internal class ClassDescriptorVisitorK2(
     private fun FirProperty.findName(): String {
         return getCustomNameFromAnnotation(this, session) ?: name.asString()
     }
+}
+
+@OptIn(SymbolInternals::class)
+private fun FirRegularClassSymbol.resolveDiscriminator(session: FirSession): String? {
+    val discriminatorFq = SerializationFramework.KOTLINX_JSON_DISCRIMINATOR
+    return annotations
+        .find { annotation -> annotation.fqName(session) == discriminatorFq.fqName }
+        ?.getStringArgument(discriminatorFq.identifier, session)
+}
+
+@OptIn(SymbolInternals::class)
+private fun ClassId.resolveDiscriminatorValue(session: FirSession): String {
+    val serialNameFq = SerializationFramework.KOTLINX_SERIAL_NAME
+    val symbol = toLookupTag().toClassSymbol(session)
+    val explicitlyAnnotated = symbol?.annotations
+        ?.find { annotation -> annotation.fqName(session) == serialNameFq.fqName }
+        ?.getStringArgument(serialNameFq.identifier, session)
+    return explicitlyAnnotated ?: asFqNameString()
 }
 
 internal fun FirProperty.findDocsDescriptionOnProperty(session: FirSession): KtorDescriptionBag? {

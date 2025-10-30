@@ -61,5 +61,6 @@ private fun KClass<*>.asQualifiedFqName(): FqName = FqName(
 
 enum class SerializationFramework(val fqName: FqName, val identifier: Name) {
     MOSHI(FqName("com.squareup.moshi.Json"), Name.identifier("name")),
-    KOTLINX(FqName("kotlinx.serialization.SerialName"), Name.identifier("value"))
+    KOTLINX_SERIAL_NAME(FqName("kotlinx.serialization.SerialName"), Name.identifier("value")),
+    KOTLINX_JSON_DISCRIMINATOR(FqName("kotlinx.serialization.json.JsonClassDiscriminator"), Name.identifier("discriminator"))
 }

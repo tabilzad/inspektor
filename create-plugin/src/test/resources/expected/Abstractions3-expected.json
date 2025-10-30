@@ -82,7 +82,15 @@
         }, {
           "$ref" : "#/components/schemas/sources.SubSealedInterface3"
         } ],
-        "required" : [ "property" ]
+        "required" : [ "property" ],
+        "discriminator" : {
+          "propertyName" : "type",
+          "mapping" : {
+            "sources.SubSealedInterface1" : "#/components/schemas/sources.SubSealedInterface1",
+            "sources.SubSealedInterface2" : "#/components/schemas/sources.SubSealedInterface2",
+            "sources.SubSealedInterface3" : "#/components/schemas/sources.SubSealedInterface3"
+          }
+        }
       }
     }
   }

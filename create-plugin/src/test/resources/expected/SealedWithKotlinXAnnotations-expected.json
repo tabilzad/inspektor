@@ -33,11 +33,11 @@
           "$ref" : "#/components/schemas/sources.ActionTwo"
         } ],
         "discriminator" : {
-          "propertyName" : "type",
+          "propertyName" : "__typename",
           "mapping" : {
-            "sources.ActionOne" : "#/components/schemas/sources.ActionOne",
-            "sources.ActionThree" : "#/components/schemas/sources.ActionThree",
-            "sources.ActionTwo" : "#/components/schemas/sources.ActionTwo"
+            "ACTION_ONE" : "#/components/schemas/sources.ActionOne",
+            "ACTION_THREE" : "#/components/schemas/sources.ActionThree",
+            "ACTION_TWO" : "#/components/schemas/sources.ActionTwo"
           }
         }
       },
