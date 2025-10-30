@@ -15,7 +15,7 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 const val PLUGIN_ID = "io.github.tabilzad.inspektor"
-private val COMPATIBLE_VERSIONS = listOf<KotlinVersion>()
+private val COMPATIBLE_VERSIONS = listOf(KotlinVersion(2, 2, 20))
 
 class KtorMetaPlugin @Inject constructor(
     private val objects: ObjectFactory
