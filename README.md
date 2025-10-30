@@ -3,13 +3,17 @@
 </p>
 
 # InspeKtor
+
 ### Open API (Swagger) generator for Ktor
+
 [![Test and Publish to SonarType](https://github.com/tabilzad/inspektor/actions/workflows/gradle-publish.yml/badge.svg)](https://github.com/tabilzad/inspektor/actions/workflows/gradle-publish.yml)
 
-This plugin implements a plug and play solution for generating OpenAPI (Swagger) specification for your Ktor server on any platform with minimal effort - no need to modify your existing code, no special DSL wrappers etc.
+This plugin implements a plug and play solution for generating OpenAPI (Swagger) specification for your Ktor server on
+any platform with minimal effort - no need to modify your existing code, no special DSL wrappers etc.
 Just annotate your route(s) definitions with `@GenerateOpenApi` and `openapi.yaml` will be generated at build time.
 
-Take a look at the [Sample Project](https://github.com/tabilzad/ktor-inspektor-example) to get started. 
+Take a look at the [Sample Project](https://github.com/tabilzad/ktor-inspektor-example) to get started.
+
 ## How to apply the plugin
 
 ```groovy
@@ -51,29 +55,43 @@ swagger {
 | Endpoint/Scheme Descriptions | ✅           | Explicit  |
 | Endpoint Tagging             | ✅           | Explicit  |
 
+## Compatibility
+
+Each listed plugin version is only compatible with the specified Kotlin compiler version.
+
+| Plugin version | Kotlin compiler |
+|----------------|-----------------|
+| 0.8.8-alpha    | 2.2.20, 2.2.21  |
+| 0.8.7-alpha    | 2.2.20          |
+| 0.8.4-alpha    | 2.2.0           |
+| 0.8.0-alpha    | 2.1.20          |
+| 0.7.0-alpha    | 2.1.0           |
+| 0.6.4-alpha    | 2.0.20          |
+| 0.6.0-alpha    | 2.0             |
 
 ## Plugin Configuration
 
 ### Documentation options
 
-| Option                         | Default Value                             | Explanation                                                                                 |
-|--------------------------------|-------------------------------------------|---------------------------------------------------------------------------------------------|
-| `info.title`                   | `"Open API Specification"`                | Title for the API specification that is generated                                           |
-| `info.description`             | `"Generated using Ktor Docs Plugin"`      | A brief description for the generated API specification                                     |
-| `info.version`                 | `"1.0.0"`                                 | Specifies the version for the generated API specification                                   |
-| `generateRequestSchemas`       | `true`                                    | Determines if request body schemas should <br/>be automatically resolved and included       |
-| `hideTransientFields`          | `true`                                    | Controls whether fields marked with `@Transient` <br/> are omitted in schema outputs        |
-| `hidePrivateAndInternalFields` | `true`                                    | Opts to exclude fields with `private` or `internal` modifiers from schema outputs           |
-| `deriveFieldRequirementFromTypeNullability` | `true`                       | Automatically derive object fields' requirement from its type nullability                   |
-| `servers`                      | []                                        | List of server URLs to be included in the spec  (ex: `listOf("http://localhost:8080")`      |
+| Option                                      | Default Value                        | Explanation                                                                            |
+|---------------------------------------------|--------------------------------------|----------------------------------------------------------------------------------------|
+| `info.title`                                | `"Open API Specification"`           | Title for the API specification that is generated                                      |
+| `info.description`                          | `"Generated using Ktor Docs Plugin"` | A brief description for the generated API specification                                |
+| `info.version`                              | `"1.0.0"`                            | Specifies the version for the generated API specification                              |
+| `generateRequestSchemas`                    | `true`                               | Determines if request body schemas should <br/>be automatically resolved and included  |
+| `hideTransientFields`                       | `true`                               | Controls whether fields marked with `@Transient` <br/> are omitted in schema outputs   |
+| `hidePrivateAndInternalFields`              | `true`                               | Opts to exclude fields with `private` or `internal` modifiers from schema outputs      |
+| `deriveFieldRequirementFromTypeNullability` | `true`                               | Automatically derive object fields' requirement from its type nullability              |
+| `servers`                                   | []                                   | List of server URLs to be included in the spec  (ex: `listOf("http://localhost:8080")` |
 
 ### Plugin options
-| Option                         | Default Value                                | Explanation                                                                                 |
-|--------------------------------|----------------------------------------------|---------------------------------------------------------------------------------------------|
-| `enabled`                      | `true`                                       | Enable/Disables the plugin                                                                  |
-| `saveInBuild`                  | `true`                                       | Decides if the generated specification file should <br/> be saved in the `build/` directory |
-| `format`                       | `yaml`                                       | The chosen format for the OpenAPI specification <br/>(options: json/yaml)                   |
-| `filePath`                     | `$modulePath/build/resources/main/openapi/`  | The designated absolute path for saving <br/> the generated specification file              |
+
+| Option        | Default Value                               | Explanation                                                                                 |
+|---------------|---------------------------------------------|---------------------------------------------------------------------------------------------|
+| `enabled`     | `true`                                      | Enable/Disables the plugin                                                                  |
+| `saveInBuild` | `true`                                      | Decides if the generated specification file should <br/> be saved in the `build/` directory |
+| `format`      | `yaml`                                      | The chosen format for the OpenAPI specification <br/>(options: json/yaml)                   |
+| `filePath`    | `$modulePath/build/resources/main/openapi/` | The designated absolute path for saving <br/> the generated specification file              |
 
 ## How to use the plugin
 
@@ -156,41 +174,46 @@ fun Route.ordersRouting() {
 ```
 
 ### Responses
-Defining response schemas and their corresponding HTTP status codes are done via `@KtorResponds` annotation on an endpoint or `responds<T>(HttpStatusCode)` inline extension on a `RouteContext`. The latter is the preferred way since it is capable of defining types with generics. On the annotation `kotlin.Nothing` is treated specially and will result in empty response body for statutes like `204 NO_CONTENT`, alternatively use `respondsNothing` extension.
+
+Defining response schemas and their corresponding HTTP status codes are done via `@KtorResponds` annotation on an
+endpoint or `responds<T>(HttpStatusCode)` inline extension on a `RouteContext`. The latter is the preferred way since it
+is capable of defining types with generics. On the annotation `kotlin.Nothing` is treated specially and will result in
+empty response body for statutes like `204 NO_CONTENT`, alternatively use `respondsNothing` extension.
 
 ```kotlin
 @GenerateOpenApi
 fun Route.ordersRouting() {
     route("/v1") {
         @KtorResponds(
-               [
-                   ResponseEntry("200", Order::class, description = "Created order"),
-                   ResponseEntry("204", Nothing::class),
-                   ResponseEntry("400", ErrorResponseSample::class, description = "Invalid order payload")
-               ]
+            [
+                ResponseEntry("200", Order::class, description = "Created order"),
+                ResponseEntry("204", Nothing::class),
+                ResponseEntry("400", ErrorResponseSample::class, description = "Invalid order payload")
+            ]
         )
         post("/create") { /*...*/ }
-        @KtorResponds([ResponseEntry("200", Order::class, isCollection=true, description = "Get all orders")])
+        @KtorResponds([ResponseEntry("200", Order::class, isCollection = true, description = "Get all orders")])
         get("/orders") { /*...*/ }
     }
 }
 ```
+
 ```kotlin
 @GenerateOpenApi
 fun Route.ordersRouting() {
     route("/v1") {
         post("/create") {
-          // Creates order
-          responds<Order>(HttpStatusCode.Ok)
-          respondsNothing(HttpStatusCode.NoContent, description = "No content for this status")
-          // Invalid order payload
-          responds<ErrorResponseSample>(HttpStatusCode.BadRequest)
-          /*...*/
+            // Creates order
+            responds<Order>(HttpStatusCode.Ok)
+            respondsNothing(HttpStatusCode.NoContent, description = "No content for this status")
+            // Invalid order payload
+            responds<ErrorResponseSample>(HttpStatusCode.BadRequest)
+            /*...*/
         }
-        get("/orders"){
-           // Get all orders
-           responds<List<Order>>(HttpStatusCode.NoContent)
-           /*...*/
+        get("/orders") {
+            // Get all orders
+            responds<List<Order>>(HttpStatusCode.NoContent)
+            /*...*/
         }
     }
 }
@@ -198,7 +221,7 @@ fun Route.ordersRouting() {
 
 ### Tagging
 
-Using tags enables the categorization of individual endpoints into designated groups. 
+Using tags enables the categorization of individual endpoints into designated groups.
 Tags specified at the parent route will propogate down to all endpoints contained within it.
 
 ```kotlin
@@ -214,7 +237,9 @@ fun Route.ordersRouting() {
     }
 }
 ```
-On the other hand, if the tags are specified with `@KtorDescription` or `@Tag` annotation on an endpoint, they are associated exclusively with that particular endpoint.
+
+On the other hand, if the tags are specified with `@KtorDescription` or `@Tag` annotation on an endpoint, they are
+associated exclusively with that particular endpoint.
 
 ```kotlin
 @GenerateOpenApi
@@ -231,7 +256,7 @@ fun Route.ordersRouting() {
 ## Planned Features
 
 * Automatic Response resolution
-* Support for polymorphic types with discriminators 
+* Support for polymorphic types with discriminators
 * Option for an automatic tag resolution from module/route function declaration
 * Tag descriptions
 
