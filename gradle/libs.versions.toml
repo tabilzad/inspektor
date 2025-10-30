@@ -1,5 +1,5 @@
 [versions]
-kotlinVersion = "2.2.20"
+kotlinVersion = "2.2.21"
 dokkaVersion = "2.0.0"
 classgraph = "4.8.157"
 jacksonVersion = "2.15.2"
