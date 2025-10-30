@@ -80,7 +80,8 @@ class KtorMetaPlugin @Inject constructor(
             securityConfig = swaggerExtension.documentation.getSecurityConfig(),
             securitySchemes = swaggerExtension.documentation.getSecuritySchemes(),
             info = swaggerExtension.documentation.getInfo(),
-            overrides = swaggerExtension.documentation.serialOverrides.getOverrides().map { it.toConfigInput() }
+            overrides = swaggerExtension.documentation.serialOverrides.getOverrides().map { it.toConfigInput() },
+            discriminator = swaggerExtension.documentation.polymorphicDiscriminator
         )
 
         val subpluginOptions = listOf(

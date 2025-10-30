@@ -1,0 +1,71 @@
+{
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/v1/action" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.RequestBody"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.Action" : {
+        "type" : "object",
+        "oneOf" : [ {
+          "$ref" : "#/components/schemas/sources.ActionOne"
+        }, {
+          "$ref" : "#/components/schemas/sources.ActionThree"
+        }, {
+          "$ref" : "#/components/schemas/sources.ActionTwo"
+        } ],
+        "discriminator" : {
+          "propertyName" : "__myCustomDiscriminator",
+          "mapping" : {
+            "sources.ActionOne" : "#/components/schemas/sources.ActionOne",
+            "sources.ActionThree" : "#/components/schemas/sources.ActionThree",
+            "sources.ActionTwo" : "#/components/schemas/sources.ActionTwo"
+          }
+        }
+      },
+      "sources.ActionOne" : {
+        "type" : "object",
+        "properties" : {
+          "field" : {
+            "type" : "integer"
+          }
+        },
+        "required" : [ "field" ]
+      },
+      "sources.ActionThree" : {
+        "type" : "object"
+      },
+      "sources.ActionTwo" : {
+        "type" : "object",
+        "properties" : {
+          "value" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "value" ]
+      },
+      "sources.RequestBody" : {
+        "type" : "object",
+        "properties" : {
+          "action" : {
+            "$ref" : "#/components/schemas/sources.Action"
+          }
+        },
+        "required" : [ "action" ]
+      }
+    }
+  }
+}

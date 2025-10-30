@@ -14,7 +14,8 @@ internal data class PluginConfiguration(
     val servers: List<String>,
     val initConfig: ConfigInput,
     val deriveFieldRequirementFromTypeNullability: Boolean,
-    val useKDocsForDescriptions: Boolean
+    val useKDocsForDescriptions: Boolean,
+    val discriminator: String,
 ) {
     companion object {
         fun createDefault(
@@ -51,7 +52,8 @@ internal data class PluginConfiguration(
                         license = null
                     )
                 ),
-                useKDocsForDescriptions = useKDocsForDescriptions ?: true
+                useKDocsForDescriptions = useKDocsForDescriptions ?: true,
+                discriminator = initConfig?.discriminator ?: "type"
             )
         }
     }

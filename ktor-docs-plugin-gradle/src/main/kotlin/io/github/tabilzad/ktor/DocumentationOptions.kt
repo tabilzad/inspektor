@@ -21,6 +21,7 @@ open class DocumentationOptions @Inject constructor(
     var hidePrivateAndInternalFields: Boolean = true
     var deriveFieldRequirementFromTypeNullability: Boolean = true
     var useKDocsForDescriptions: Boolean = true
+    var polymorphicDiscriminator: String = "type"
     var servers: List<String> = emptyList()
 
     private var info = Info()

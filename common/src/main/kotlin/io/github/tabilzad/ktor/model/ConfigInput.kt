@@ -9,6 +9,7 @@ data class ConfigInput(
     val securitySchemes: Map<String, SecurityScheme> = emptyMap(),
     val info: Info? = null,
     val overrides: List<TypeOverrideConfig> = emptyList(),
+    val discriminator: String = "type"
 )
 
 @Serializable

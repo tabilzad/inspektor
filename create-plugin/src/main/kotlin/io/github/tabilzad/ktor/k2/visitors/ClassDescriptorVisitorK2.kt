@@ -140,7 +140,7 @@ internal class ClassDescriptorVisitorK2(
 
                 baseType.withReferenceBy(fqClassName) {
 
-                    val discriminator = typeSymbol.resolveDiscriminator(session)
+                    val discriminator = typeSymbol.resolveDiscriminator(session, config)
                     val inheritorClassIds = typeSymbol.fir.sealedInheritorsAttr?.getValueOrNull()
                     val internal = TypeDescriptor(
                         "object",
@@ -149,7 +149,7 @@ internal class ClassDescriptorVisitorK2(
                             TypeDescriptor(ref = "#/components/schemas/${it.asFqNameString()}", type = null)
                         },
                         discriminator = OpenApiSpec.DiscriminatorDescriptor(
-                            propertyName = discriminator ?: "type",
+                            propertyName = discriminator,
                             mapping = inheritorClassIds?.associate {
                                 it.resolveDiscriminatorValue(session) to "#/components/schemas/${it.asFqNameString()}"
                             } ?: emptyMap()
@@ -315,11 +315,11 @@ internal class ClassDescriptorVisitorK2(
 }
 
 @OptIn(SymbolInternals::class)
-private fun FirRegularClassSymbol.resolveDiscriminator(session: FirSession): String? {
+private fun FirRegularClassSymbol.resolveDiscriminator(session: FirSession, config: PluginConfiguration): String {
     val discriminatorFq = SerializationFramework.KOTLINX_JSON_DISCRIMINATOR
     return annotations
         .find { annotation -> annotation.fqName(session) == discriminatorFq.fqName }
-        ?.getStringArgument(discriminatorFq.identifier, session)
+        ?.getStringArgument(discriminatorFq.identifier, session) ?: config.discriminator
 }
 
 @OptIn(SymbolInternals::class)

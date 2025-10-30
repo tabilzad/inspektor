@@ -2,6 +2,7 @@ package io.github.tabilzad.ktor
 
 import io.github.tabilzad.ktor.TestUtils.loadSourceAndExpected
 import io.github.tabilzad.ktor.TestUtils.loadSourceCodeFrom
+import io.github.tabilzad.ktor.model.ConfigInput
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -368,6 +369,16 @@ class K2StabilityTest {
     fun `should handle abstract or sealed schema definitions`() {
         val (source, expected) = loadSourceAndExpected("Abstractions")
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
+    fun `should use discriminator from plugin config`() {
+        val (source, expected) = loadSourceAndExpected("CustomDiscriminator")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault(
+            initConfig = ConfigInput(discriminator = "__myCustomDiscriminator")
+        ))
         val result = testFile.readText()
         result.assertWith(expected)
     }
