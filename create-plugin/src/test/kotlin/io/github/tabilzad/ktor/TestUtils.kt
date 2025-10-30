@@ -203,6 +203,7 @@ private val deps = arrayOf(
     "ktor-http:3.3.0",
     "kotlinx-coroutines-core:1.10.1",
     "moshi:1.14.0",
-    "kotlinx-serialization-core:2.1.0",
+    "kotlinx-serialization-core:2.2.21",
+    "kotlinx-serialization-json:2.2.21",
     "annotations:0.7.2-alpha"
 )
