@@ -1,5 +1,6 @@
 package io.github.tabilzad.ktor
 
+import org.gradle.api.Action
 import org.gradle.api.model.ObjectFactory
 import javax.inject.Inject
 
@@ -15,11 +16,11 @@ open class KtorInspectorGradleConfig @Inject constructor(
 
     /** swagger { documentation { … } } */
     val documentation: DocumentationOptions get() = _documentation
-    fun documentation(block: DocumentationOptions.() -> Unit) = _documentation.apply(block)
+    fun documentation(action: Action<DocumentationOptions>) = action.execute(_documentation)
 
     /** swagger { pluginOptions { … } } */
     val pluginOptions: PluginOptions get() = _pluginOptions
-    fun pluginOptions(block: PluginOptions.() -> Unit) = _pluginOptions.apply(block)
+    fun pluginOptions(action: Action<PluginOptions>) = action.execute(_pluginOptions)
 }
 
 open class PluginOptions @Inject constructor(

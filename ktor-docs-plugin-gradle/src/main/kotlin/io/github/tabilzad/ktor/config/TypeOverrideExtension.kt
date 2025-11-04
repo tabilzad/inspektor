@@ -19,23 +19,18 @@ open class TypeOverrideExtension @Inject constructor(objects: ObjectFactory) {
             TypeOverride(fqName = fqName)
         }
 
-    fun typeOverrides(configure: NamedDomainObjectContainer<TypeOverride>.() -> Unit) =
-        typeOverrides.apply(configure)
+    fun typeOverrides(action: Action<NamedDomainObjectContainer<TypeOverride>>) =
+        action.execute(typeOverrides)
+
     /**
      * Shortcut for single override entries:
      *   openApi {
      *     typeOverride("java.time.Instant") { ... }
      *   }
      */
-    fun typeOverride(fqName: String, configure: TypeOverride.() -> Unit) {
-        typeOverrides.create(fqName, configure)
+    fun typeOverride(fqName: String, action: Action<TypeOverride>) {
+        typeOverrides.create(fqName, action)
     }
-
-    /**
-     * Groovy DSL
-     */
-    fun typeOverrides(action: Action<NamedDomainObjectContainer<TypeOverride>>) =
-        typeOverrides.apply(action::execute)
 
     internal fun getOverrides() = typeOverrides
 }

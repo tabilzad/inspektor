@@ -1,6 +1,7 @@
 package io.github.tabilzad.ktor.config
 
 import io.github.tabilzad.ktor.model.SecurityScheme
+import org.gradle.api.Action
 
 data class SecurityConfig(
     val scopes: List<Map<String, List<String>>>,
@@ -11,13 +12,13 @@ class SecurityBuilder {
     private val requirements = mutableListOf<Map<String, List<String>>>()
     private val schemes = mutableMapOf<String, SecurityScheme>()
 
-    fun scopes(init: ScopeConfigBuilder.() -> Unit) {
-        val scopeConfig = ScopeConfigBuilder().apply(init).build()
+    fun scopes(action: Action<ScopeConfigBuilder>) {
+        val scopeConfig = ScopeConfigBuilder().also(action::execute).build()
         requirements.addAll(scopeConfig)
     }
 
-    fun schemes(init: SchemeConfigBuilder.() -> Unit) {
-        val schemeConfig = SchemeConfigBuilder().apply(init).build()
+    fun schemes(action: Action<SchemeConfigBuilder>) {
+        val schemeConfig = SchemeConfigBuilder().also(action::execute).build()
         schemes.putAll(schemeConfig)
     }
 
@@ -27,15 +28,15 @@ class SecurityBuilder {
 class ScopeConfigBuilder {
     private val items = mutableListOf<Map<String, List<String>>>()
 
-    fun or(init: ItemBuilder.() -> Unit) {
+    fun or(action: Action<ItemBuilder>) {
         val builder = ItemBuilder()
-        builder.init()
+        action.execute(builder)
         items.add(builder.build())
     }
 
-    fun and(init: ItemBuilder.() -> Unit) {
+    fun and(action: Action<ItemBuilder>) {
         val builder = ItemBuilder()
-        builder.init()
+        action.execute(builder)
         items.add(builder.build())
     }
 
