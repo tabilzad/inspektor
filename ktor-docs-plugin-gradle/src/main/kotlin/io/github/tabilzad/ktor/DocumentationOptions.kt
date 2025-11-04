@@ -5,6 +5,7 @@ import io.github.tabilzad.ktor.config.SecurityBuilder
 import io.github.tabilzad.ktor.config.TypeOverrideExtension
 import io.github.tabilzad.ktor.model.Info
 import io.github.tabilzad.ktor.model.SecurityScheme
+import org.gradle.api.Action
 import org.gradle.api.model.ObjectFactory
 import javax.inject.Inject
 
@@ -38,21 +39,21 @@ open class DocumentationOptions @Inject constructor(
      *   }
      * }
      */
-    fun serialOverrides(configure: TypeOverrideExtension.() -> Unit) =
-        serialOverrides.apply(configure)
+    fun serialOverrides(action: Action<TypeOverrideExtension>) =
+        action.execute(serialOverrides)
 
-    fun security(block: SecurityBuilder.() -> Unit) {
+    fun security(action: Action<SecurityBuilder>) {
         val builder = SecurityBuilder()
-        builder.block()
+        action.execute(builder)
         builder.build().let {
             securityConfig.addAll(it.scopes)
             securitySchemes.putAll(it.schemes)
         }
     }
 
-    fun info(block: InfoConfigBuilder.() -> Unit) {
+    fun info(action: Action<InfoConfigBuilder>) {
         val builder = InfoConfigBuilder()
-        builder.block()
+        action.execute(builder)
         val infoBlock = builder.build()
         info = info.copy(
             title = infoBlock.title ?: info.title,

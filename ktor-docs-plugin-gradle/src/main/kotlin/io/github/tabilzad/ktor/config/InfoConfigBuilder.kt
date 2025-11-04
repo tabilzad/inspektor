@@ -1,6 +1,7 @@
 package io.github.tabilzad.ktor.config
 
 import io.github.tabilzad.ktor.model.Info
+import org.gradle.api.Action
 
 class InfoConfigBuilder {
     var title: String? = null
@@ -10,12 +11,12 @@ class InfoConfigBuilder {
     private var contact: Info.Contact? = null
     private var license: Info.License? = null
 
-    fun contact(builder: Info.Contact.() -> Unit) {
-        contact = Info.Contact().apply(builder)
+    fun contact(action: Action<Info.Contact>) {
+        contact = Info.Contact().also(action::execute)
     }
 
-    fun license(builder: Info.License.() -> Unit) {
-        license = Info.License().apply(builder)
+    fun license(action: Action<Info.License>) {
+        license = Info.License().also(action::execute)
     }
 
     fun build(): Info = Info(
