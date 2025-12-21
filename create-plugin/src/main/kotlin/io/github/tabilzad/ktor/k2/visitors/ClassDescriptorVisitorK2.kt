@@ -167,9 +167,9 @@ internal class ClassDescriptorVisitorK2(
                         )
                         if (!classNames.names.contains(fqName1)) {
                             classNames.add(inheritorType)
+                            val fir: FirClass? = it.toLookupTag().toClassSymbol(session)?.fir
+                            fir?.accept(this, inheritorType)
                         }
-                        val fir: FirClass? = it.toLookupTag().toClassSymbol(session)?.fir
-                        fir?.accept(this, inheritorType)
                     }
                     internal
                 }

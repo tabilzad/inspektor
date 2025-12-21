@@ -374,6 +374,14 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should not overflow stack on self referencing sealed classes`() {
+        val (source, expected) = loadSourceAndExpected("SelfReferencingSealed")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should use discriminator from plugin config`() {
         val (source, expected) = loadSourceAndExpected("CustomDiscriminator")
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault(

@@ -1,0 +1,113 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v3/sealedJsonElement" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.SelfReferencingSealed"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "kotlin.collections.Map.Entry_Of_String_and_JsonElement" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "string"
+          },
+          "value" : {
+            "$ref" : "#/components/schemas/kotlinx.serialization.json.JsonElement"
+          }
+        },
+        "required" : [ "key", "value" ]
+      },
+      "kotlinx.serialization.json.JsonArray" : {
+        "type" : "object",
+        "properties" : {
+          "size" : {
+            "type" : "integer"
+          }
+        }
+      },
+      "kotlinx.serialization.json.JsonElement" : {
+        "type" : "object",
+        "oneOf" : [ {
+          "$ref" : "#/components/schemas/kotlinx.serialization.json.JsonArray"
+        }, {
+          "$ref" : "#/components/schemas/kotlinx.serialization.json.JsonObject"
+        }, {
+          "$ref" : "#/components/schemas/kotlinx.serialization.json.JsonPrimitive"
+        } ],
+        "discriminator" : {
+          "propertyName" : "type",
+          "mapping" : {
+            "kotlinx.serialization.json.JsonArray" : "#/components/schemas/kotlinx.serialization.json.JsonArray",
+            "kotlinx.serialization.json.JsonObject" : "#/components/schemas/kotlinx.serialization.json.JsonObject",
+            "kotlinx.serialization.json.JsonPrimitive" : "#/components/schemas/kotlinx.serialization.json.JsonPrimitive"
+          }
+        }
+      },
+      "kotlinx.serialization.json.JsonObject" : {
+        "type" : "object",
+        "properties" : {
+          "entries" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/kotlin.collections.Map.Entry_Of_String_and_JsonElement"
+            }
+          },
+          "keys" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "size" : {
+            "type" : "integer"
+          },
+          "values" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/kotlinx.serialization.json.JsonElement"
+            }
+          }
+        }
+      },
+      "kotlinx.serialization.json.JsonPrimitive" : {
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "string"
+          },
+          "isString" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "isString", "content" ]
+      },
+      "sources.SelfReferencingSealed" : {
+        "type" : "object",
+        "properties" : {
+          "json" : {
+            "$ref" : "#/components/schemas/kotlinx.serialization.json.JsonElement"
+          }
+        },
+        "required" : [ "json" ]
+      }
+    }
+  }
+}
