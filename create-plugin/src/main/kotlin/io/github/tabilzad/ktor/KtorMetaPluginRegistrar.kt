@@ -17,7 +17,12 @@ import org.jetbrains.kotlin.fir.analysis.extensions.FirAdditionalCheckersExtensi
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrarAdapter
 
+const val PLUGIN_ID = "io.github.tabilzad.inspektor"
 open class KtorMetaPluginRegistrar : CompilerPluginRegistrar() {
+
+    override val pluginId: String
+        get() = PLUGIN_ID
+
     override val supportsK2: Boolean
         get() = true
 
