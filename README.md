@@ -83,6 +83,7 @@ Each listed plugin version is only compatible with the specified Kotlin compiler
 | `hideTransientFields`                       | `true`                               | Controls whether fields marked with `@Transient` <br/> are omitted in schema outputs   |
 | `hidePrivateAndInternalFields`              | `true`                               | Opts to exclude fields with `private` or `internal` modifiers from schema outputs      |
 | `deriveFieldRequirementFromTypeNullability` | `true`                               | Automatically derive object fields' requirement from its type nullability              |
+| `useKDocsForDescriptions`                   | `true`                               | Extract field and schema descriptions from KDoc comments                               |
 | `servers`                                   | []                                   | List of server URLs to be included in the spec  (ex: `listOf("http://localhost:8080")` |
 
 ### Plugin options
@@ -148,7 +149,7 @@ data class RequestSample(
     val string: String,
     val int: Int,
     val double: Double,
-    @KtorField(description = "this is instant", typr = "string", format = "date-time")
+    @KtorField(description = "this is instant", type = "string", format = "date-time")
     val date: Instant
 )
 
@@ -254,10 +255,83 @@ fun Route.ordersRouting() {
 }
 ```
 
+### Security Configuration
+
+Define OpenAPI security schemes and requirements in your Gradle configuration:
+
+```kotlin
+swagger {
+    documentation {
+        security {
+            // Define security schemes
+            schemes {
+                "bearerAuth" to SecurityScheme(
+                    type = "http",
+                    scheme = "bearer",
+                    bearerFormat = "JWT",
+                    description = "JWT Bearer token authentication"
+                )
+                "apiKey" to SecurityScheme(
+                    type = "apiKey",
+                    `in` = "header",
+                    name = "X-API-Key"
+                )
+            }
+            // Define security requirements (OR relationship between items)
+            scopes {
+                or { +"bearerAuth" }  // Require bearer auth
+                or { +"apiKey" }       // OR require API key
+            }
+        }
+    }
+}
+```
+
+### Type Overrides
+
+Override how specific types are serialized in the OpenAPI schema:
+
+```kotlin
+swagger {
+    documentation {
+        serialOverrides {
+            typeOverride("java.time.Instant") {
+                serializedAs = "string"
+                format = "date-time"
+                description = "ISO 8601 timestamp"
+            }
+            typeOverride("java.util.UUID") {
+                serializedAs = "string"
+                format = "uuid"
+            }
+        }
+    }
+}
+```
+
+### Polymorphic Discriminator
+
+Configure the discriminator property name for sealed class hierarchies:
+
+```kotlin
+swagger {
+    documentation {
+        polymorphicDiscriminator = "type"  // default
+    }
+}
+```
+
+This works with kotlinx.serialization's `@JsonClassDiscriminator` annotation on sealed classes.
+
+### Type Support
+
+- **Value classes**: Unwrapped to their underlying type in the schema
+- **Sealed classes**: Fully supported with `oneOf` discriminators via `@JsonClassDiscriminator` (kotlinx.serialization)
+- **Generic types**: Supported, but complex nested generics may have limitations
+
 ## Planned Features
 
-* Automatic Response resolution
-* Support for polymorphic types with discriminators
+* Automatic Response resolution (inferring response types from handler code)
 * Option for an automatic tag resolution from module/route function declaration
 * Tag descriptions
 
