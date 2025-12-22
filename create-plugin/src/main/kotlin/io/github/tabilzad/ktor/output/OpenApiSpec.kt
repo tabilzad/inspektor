@@ -63,12 +63,12 @@ data class OpenApiSpec(
             return when {
                 this === other -> true
                 other !is TypeDescriptor -> false
-                other.fqName == fqName -> true
-                else -> false
+                fqName == null || other.fqName == null -> false
+                else -> fqName == other.fqName
             }
         }
 
-        override fun hashCode() = fqName.hashCode()
+        override fun hashCode(): Int = fqName?.hashCode() ?: System.identityHashCode(this)
     }
 
     data class DiscriminatorDescriptor(
