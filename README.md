@@ -61,7 +61,7 @@ Each listed plugin version is only compatible with the specified Kotlin compiler
 
 | Plugin version | Kotlin compiler |
 |----------------|-----------------|
-| 0.8.8-alpha    | 2.2.20, 2.2.21  |
+| 0.9.1-alpha    | 2.2.20, 2.2.21  |
 | 0.8.7-alpha    | 2.2.20          |
 | 0.8.4-alpha    | 2.2.0           |
 | 0.8.0-alpha    | 2.1.20          |
