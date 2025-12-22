@@ -2,14 +2,12 @@
 
 package io.github.tabilzad.ktor
 
-import io.github.tabilzad.ktor.k1.DeclarationExtension
 import io.github.tabilzad.ktor.k2.ResponseSchemaIrLoweringExtension
 import io.github.tabilzad.ktor.k2.SwaggerDeclarationChecker
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.extensions.StorageComponentContainerContributor
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.DeclarationCheckers
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirSimpleFunctionChecker
@@ -28,12 +26,7 @@ open class KtorMetaPluginRegistrar : CompilerPluginRegistrar() {
 
     @OptIn(ExperimentalCompilerApi::class)
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
-        val config = configuration.buildPluginConfiguration()
-        // K1
-        StorageComponentContainerContributor.registerExtension(DeclarationExtension(config))
-        // K2
         FirExtensionRegistrarAdapter.registerExtension(SwaggerCheckers(configuration))
-
         IrGenerationExtension.registerExtension(ResponseSchemaIrLoweringExtension())
     }
 }

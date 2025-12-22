@@ -1,7 +1,5 @@
 package io.github.tabilzad.ktor
 
-import io.github.tabilzad.ktor.k1.visitors.KtorDescriptionBag
-import io.github.tabilzad.ktor.k2.ClassIds.TRANSIENT_ANNOTATION_FQ
 import io.github.tabilzad.ktor.k2.visitors.StringArrayLiteralVisitor
 import io.github.tabilzad.ktor.k2.visitors.StringResolutionVisitor
 import io.github.tabilzad.ktor.model.ConfigInput
@@ -9,7 +7,6 @@ import io.github.tabilzad.ktor.output.OpenApiSpec
 import org.jetbrains.kotlin.KtSourceElement
 import org.jetbrains.kotlin.com.intellij.lang.LighterASTNode
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.descriptors.PropertyDescriptor
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
@@ -25,10 +22,6 @@ import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 import org.jetbrains.kotlin.kdoc.lexer.KDocTokens
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.stubs.elements.KtModifierListElementType
-import org.jetbrains.kotlin.resolve.descriptorUtil.isEffectivelyPublicApi
-import org.jetbrains.kotlin.resolve.scopes.DescriptorKindFilter
-import org.jetbrains.kotlin.resolve.scopes.MemberScope
-import org.jetbrains.kotlin.resolve.scopes.getDescriptorsFiltered
 import org.jetbrains.kotlin.util.PrivateForInline
 import org.jetbrains.kotlin.util.getChildren
 import java.io.OutputStream
@@ -37,32 +30,6 @@ fun Boolean.byFeatureFlag(flag: Boolean): Boolean = if (flag) {
     this
 } else {
     true
-}
-
-@Deprecated("K1 only", replaceWith = ReplaceWith("ConeKotlinType.getMembers"))
-internal fun MemberScope.forEachVariable(configuration: PluginConfiguration, predicate: (PropertyDescriptor) -> Unit) {
-    getDescriptorsFiltered(DescriptorKindFilter.VARIABLES)
-        .asSequence()
-        .map { it.original }
-        .filterIsInstance<PropertyDescriptor>()
-        .filter {
-            it.isEffectivelyPublicApi.byFeatureFlag(configuration.hidePrivateFields)
-        }
-        .filter {
-            (!it.annotations.hasAnnotation(TRANSIENT_ANNOTATION_FQ)).byFeatureFlag(configuration.hideTransients)
-        }
-        .filter {
-            (!(it.backingField?.annotations?.hasAnnotation(TRANSIENT_ANNOTATION_FQ) == true
-                    || it.delegateField?.annotations?.hasAnnotation(TRANSIENT_ANNOTATION_FQ) == true
-                    || it.setter?.annotations?.hasAnnotation(TRANSIENT_ANNOTATION_FQ) == true
-                    || it.getter?.annotations?.hasAnnotation(TRANSIENT_ANNOTATION_FQ) == true
-                    )
-
-                    ).byFeatureFlag(
-                    configuration.hideTransients
-                )
-        }
-        .toList().forEach { predicate(it) }
 }
 
 internal val Iterable<OpenApiSpec.TypeDescriptor>.names get() = mapNotNull { it.fqName }

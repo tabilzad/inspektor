@@ -1,8 +1,6 @@
 package io.github.tabilzad.ktor.k2
 
 import io.github.tabilzad.ktor.*
-import io.github.tabilzad.ktor.k1.visitors.KtorDescriptionBag
-import io.github.tabilzad.ktor.k1.visitors.toSwaggerType
 import io.github.tabilzad.ktor.k2.visitors.*
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
