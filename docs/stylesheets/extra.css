@@ -1,0 +1,138 @@
+/* InspeKtor Documentation - Custom Styles */
+
+/* Primary color adjustments */
+:root {
+    --md-primary-fg-color: #7c4dff;
+    --md-primary-fg-color--light: #b47cff;
+    --md-primary-fg-color--dark: #651fff;
+    --md-accent-fg-color: #7c4dff;
+}
+
+/* Dark mode adjustments */
+[data-md-color-scheme="slate"] {
+    --md-primary-fg-color: #b47cff;
+    --md-accent-fg-color: #b47cff;
+}
+
+/* Code block styling */
+.md-typeset code {
+    border-radius: 4px;
+}
+
+/* Better table styling */
+.md-typeset table:not([class]) {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.md-typeset table:not([class]) th {
+    background-color: var(--md-primary-fg-color);
+    color: white;
+    font-weight: 600;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+    background-color: var(--md-primary-fg-color--dark);
+}
+
+/* Hero section on home page */
+.md-typeset .hero {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.md-typeset .hero h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.md-typeset .hero p {
+    font-size: 1.25rem;
+    color: var(--md-default-fg-color--light);
+}
+
+/* Feature grid cards */
+.md-typeset .grid.cards > ul > li {
+    border-radius: 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Admonition styling */
+.md-typeset .admonition,
+.md-typeset details {
+    border-radius: 8px;
+}
+
+/* Button styling */
+.md-typeset .md-button {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.md-typeset .md-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.md-typeset .md-button--primary {
+    background-color: var(--md-primary-fg-color);
+    border-color: var(--md-primary-fg-color);
+}
+
+/* Improve code block titles */
+.md-typeset .highlight > .filename {
+    border-radius: 8px 8px 0 0;
+    background-color: var(--md-code-bg-color);
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+/* Navigation improvements */
+.md-nav__link {
+    transition: color 0.2s ease;
+}
+
+/* Footer styling */
+.md-footer {
+    margin-top: 2rem;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 76.1875em) {
+    .md-typeset .hero h1 {
+        font-size: 2rem;
+    }
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Better inline code visibility */
+.md-typeset code:not([class]) {
+    padding: 0.1em 0.4em;
+    background-color: var(--md-code-bg-color);
+}
+
+/* Tab styling */
+.md-typeset .tabbed-labels > label {
+    border-radius: 4px 4px 0 0;
+}
+
+/* Search highlight */
+.md-search-result mark {
+    background-color: rgba(124, 77, 255, 0.3);
+}
+
+/* Copy button styling */
+.md-clipboard {
+    border-radius: 4px;
+}

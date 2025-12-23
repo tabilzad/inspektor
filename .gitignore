@@ -47,3 +47,4 @@ gradle-app.setting
 
 .DS_Store
 local.properties
+/.claude/settings.local.json
