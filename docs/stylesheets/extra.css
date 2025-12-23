@@ -1,5 +1,10 @@
 /* InspeKtor Documentation - Dark Theme Only */
-
+.md-header__button.md-logo img, .md-header__button.md-logo svg{
+  margin: 0;
+  padding: 0;
+  height: 2rem;
+  width: 2rem;
+}
 /* ===== CSS Variables ===== */
 :root,
 [data-md-color-scheme="slate"] {

@@ -16,6 +16,7 @@ detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 mavenShadow = { id = "com.gradleup.shadow", version = "9.0.0-beta4" }
 
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlinVersion" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlinVersion" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinVersion" }
 
 [bundles]
