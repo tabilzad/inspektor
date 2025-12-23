@@ -2,275 +2,315 @@
   <img width="200" height="200" src="https://github.com/user-attachments/assets/da646150-24f3-43af-8b8f-188848f284a5" />
 </p>
 
-# InspeKtor
+<h1 align="center">InspeKtor</h1>
 
-### Open API (Swagger) generator for Ktor
+<p align="center">
+  <strong>OpenAPI (Swagger) specification generator for Ktor</strong>
+</p>
 
-[![Test and Publish to SonarType](https://github.com/tabilzad/inspektor/actions/workflows/gradle-publish.yml/badge.svg)](https://github.com/tabilzad/inspektor/actions/workflows/gradle-publish.yml)
+<p align="center">
+  <a href="https://github.com/tabilzad/inspektor/actions/workflows/gradle-publish.yml">
+    <img src="https://github.com/tabilzad/inspektor/actions/workflows/gradle-publish.yml/badge.svg" alt="Build Status"/>
+  </a>
+  <a href="https://central.sonatype.com/artifact/io.github.tabilzad.inspektor/ktor-docs-plugin">
+    <img src="https://img.shields.io/maven-central/v/io.github.tabilzad.inspektor/ktor-docs-plugin?color=blue" alt="Maven Central"/>
+  </a>
+  <a href="https://kotlinlang.org">
+    <img src="https://img.shields.io/badge/kotlin-2.3.0-blue.svg?logo=kotlin" alt="Kotlin"/>
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"/>
+  </a>
+</p>
 
-This plugin implements a plug and play solution for generating OpenAPI (Swagger) specification for your Ktor server on
-any platform with minimal effort - no need to modify your existing code, no special DSL wrappers etc.
-Just annotate your route(s) definitions with `@GenerateOpenApi` and `openapi.yaml` will be generated at build time.
+<p align="center">
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#features">Features</a> •
+  <a href="#configuration">Configuration</a> •
+  <a href="#usage-guide">Usage Guide</a> •
+  <a href="#examples">Examples</a>
+</p>
 
-Take a look at the [Sample Project](https://github.com/tabilzad/ktor-inspektor-example) to get started.
+---
 
-## How to apply the plugin
+## What is InspeKtor?
 
-```groovy
+InspeKtor is a **Kotlin compiler plugin** that automatically generates OpenAPI (Swagger) specifications from your Ktor
+server code at **build time**. No runtime overhead, no special DSL wrappers, no code modifications required.
+
+Simply annotate your route definitions with `@GenerateOpenApi` and get a complete `openapi.yaml` or `openapi.json`
+specification.
+
+<p align="center">
+  <img src="https://github.com/tabilzad/inspektor/assets/16094286/6d0b0a6a-5925-4f52-ad23-11b1c44b43a1" alt="Sample OpenAPI Specification" width="700"/>
+</p>
+
+### Why InspeKtor?
+
+|                    | Traditional Approach                        | InspeKtor                              |
+|--------------------|---------------------------------------------|----------------------------------------|
+| **Setup**          | Manual spec writing or complex DSL wrappers | Single annotation                      |
+| **Maintenance**    | Spec drifts from code over time             | Always in sync - generated from source |
+| **Performance**    | Runtime overhead for spec generation        | Zero runtime cost - build time only    |
+| **Learning Curve** | Learn new DSL or spec format                | Use your existing Ktor code            |
+
+---
+
+## Quick Start
+
+### 1. Add the Plugin
+
+```kotlin
+// build.gradle.kts
 plugins {
     id("io.github.tabilzad.inspektor") version "0.10.0-alpha"
 }
+```
 
+### 2. Annotate Your Routes
+
+```kotlin
+@GenerateOpenApi
+fun Application.module() {
+    routing {
+        get("/hello") {
+            call.respondText("Hello, World!")
+        }
+
+        post("/users") {
+            val user = call.receive<CreateUserRequest>()
+            call.respond(HttpStatusCode.Created, user)
+        }
+    }
+}
+
+data class CreateUserRequest(val name: String, val email: String)
+```
+
+### 3. Build Your Project
+
+```bash
+./gradlew build
+```
+
+Your OpenAPI specification is generated at `build/resources/main/openapi/openapi.yaml`
+
+> **Want a complete example?** Check out the [Sample Project](https://github.com/tabilzad/ktor-inspektor-example)
+
+---
+
+## Features
+
+| Feature                       | Type          | Description                                    |
+|-------------------------------|---------------|------------------------------------------------|
+| **Path & Endpoint Detection** | Automatic     | Extracts all routes from annotated functions   |
+| **Ktor Resources Support**    | Automatic     | Full support for type-safe routing             |
+| **Request Body Schemas**      | Automatic     | Generates schemas from `call.receive<T>()`     |
+| **Response Schemas**          | Explicit      | Define with `responds<T>()` or `@KtorResponds` |
+| **Descriptions**              | Explicit      | Add summaries via `@KtorDescription` or KDocs  |
+| **Tags**                      | Explicit      | Organize endpoints with `@Tag`                 |
+| **Security Schemes**          | Configuration | JWT, API Key, OAuth2, etc.                     |
+| **Sealed Classes**            | Automatic     | `oneOf` with discriminators                    |
+| **Value Classes**             | Automatic     | Unwrapped to underlying type                   |
+| **Generic Types**             | Automatic     | Full support for parameterized types           |
+
+---
+
+## Configuration
+
+### Basic Configuration
+
+```kotlin
 swagger {
     documentation {
-        generateRequestSchemas = true
-        hideTransientFields = true
-        hidePrivateAndInternalFields = true
-        deriveFieldRequirementFromTypeNullability = true
         info {
-            title = "Ktor Server Title"
-            description = "Ktor Server Description"
-            version = "1.0"
+            title = "My API"
+            description = "API documentation for my Ktor server"
+            version = "1.0.0"
             contact {
-                name = "Inspektor"
-                url = "https://github.com/tabilzad/inspektor"
+                name = "API Support"
+                url = "https://example.com/support"
             }
         }
+        servers = listOf("https://api.example.com", "http://localhost:8080")
     }
 
     pluginOptions {
-        format = "yaml" // or json
+        format = "yaml"  // or "json"
     }
 }
 ```
 
-## Supported Features
+### Documentation Options
 
-| Feature                      | isSupported | type      |
-|------------------------------|-------------|-----------|
-| Path/Endpoint definitions    | ✅           | Automatic |
-| Ktor Resources               | ✅           | Automatic |
-| Request Schemas              | ✅           | Automatic |
-| Response Schemas             | ✅           | Explicit  |
-| Endpoint/Scheme Descriptions | ✅           | Explicit  |
-| Endpoint Tagging             | ✅           | Explicit  |
+| Option                                      | Default                              | Description                              |
+|---------------------------------------------|--------------------------------------|------------------------------------------|
+| `info.title`                                | `"Open API Specification"`           | API specification title                  |
+| `info.description`                          | `"Generated using Ktor Docs Plugin"` | API description                          |
+| `info.version`                              | `"1.0.0"`                            | API version                              |
+| `generateRequestSchemas`                    | `true`                               | Auto-resolve request body schemas        |
+| `hideTransientFields`                       | `true`                               | Omit `@Transient` fields from schemas    |
+| `hidePrivateAndInternalFields`              | `true`                               | Omit private/internal fields             |
+| `deriveFieldRequirementFromTypeNullability` | `true`                               | Nullable = optional, non-null = required |
+| `useKDocsForDescriptions`                   | `true`                               | Extract descriptions from KDoc comments  |
+| `servers`                                   | `[]`                                 | List of server URLs                      |
 
-## Compatibility
+### Plugin Options
 
-Each listed plugin version is only compatible with the specified Kotlin compiler version.
+| Option             | Default                         | Description                                                      |
+|--------------------|---------------------------------|------------------------------------------------------------------|
+| `enabled`          | `true`                          | Enable/disable the plugin                                        |
+| `saveInBuild`      | `true`                          | Save spec in `build/` directory                                  |
+| `format`           | `"yaml"`                        | Output format: `yaml` or `json`                                  |
+| `filePath`         | `build/resources/main/openapi/` | Custom output path                                               |
+| `regenerationMode` | `"strict"`                      | Incremental build behavior ([details](#incremental-compilation)) |
 
-| Plugin version | Kotlin compiler |
-|----------------|-----------------|
-| 0.10.0-alpha   | 2.3.0           |
-| 0.8.8-alpha    | 2.2.20, 2.2.21  |
-| 0.8.7-alpha    | 2.2.20          |
-| 0.8.4-alpha    | 2.2.0           |
-| 0.8.0-alpha    | 2.1.20          |
-| 0.7.0-alpha    | 2.1.0           |
-| 0.6.4-alpha    | 2.0.20          |
-| 0.6.0-alpha    | 2.0             |
+---
 
-## Plugin Configuration
+## Usage Guide
 
-### Documentation options
+### Defining Endpoints
 
-| Option                                      | Default Value                        | Explanation                                                                            |
-|---------------------------------------------|--------------------------------------|----------------------------------------------------------------------------------------|
-| `info.title`                                | `"Open API Specification"`           | Title for the API specification that is generated                                      |
-| `info.description`                          | `"Generated using Ktor Docs Plugin"` | A brief description for the generated API specification                                |
-| `info.version`                              | `"1.0.0"`                            | Specifies the version for the generated API specification                              |
-| `generateRequestSchemas`                    | `true`                               | Determines if request body schemas should <br/>be automatically resolved and included  |
-| `hideTransientFields`                       | `true`                               | Controls whether fields marked with `@Transient` <br/> are omitted in schema outputs   |
-| `hidePrivateAndInternalFields`              | `true`                               | Opts to exclude fields with `private` or `internal` modifiers from schema outputs      |
-| `deriveFieldRequirementFromTypeNullability` | `true`                               | Automatically derive object fields' requirement from its type nullability              |
-| `useKDocsForDescriptions`                   | `true`                               | Extract field and schema descriptions from KDoc comments                               |
-| `servers`                                   | []                                   | List of server URLs to be included in the spec  (ex: `listOf("http://localhost:8080")` |
-
-### Plugin options
-
-| Option             | Default Value                               | Explanation                                                                                                       |
-|--------------------|---------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
-| `enabled`          | `true`                                      | Enable/Disables the plugin                                                                                        |
-| `saveInBuild`      | `true`                                      | Decides if the generated specification file should <br/> be saved in the `build/` directory                       |
-| `format`           | `yaml`                                      | The chosen format for the OpenAPI specification <br/>(options: json/yaml)                                         |
-| `filePath`         | `$modulePath/build/resources/main/openapi/` | The designated absolute path for saving <br/> the generated specification file                                    |
-| `regenerationMode` | `strict`                                    | Controls incremental compilation behavior <br/>(options: strict/safe/fast). See [Incremental Compilation](#incremental-compilation) |
-
-## How to use the plugin
-
-### Generating endpoint specifications
-
-Annotate the specific route definitions you want the OpenAPI specification to be generated for.
+Annotate route functions to generate their specifications:
 
 ```kotlin
-
 @GenerateOpenApi
-fun Route.ordersRouting() {
-    route("/v1") {
-        post("/order1") {
-            /*...*/
+fun Route.usersApi() {
+    route("/api/v1/users") {
+        get { /* List users */ }
+        post { /* Create user */ }
+
+        route("/{id}") {
+            get { /* Get user by ID */ }
+            put { /* Update user */ }
+            delete { /* Delete user */ }
         }
     }
 }
-
 ```
 
-You could also annotate the entire `Application` module with multiple/nested route definitions. The plugin will
-recursively visit each `Route`. extension and generate its documentation.
+You can also annotate entire application modules:
 
 ```kotlin
-
 @GenerateOpenApi
-fun Application.ordersModule() {
+fun Application.apiModule() {
     routing {
-        routeOne()
-        routeTwo()
+        usersApi()      // All routes are included
+        productsApi()   // Even nested route functions
+        ordersApi()
     }
 }
-
-fun Route.routeOne() {
-    route("/v1") { /*...*/ }
-}
-
-fun Route.routeTwo() {
-    route("/v2") { /*...*/ }
-    routeThree()
-}
-
 ```
 
-### Endpoint and field descriptions
+### Adding Descriptions
 
-Describe endpoints or schema fields.
+Use `@KtorDescription` for endpoint documentation:
 
 ```kotlin
-@KtorSchema("this is my request")
-data class RequestSample(
-    @KtorField("this is a string")
-    val string: String,
-    val int: Int,
-    val double: Double,
-    @KtorField(description = "this is instant", type = "string", format = "date-time")
-    val date: Instant
-)
-
 @GenerateOpenApi
-fun Route.ordersRouting() {
-    route("/v1") {
+fun Route.ordersApi() {
+    route("/orders") {
         @KtorDescription(
             summary = "Create Order",
-            description = "This endpoint will create an order",
+            description = "Creates a new order with the provided items"
         )
-        post("/create") {
-            call.receive<RequestSample>()
-        }
-
-        route("/orders") {
-            @KtorDescription(
-                summary = "All Orders",
-                description = "This endpoint will return a list of all orders"
-            )
-            get { /*...*/ }
+        post {
+            val order = call.receive<CreateOrderRequest>()
+            // ...
         }
     }
 }
 ```
 
-### Responses
-
-Defining response schemas and their corresponding HTTP status codes are done via `@KtorResponds` annotation on an
-endpoint or `responds<T>(HttpStatusCode)` inline extension on a `RouteContext`. The latter is the preferred way since it
-is capable of defining types with generics. On the annotation `kotlin.Nothing` is treated specially and will result in
-empty response body for statutes like `204 NO_CONTENT`, alternatively use `respondsNothing` extension.
+Use `@KtorSchema` and `@KtorField` for schema documentation:
 
 ```kotlin
+@KtorSchema("Request payload for creating a new order")
+data class CreateOrderRequest(
+    @KtorField("List of items to include in the order")
+    val items: List<OrderItem>,
+
+    @KtorField("Optional discount code")
+    val discountCode: String? = null
+)
+```
+
+Or simply use KDoc comments:
+
+```kotlin
+/**
+ * Request payload for creating a new order
+ * @property items List of items to include in the order
+ * @property discountCode Optional discount code
+ */
+data class CreateOrderRequest(
+    val items: List<OrderItem>,
+    val discountCode: String? = null
+)
+```
+
+### Defining Responses
+
+**Option 1: Inline DSL (Recommended)**
+
+```kotlin
+post("/orders") {
+    responds<Order>(HttpStatusCode.Created, description = "Order created successfully")
+    responds<ErrorResponse>(HttpStatusCode.BadRequest, description = "Invalid request")
+    respondsNothing(HttpStatusCode.Unauthorized)
+
+    // Your handler code...
+}
+```
+
+**Option 2: Annotation**
+
+```kotlin
+@KtorResponds(
+    [
+        ResponseEntry("201", Order::class, description = "Order created"),
+        ResponseEntry("400", ErrorResponse::class, description = "Invalid request"),
+        ResponseEntry("401", Nothing::class)
+    ]
+)
+post("/orders") { /* ... */ }
+```
+
+### Tagging Endpoints
+
+Group endpoints by applying tags:
+
+```kotlin
+@Tag(["Users"])
+fun Route.usersApi() {
+    get("/users") { /* tagged as "Users" */ }
+    post("/users") { /* tagged as "Users" */ }
+}
+
+// Or on individual endpoints:
 @GenerateOpenApi
-fun Route.ordersRouting() {
-    route("/v1") {
-        @KtorResponds(
-            [
-                ResponseEntry("200", Order::class, description = "Created order"),
-                ResponseEntry("204", Nothing::class),
-                ResponseEntry("400", ErrorResponseSample::class, description = "Invalid order payload")
-            ]
-        )
-        post("/create") { /*...*/ }
-        @KtorResponds([ResponseEntry("200", Order::class, isCollection = true, description = "Get all orders")])
-        get("/orders") { /*...*/ }
-    }
-}
-```
+fun Route.api() {
+    @Tag(["Users"])
+    get("/users") { /* ... */ }
 
-```kotlin
-@GenerateOpenApi
-fun Route.ordersRouting() {
-    route("/v1") {
-        post("/create") {
-            // Creates order
-            responds<Order>(HttpStatusCode.Ok)
-            respondsNothing(HttpStatusCode.NoContent, description = "No content for this status")
-            // Invalid order payload
-            responds<ErrorResponseSample>(HttpStatusCode.BadRequest)
-            /*...*/
-        }
-        get("/orders") {
-            // Get all orders
-            responds<List<Order>>(HttpStatusCode.NoContent)
-            /*...*/
-        }
-    }
-}
-```
-
-### Tagging
-
-Using tags enables the categorization of individual endpoints into designated groups.
-Tags specified at the parent route will propogate down to all endpoints contained within it.
-
-```kotlin
-@Tag(["Orders"])
-fun Route.ordersRouting() {
-    route("/v1") {
-        post("/create") { /*...*/ }
-        get("/orders") { /*...*/ }
-    }
-    route("/v2") {
-        post("/create") { /*...*/ }
-        get("/orders") { /*...*/ }
-    }
-}
-```
-
-On the other hand, if the tags are specified with `@KtorDescription` or `@Tag` annotation on an endpoint, they are
-associated exclusively with that particular endpoint.
-
-```kotlin
-@GenerateOpenApi
-fun Route.ordersRouting() {
-    route("/v1") {
-        @KtorDescription(tags = ["Order Operations"])
-        post("/order") { /*...*/ }
-        @Tag(["Cart Operations"])
-        get("/cart") { /*...*/ }
-    }
+    @Tag(["Products"])
+    get("/products") { /* ... */ }
 }
 ```
 
 ### Security Configuration
 
-Define OpenAPI security schemes and requirements in your Gradle configuration:
+Define security schemes in your Gradle configuration:
 
 ```kotlin
 swagger {
     documentation {
         security {
-            // Define security schemes
             schemes {
                 "bearerAuth" to SecurityScheme(
                     type = "http",
                     scheme = "bearer",
-                    bearerFormat = "JWT",
-                    description = "JWT Bearer token authentication"
+                    bearerFormat = "JWT"
                 )
                 "apiKey" to SecurityScheme(
                     type = "apiKey",
@@ -278,10 +318,9 @@ swagger {
                     name = "X-API-Key"
                 )
             }
-            // Define security requirements (OR relationship between items)
             scopes {
-                or { +"bearerAuth" }  // Require bearer auth
-                or { +"apiKey" }       // OR require API key
+                or { +"bearerAuth" }
+                or { +"apiKey" }
             }
         }
     }
@@ -290,7 +329,7 @@ swagger {
 
 ### Type Overrides
 
-Override how specific types are serialized in the OpenAPI schema:
+Customize how specific types appear in the schema:
 
 ```kotlin
 swagger {
@@ -310,9 +349,19 @@ swagger {
 }
 ```
 
-### Polymorphic Discriminator
+### Polymorphic Types
 
-Configure the discriminator property name for sealed class hierarchies:
+Sealed classes are automatically handled with `oneOf`:
+
+```kotlin
+@JsonClassDiscriminator("type")
+sealed class PaymentMethod {
+    data class CreditCard(val cardNumber: String, val cvv: String) : PaymentMethod()
+    data class BankTransfer(val iban: String) : PaymentMethod()
+}
+```
+
+Configure the default discriminator property:
 
 ```kotlin
 swagger {
@@ -322,94 +371,68 @@ swagger {
 }
 ```
 
-This works with kotlinx.serialization's `@JsonClassDiscriminator` annotation on sealed classes.
+---
 
-### Type Support
+## Incremental Compilation
 
-- **Value classes**: Unwrapped to their underlying type in the schema
-- **Sealed classes**: Fully supported with `oneOf` discriminators via `@JsonClassDiscriminator` (kotlinx.serialization)
-- **Generic types**: Supported, but complex nested generics may have limitations
+The plugin supports three regeneration modes to balance build speed and specification completeness:
 
-## Known Limitations
-
-### Incremental Compilation
-
-In Kotlin's incremental compilation mode, only changed source files are recompiled. Since the OpenAPI specification is generated during compilation, the spec may be incomplete if not all `@GenerateOpenApi` functions are recompiled.
-
-The `regenerationMode` option controls how the plugin handles this:
-
-#### Regeneration Modes
-
-| Mode     | Build Speed | Correctness | Best For                              |
-|----------|-------------|-------------|---------------------------------------|
-| `strict` | Slowest     | Always correct | CI/CD, release builds, production    |
-| `safe`   | Balanced    | Usually correct | Local development                   |
-| `fast`   | Fastest     | May be incomplete | Rapid iteration, spec not critical |
-
-#### `strict` (Default)
-
-Always regenerates the OpenAPI spec on every compilation, regardless of what changed.
+| Mode     | Build Speed | Completeness     | Recommended For   |
+|----------|-------------|------------------|-------------------|
+| `strict` | Slower      | Always complete  | CI/CD, releases   |
+| `safe`   | Balanced    | Usually complete | Local development |
+| `fast`   | Fastest     | May be partial   | Rapid prototyping |
 
 ```kotlin
 swagger {
     pluginOptions {
-        regenerationMode = "strict"
+        regenerationMode = "strict"  // default
     }
 }
 ```
 
-**Pros**: Guarantees a complete and correct specification every time.
+**`strict`** (Default): Regenerates the full spec on every build. Best for CI/CD pipelines.
 
-**Cons**: Disables incremental compilation benefits for the compilation task.
+**`safe`**: Regenerates when files containing `@GenerateOpenApi` change. Good balance for development.
 
-#### `safe`
+**`fast`**: Trusts Kotlin's incremental compilation. Fastest, but may produce incomplete specs.
 
-Tracks source files containing `@GenerateOpenApi` as Gradle inputs. The spec is regenerated whenever any of these annotated files change.
+---
 
-```kotlin
-swagger {
-    pluginOptions {
-        regenerationMode = "safe"
-    }
-}
-```
+## Compatibility
 
-**Pros**: Faster than `strict` when editing files that don't contain `@GenerateOpenApi`.
+| Plugin Version | Kotlin Version |
+|----------------|----------------|
+| 0.10.0-alpha   | 2.3.0          |
+| 0.8.8-alpha    | 2.2.20, 2.2.21 |
+| 0.8.7-alpha    | 2.2.20         |
+| 0.8.4-alpha    | 2.2.0          |
+| 0.8.0-alpha    | 2.1.20         |
+| 0.7.0-alpha    | 2.1.0          |
+| 0.6.4-alpha    | 2.0.20         |
+| 0.6.0-alpha    | 2.0            |
 
-**Cons**: May miss updates when route functions (called by `@GenerateOpenApi` functions but not annotated themselves) have body-only changes within the same module. Cross-module dependency changes are handled correctly by Gradle.
+---
 
-#### `fast`
+## Roadmap
 
-Trusts Kotlin's incremental compilation completely. Only regenerates when Gradle determines the compilation task needs to run.
+- [ ] Automatic response type inference from handler code
+- [ ] Auto-tagging based on module/route function names
+- [ ] Tag descriptions
+- [ ] OpenAPI 3.1 full support
 
-```kotlin
-swagger {
-    pluginOptions {
-        regenerationMode = "fast"
-    }
-}
-```
+---
 
-**Pros**: Fastest possible builds.
+## Contributing
 
-**Cons**: May produce incomplete specs containing only routes from recompiled files. Use only when build speed is prioritized over spec completeness.
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to
+discuss what you would like to change.
 
-#### Recommendations
+## Support
 
-- **CI/CD pipelines**: Use `strict` (default) to ensure complete specifications
-- **Local development**: Use `safe` for a balance of speed and correctness
-- **Rapid prototyping**: Use `fast` if you don't need the spec to be accurate during development
+- [GitHub Issues](https://github.com/tabilzad/inspektor/issues) - Bug reports and feature requests
+- [Sample Project](https://github.com/tabilzad/ktor-inspektor-example) - Complete working example
 
-## Planned Features
+## License
 
-* Automatic Response resolution (inferring response types from handler code)
-* Option for an automatic tag resolution from module/route function declaration
-* Tag descriptions
-
-## Sample Specification
-
-![sample](https://github.com/tabilzad/inspektor/assets/16094286/6d0b0a6a-5925-4f52-ad23-11b1c44b43a1)
-
-
-
-
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
