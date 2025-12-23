@@ -41,10 +41,6 @@ server code at **build time**. No runtime overhead, no special DSL wrappers, no 
 Simply annotate your route definitions with `@GenerateOpenApi` and get a complete `openapi.yaml` or `openapi.json`
 specification.
 
-<p align="center">
-  <img src="https://github.com/tabilzad/inspektor/assets/16094286/6d0b0a6a-5925-4f52-ad23-11b1c44b43a1" alt="Sample OpenAPI Specification" width="700"/>
-</p>
-
 ### Why InspeKtor?
 
 |                    | Traditional Approach                        | InspeKtor                              |
