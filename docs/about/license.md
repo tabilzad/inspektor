@@ -210,4 +210,4 @@ InspeKtor uses the following open-source libraries:
 
 ## Questions
 
-If you have questions about the license, please [open an issue](https://github.com/tabilzad/ktor-docs/issues).
+If you have questions about the license, please [open an issue](https://github.com/tabilzad/inspektor/issues).

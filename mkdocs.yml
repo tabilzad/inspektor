@@ -1,14 +1,14 @@
 # Project information
 site_name: InspeKtor
-site_url: https://tabilzad.github.io/ktor-docs
+site_url: https://github.com/tabilzad/inspektor
 site_author: tabilzad
 site_description: >-
   OpenAPI (Swagger) specification generator for Ktor.
   Generate complete API documentation from your Kotlin code at build time.
 
 # Repository
-repo_name: tabilzad/ktor-docs
-repo_url: https://github.com/tabilzad/ktor-docs
+repo_name: tabilzad/inspektor
+repo_url: https://github.com/tabilzad/inspektor
 edit_uri: edit/master/docs/
 
 # Copyright
@@ -168,7 +168,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/tabilzad/ktor-docs
+      link: https://github.com/tabilzad/inspektor
       name: InspeKtor on GitHub
   generator: false
   status:

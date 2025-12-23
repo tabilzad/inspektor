@@ -6,7 +6,7 @@ Thank you for your interest in contributing to InspeKtor!
 
 ### Report Bugs
 
-Found a bug? [Open an issue](https://github.com/tabilzad/ktor-docs/issues/new) with:
+Found a bug? [Open an issue](https://github.com/tabilzad/inspektor/issues/new) with:
 
 - InspeKtor, Kotlin, and Ktor versions
 - Minimal code to reproduce the issue
@@ -15,7 +15,7 @@ Found a bug? [Open an issue](https://github.com/tabilzad/ktor-docs/issues/new) w
 
 ### Suggest Features
 
-Have an idea? [Open a feature request](https://github.com/tabilzad/ktor-docs/issues/new) with:
+Have an idea? [Open a feature request](https://github.com/tabilzad/inspektor/issues/new) with:
 
 - Description of the feature
 - Use case / motivation
@@ -49,7 +49,7 @@ Want to fix a bug or add a feature?
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/tabilzad/ktor-docs.git
+git clone https://github.com/tabilzad/inspektor.git
 cd ktor-docs
 ```
 
@@ -213,8 +213,8 @@ Releases are managed by maintainers:
 
 ## Getting Help
 
-- [GitHub Discussions](https://github.com/tabilzad/ktor-docs/discussions) - Questions and discussions
-- [GitHub Issues](https://github.com/tabilzad/ktor-docs/issues) - Bug reports and feature requests
+- [GitHub Discussions](https://github.com/tabilzad/inspektor/discussions) - Questions and discussions
+- [GitHub Issues](https://github.com/tabilzad/inspektor/issues) - Bug reports and feature requests
 
 ## Code of Conduct
 

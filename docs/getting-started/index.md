@@ -57,5 +57,5 @@ graph LR
 **Key benefits of this approach:**
 
 - **No runtime overhead** - Generation happens at build time only
+- **No third party DSL** - Use standard Ktor routing syntax
 - **Always accurate** - The spec is derived directly from your source code
-- **IDE support** - Full autocomplete and type checking for annotations

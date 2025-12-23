@@ -119,7 +119,7 @@ Alpha/Beta versions indicate pre-release status.
 
 ## Reporting Issues
 
-Found a bug? Please report it on [GitHub Issues](https://github.com/tabilzad/ktor-docs/issues).
+Found a bug? Please report it on [GitHub Issues](https://github.com/tabilzad/inspektor/issues).
 
 Include:
 - InspeKtor version

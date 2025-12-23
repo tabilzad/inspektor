@@ -50,9 +50,9 @@ InspeKtor analyzes your Ktor routing DSL at compile time and generates accurate 
 
 ## Project Links
 
-- [:material-github: GitHub Repository](https://github.com/tabilzad/ktor-docs)
-- [:material-package-variant: Maven Central](https://central.sonatype.com/artifact/io.github.tabilzad/ktor-docs-plugin-gradle)
-- [:material-bug: Issue Tracker](https://github.com/tabilzad/ktor-docs/issues)
+- [:material-github: GitHub Repository](https://github.com/tabilzad/inspektor)
+- [:material-package-variant: Maven Central](https://central.sonatype.com/artifact/io.github.tabilzad.inspektor/io.github.tabilzad.inspektor.gradle.plugin)
+- [:material-bug: Issue Tracker](https://github.com/tabilzad/inspektor/issues)
 
 ## About This Documentation
 

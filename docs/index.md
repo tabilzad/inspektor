@@ -16,22 +16,22 @@ Zero runtime overhead. Full type safety. Always in sync.
 </p>
 
 <p align="center" style="margin-top: 2rem;">
-  <a href="https://github.com/tabilzad/ktor-docs/actions/workflows/gradle-publish.yml">
-    <img src="https://github.com/tabilzad/ktor-docs/actions/workflows/gradle-publish.yml/badge.svg" alt="Build Status">
+  <a href="https://github.com/tabilzad/inspektor/actions/workflows/gradle-publish.yml">
+    <img src="https://github.com/tabilzad/inspektor/actions/workflows/gradle-publish.yml/badge.svg" alt="Build Status">
   </a>
-  <a href="https://central.sonatype.com/artifact/io.github.tabilzad/ktor-docs-plugin-gradle">
-    <img src="https://img.shields.io/maven-central/v/io.github.tabilzad/ktor-docs-plugin-gradle?color=blue" alt="Maven Central">
+  <a href="https://central.sonatype.com/artifact/io.github.tabilzad.inspektor/io.github.tabilzad.inspektor.gradle.plugin">
+    <img src="https://img.shields.io/maven-central/v/io.github.tabilzad.inspektor/io.github.tabilzad.inspektor.gradle.plugin?color=blue" alt="Maven Central">
   </a>
   <a href="https://kotlinlang.org">
     <img src="https://img.shields.io/badge/kotlin-2.3.0-blue.svg?logo=kotlin" alt="Kotlin">
   </a>
-  <a href="https://github.com/tabilzad/ktor-docs/blob/master/LICENSE">
+  <a href="https://github.com/tabilzad/inspektor/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License">
   </a>
 </p>
 
 [Get Started :material-arrow-right:](getting-started/index.md){ .md-button .md-button--primary }
-[View on GitHub :material-github:](https://github.com/tabilzad/ktor-docs){ .md-button }
+[View on GitHub :material-github:](https://github.com/tabilzad/inspektor){ .md-button }
 
 </div>
 
