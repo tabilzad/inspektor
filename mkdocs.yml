@@ -3,8 +3,8 @@ site_name: InspeKtor
 site_url: https://tabilzad.github.io/ktor-docs
 site_author: tabilzad
 site_description: >-
-  OpenAPI (Swagger) specification generator for Ktor -
-  Generate complete API documentation from your Kotlin code at build time
+  OpenAPI (Swagger) specification generator for Ktor.
+  Generate complete API documentation from your Kotlin code at build time.
 
 # Repository
 repo_name: tabilzad/ktor-docs
@@ -17,8 +17,10 @@ copyright: Copyright &copy; 2024 tabilzad
 # Configuration
 theme:
   name: material
-  # logo: assets/logo.png  # Uncomment when logo is available
-  # favicon: assets/favicon.png  # Uncomment when favicon is available
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
   features:
     - announce.dismiss
     - content.action.edit
@@ -28,6 +30,7 @@ theme:
     - content.code.select
     - content.tabs.link
     - content.tooltips
+    - header.autohide
     - navigation.footer
     - navigation.indexes
     - navigation.instant
@@ -44,27 +47,24 @@ theme:
     - search.suggest
     - toc.follow
   palette:
-    - media: "(prefers-color-scheme)"
+    # Dark mode first (default)
+    - scheme: slate
+      primary: indigo
+      accent: purple
       toggle:
-        icon: material/link
+        icon: material/weather-night
         name: Switch to light mode
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: deep purple
-      accent: deep purple
+    # Light mode
+    - scheme: default
+      primary: indigo
+      accent: purple
       toggle:
-        icon: material/toggle-switch
+        icon: material/weather-sunny
         name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: deep purple
-      accent: deep purple
-      toggle:
-        icon: material/toggle-switch-off
-        name: Switch to system preference
   font:
     text: Inter
     code: JetBrains Mono
+  language: en
 
 # Plugins
 plugins:
@@ -81,8 +81,10 @@ markdown_extensions:
   - def_list
   - footnotes
   - md_in_html
+  - tables
   - toc:
       permalink: true
+      toc_depth: 3
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.betterem:
@@ -96,6 +98,7 @@ markdown_extensions:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
+      auto_title: true
   - pymdownx.inlinehilite
   - pymdownx.keys
   - pymdownx.magiclink:
@@ -155,6 +158,7 @@ nav:
       - DSL Functions: api/dsl-functions.md
       - Gradle DSL: api/gradle-dsl.md
   - About:
+      - about/index.md
       - Compatibility: about/compatibility.md
       - Changelog: about/changelog.md
       - Contributing: about/contributing.md
@@ -164,11 +168,12 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/tabilzad
+      link: https://github.com/tabilzad/ktor-docs
+      name: InspeKtor on GitHub
   generator: false
-  analytics:
-    provider: google
-    property: !ENV GOOGLE_ANALYTICS_KEY
+  status:
+    new: Recently added
+    deprecated: Deprecated
 
 extra_css:
   - stylesheets/extra.css

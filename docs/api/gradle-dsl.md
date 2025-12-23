@@ -160,15 +160,14 @@ Define security schemes.
 ```kotlin
 schemes {
     "schemeName" to SecurityScheme(
-        type = "http",           // http, apiKey, oauth2, openIdConnect
-        scheme = "bearer",       // For http: bearer, basic
-        bearerFormat = "JWT",    // Optional format hint
-        `in` = "header",         // For apiKey: header, query, cookie
-        name = "X-API-Key",      // For apiKey: parameter name
-        description = "...",     // Optional description
-        flows = OAuthFlows(...
-    ), // For oauth2
-    openIdConnectUrl = "..." // For openIdConnect
+        type = "http",              // http, apiKey, oauth2, openIdConnect
+        scheme = "bearer",          // For http: bearer, basic
+        bearerFormat = "JWT",       // Optional format hint
+        `in` = "header",            // For apiKey: header, query, cookie
+        name = "X-API-Key",         // For apiKey: parameter name
+        description = "...",        // Optional description
+        flows = OAuthFlows(...),    // For oauth2
+        openIdConnectUrl = "..."    // For openIdConnect
     )
 }
 ```
