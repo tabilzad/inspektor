@@ -8,15 +8,31 @@ internal fun convertInternalToOpenSpec(
     configuration: PluginConfiguration,
     schemas: Map<String, OpenApiSpec.TypeDescriptor>
 ): OpenApiSpec {
-    val reducedRoutes = routes
-        .map {
-            reduce(it)
-                .cleanPaths()
-                .convertToSpec()
+    // Flatten all routes from all RouteDescriptors into a single list
+    val allRouteSpecs = routes.flatMap { reduce(it) }.cleanPaths()
+
+    // Group by path and method, merging when the same path/method appears multiple times
+    val mergedRouteSpecs = allRouteSpecs
+        .groupBy { it.path to it.method }
+        .map { (_, specsForPathMethod) ->
+            // Merge all specs for the same path/method into one
+            specsForPathMethod.reduce { acc, spec ->
+                acc.copy(
+                    tags = acc.tags merge spec.tags,
+                    summary = acc.summary ?: spec.summary,
+                    description = acc.description ?: spec.description,
+                    operationId = acc.operationId ?: spec.operationId,
+                    parameters = acc.parameters ?: spec.parameters,
+                    responses = acc.responses ?: spec.responses,
+                    deprecated = acc.deprecated ?: spec.deprecated
+                )
+            }
         }
-        .reduce { acc, route ->
-            acc.plus(route)
-        }.mapKeys { it.key.replace("//", "/") }
+
+    // Convert merged specs to OpenAPI format
+    val reducedRoutes = mergedRouteSpecs
+        .convertToSpec()
+        .mapKeys { it.key.replace("//", "/") }
 
     return OpenApiSpec(
         info = configuration.initConfig.info,

@@ -76,7 +76,7 @@ infix fun Boolean?.optionalAnd(other: Boolean?): Boolean? =
 internal fun List<KtorRouteSpec>.cleanPaths() = map {
     it.copy(
         path = it.path
-            .replace("//", "/")
+            .replace(Regex("/+"), "/")  // Replace multiple consecutive slashes with single slash
             .replace("?", "")
     )
 }

@@ -329,6 +329,17 @@ This works with kotlinx.serialization's `@JsonClassDiscriminator` annotation on 
 - **Sealed classes**: Fully supported with `oneOf` discriminators via `@JsonClassDiscriminator` (kotlinx.serialization)
 - **Generic types**: Supported, but complex nested generics may have limitations
 
+## Known Limitations
+
+### Incremental Compilation
+
+In Kotlin's incremental compilation mode, only changed source files are recompiled. Since the OpenAPI specification is generated during compilation, this means:
+
+- **Full builds**: The spec contains all routes from all `@GenerateOpenApi` functions
+- **Incremental builds**: The spec only contains routes from recompiled files
+
+**Recommendation**: For production builds or CI/CD pipelines, use `./gradlew clean build` to ensure a complete specification.
+
 ## Planned Features
 
 * Automatic Response resolution (inferring response types from handler code)

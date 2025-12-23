@@ -2,7 +2,7 @@
 
 package io.github.tabilzad.ktor
 
-import io.github.tabilzad.ktor.k2.ResponseSchemaIrLoweringExtension
+import io.github.tabilzad.ktor.k2.OpenApiIrGenerationExtension
 import io.github.tabilzad.ktor.k2.SwaggerDeclarationChecker
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
@@ -26,8 +26,13 @@ open class KtorMetaPluginRegistrar : CompilerPluginRegistrar() {
 
     @OptIn(ExperimentalCompilerApi::class)
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
+        val config = configuration.buildPluginConfiguration()
+
+        // FIR phase: Collect routes and schemas from @GenerateOpenApi functions
         FirExtensionRegistrarAdapter.registerExtension(SwaggerCheckers(configuration))
-        IrGenerationExtension.registerExtension(ResponseSchemaIrLoweringExtension())
+
+        // IR phase: Write collected data to file and lower responds<T>() calls
+        IrGenerationExtension.registerExtension(OpenApiIrGenerationExtension(configuration, config))
     }
 }
 
