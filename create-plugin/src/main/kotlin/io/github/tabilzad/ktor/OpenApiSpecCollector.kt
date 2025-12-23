@@ -52,10 +52,35 @@ internal object OpenApiSpecCollector {
         routes: List<RouteDescriptor>,
         schemas: Map<String, OpenApiSpec.TypeDescriptor>
     ) {
+        // Clean up stale data from previous compilations for this key.
+        // This prevents memory leaks when compilations fail between FIR and IR phases.
+        clearStaleData(configuration, key)
+
         val dataMap = getDataMap(configuration)
         dataMap
             .getOrPut(key) { Collections.synchronizedList(mutableListOf()) }
             .add(CollectedRouteData(routes, schemas))
+    }
+
+    /**
+     * Remove data for a given key from all configurations EXCEPT the current one.
+     * This cleans up orphaned data from previous failed/cancelled compilations.
+     */
+    private fun clearStaleData(currentConfiguration: CompilerConfiguration, key: String) {
+        val currentConfigId = System.identityHashCode(currentConfiguration)
+        val staleConfigIds = mutableListOf<Int>()
+
+        globalData.forEach { (configId, dataMap) ->
+            if (configId != currentConfigId) {
+                dataMap.remove(key)
+                if (dataMap.isEmpty()) {
+                    staleConfigIds.add(configId)
+                }
+            }
+        }
+
+        // Remove empty configuration entries
+        staleConfigIds.forEach { globalData.remove(it) }
     }
 
     /**
