@@ -17,6 +17,8 @@ copyright: Copyright &copy; 2024 tabilzad
 # Configuration
 theme:
   name: material
+  logo: assets/logo.png
+  favicon: assets/favicon.png
   icon:
     repo: fontawesome/brands/github
     edit: material/pencil
@@ -105,7 +107,7 @@ markdown_extensions:
       normalize_issue_symbols: true
       repo_url_shorthand: true
       user: tabilzad
-      repo: ktor-docs
+      repo: inspektor
   - pymdownx.mark
   - pymdownx.smartsymbols
   - pymdownx.snippets

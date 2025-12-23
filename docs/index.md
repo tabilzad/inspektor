@@ -8,6 +8,10 @@ hide:
 
 <div class="hero-section" markdown>
 
+<p align="center">
+  <img src="assets/logo.png" alt="InspeKtor Logo" width="180" style="margin-bottom: 1rem;">
+</p>
+
 # InspeKtor
 
 <p class="subtitle">
