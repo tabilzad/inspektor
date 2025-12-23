@@ -88,12 +88,13 @@ Each listed plugin version is only compatible with the specified Kotlin compiler
 
 ### Plugin options
 
-| Option        | Default Value                               | Explanation                                                                                 |
-|---------------|---------------------------------------------|---------------------------------------------------------------------------------------------|
-| `enabled`     | `true`                                      | Enable/Disables the plugin                                                                  |
-| `saveInBuild` | `true`                                      | Decides if the generated specification file should <br/> be saved in the `build/` directory |
-| `format`      | `yaml`                                      | The chosen format for the OpenAPI specification <br/>(options: json/yaml)                   |
-| `filePath`    | `$modulePath/build/resources/main/openapi/` | The designated absolute path for saving <br/> the generated specification file              |
+| Option             | Default Value                               | Explanation                                                                                                       |
+|--------------------|---------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| `enabled`          | `true`                                      | Enable/Disables the plugin                                                                                        |
+| `saveInBuild`      | `true`                                      | Decides if the generated specification file should <br/> be saved in the `build/` directory                       |
+| `format`           | `yaml`                                      | The chosen format for the OpenAPI specification <br/>(options: json/yaml)                                         |
+| `filePath`         | `$modulePath/build/resources/main/openapi/` | The designated absolute path for saving <br/> the generated specification file                                    |
+| `regenerationMode` | `strict`                                    | Controls incremental compilation behavior <br/>(options: strict/safe/fast). See [Incremental Compilation](#incremental-compilation) |
 
 ## How to use the plugin
 
@@ -333,12 +334,71 @@ This works with kotlinx.serialization's `@JsonClassDiscriminator` annotation on 
 
 ### Incremental Compilation
 
-In Kotlin's incremental compilation mode, only changed source files are recompiled. Since the OpenAPI specification is generated during compilation, this means:
+In Kotlin's incremental compilation mode, only changed source files are recompiled. Since the OpenAPI specification is generated during compilation, the spec may be incomplete if not all `@GenerateOpenApi` functions are recompiled.
 
-- **Full builds**: The spec contains all routes from all `@GenerateOpenApi` functions
-- **Incremental builds**: The spec only contains routes from recompiled files
+The `regenerationMode` option controls how the plugin handles this:
 
-**Recommendation**: For production builds or CI/CD pipelines, use `./gradlew clean build` to ensure a complete specification.
+#### Regeneration Modes
+
+| Mode     | Build Speed | Correctness | Best For                              |
+|----------|-------------|-------------|---------------------------------------|
+| `strict` | Slowest     | Always correct | CI/CD, release builds, production    |
+| `safe`   | Balanced    | Usually correct | Local development                   |
+| `fast`   | Fastest     | May be incomplete | Rapid iteration, spec not critical |
+
+#### `strict` (Default)
+
+Always regenerates the OpenAPI spec on every compilation, regardless of what changed.
+
+```kotlin
+swagger {
+    pluginOptions {
+        regenerationMode = "strict"
+    }
+}
+```
+
+**Pros**: Guarantees a complete and correct specification every time.
+
+**Cons**: Disables incremental compilation benefits for the compilation task.
+
+#### `safe`
+
+Tracks source files containing `@GenerateOpenApi` as Gradle inputs. The spec is regenerated whenever any of these annotated files change.
+
+```kotlin
+swagger {
+    pluginOptions {
+        regenerationMode = "safe"
+    }
+}
+```
+
+**Pros**: Faster than `strict` when editing files that don't contain `@GenerateOpenApi`.
+
+**Cons**: May miss updates when route functions (called by `@GenerateOpenApi` functions but not annotated themselves) have body-only changes within the same module. Cross-module dependency changes are handled correctly by Gradle.
+
+#### `fast`
+
+Trusts Kotlin's incremental compilation completely. Only regenerates when Gradle determines the compilation task needs to run.
+
+```kotlin
+swagger {
+    pluginOptions {
+        regenerationMode = "fast"
+    }
+}
+```
+
+**Pros**: Fastest possible builds.
+
+**Cons**: May produce incomplete specs containing only routes from recompiled files. Use only when build speed is prioritized over spec completeness.
+
+#### Recommendations
+
+- **CI/CD pipelines**: Use `strict` (default) to ensure complete specifications
+- **Local development**: Use `safe` for a balance of speed and correctness
+- **Rapid prototyping**: Use `fast` if you don't need the spec to be accurate during development
 
 ## Planned Features
 
