@@ -78,7 +78,14 @@ class KtorMetaPlugin @Inject constructor(
         // Serialize the config to use as an input hash for Gradle caching
         val initialConfigJson = Json.encodeToString<ConfigInput>(initialConfig)
 
-        // Configure Gradle task inputs/outputs for proper incremental build support
+        // Validate regeneration mode
+        val regenerationMode = swaggerExtension.pluginOptions.regenerationMode.lowercase()
+        require(regenerationMode in listOf("strict", "safe", "fast")) {
+            "Invalid regenerationMode '${swaggerExtension.pluginOptions.regenerationMode}'. " +
+                "Must be one of: strict, safe, fast"
+        }
+
+        // Configure Gradle task inputs/outputs based on regeneration mode
         kotlinCompilation.compileTaskProvider.configure { task ->
             // Register the OpenAPI output file so Gradle can track it for up-to-date checks.
             // We use outputs.files() instead of outputs.file() because outputs.file() on
@@ -86,22 +93,53 @@ class KtorMetaPlugin @Inject constructor(
             task.outputs.files(openApiOutputFile)
                 .withPropertyName("openApiSpec")
 
+            // Always force regeneration if output file doesn't exist
             if (!openApiOutputFile.exists()) {
                 task.outputs.upToDateWhen { false }
             }
 
-            // Register plugin configuration as inputs so changes trigger regeneration.
-            // This ensures that changing swagger { } config invalidates the build cache.
+            // Register plugin configuration as inputs so config changes trigger regeneration.
+            // This applies to all modes - changing swagger { } config should always regenerate.
             task.inputs.property("swagger.enabled", swaggerExtension.pluginOptions.enabled)
             task.inputs.property("swagger.format", swaggerExtension.pluginOptions.format)
+            task.inputs.property("swagger.regenerationMode", regenerationMode)
             task.inputs.property("swagger.generateRequestSchemas", swaggerExtension.documentation.generateRequestSchemas)
             task.inputs.property("swagger.hideTransientFields", swaggerExtension.documentation.hideTransientFields)
             task.inputs.property("swagger.hidePrivateAndInternalFields", swaggerExtension.documentation.hidePrivateAndInternalFields)
             task.inputs.property("swagger.deriveFieldRequirementFromTypeNullability", swaggerExtension.documentation.deriveFieldRequirementFromTypeNullability)
             task.inputs.property("swagger.useKDocsForDescriptions", swaggerExtension.documentation.useKDocsForDescriptions)
             task.inputs.property("swagger.servers", swaggerExtension.documentation.servers.joinToString(","))
-            // Track complex config (info, security, overrides) as a single hash
             task.inputs.property("swagger.initialConfig", initialConfigJson.hashCode())
+
+            // Apply regeneration mode strategy
+            when (regenerationMode) {
+                "strict" -> {
+                    // STRICT MODE: Always regenerate on every compilation.
+                    // Guarantees correctness but disables incremental compilation benefits.
+                    // Recommended for CI/CD and release builds.
+                    task.outputs.upToDateWhen { false }
+                }
+
+                "safe" -> {
+                    // SAFE MODE: Track source files containing @GenerateOpenApi as inputs.
+                    // Regenerates when any annotated file changes. Faster than strict for
+                    // changes to unrelated files, but may miss body-only changes to route
+                    // functions within the same module.
+                    val openApiSourceFiles = findOpenApiAnnotatedFiles(kotlinCompilation)
+                    if (openApiSourceFiles.isNotEmpty()) {
+                        task.inputs.files(openApiSourceFiles)
+                            .withPropertyName("openApiSourceFiles")
+                            .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+                    }
+                }
+
+                "fast" -> {
+                    // FAST MODE: Trust Kotlin's incremental compilation completely.
+                    // Fastest builds but may produce incomplete specs when only some
+                    // source files are recompiled. Use for rapid local development only.
+                    // No additional input tracking beyond standard Kotlin compilation.
+                }
+            }
         }
 
         val subpluginOptions = listOf(
@@ -189,4 +227,41 @@ class KtorMetaPlugin @Inject constructor(
     }
 
     private fun Semver.toKotlinVersion(): KotlinVersion = KotlinVersion(this.major, this.minor, this.patch)
+
+    /**
+     * Finds all Kotlin source files that contain the @GenerateOpenApi annotation.
+     * Used in "safe" regeneration mode to track annotated files as Gradle inputs.
+     *
+     * This function scans source files for the annotation text, checking for:
+     * - Simple annotation: @GenerateOpenApi
+     * - Fully qualified: @io.github.tabilzad.ktor.annotations.GenerateOpenApi
+     *
+     * Note: This is a text-based scan, not a semantic analysis. It may have false
+     * positives (e.g., annotation in comments) but this is acceptable for input tracking.
+     */
+    private fun findOpenApiAnnotatedFiles(kotlinCompilation: KotlinCompilation<*>): List<File> {
+        return kotlinCompilation.allKotlinSourceSets
+            .flatMap { sourceSet -> sourceSet.kotlin.srcDirs }
+            .filter { it.exists() && it.isDirectory }
+            .flatMap { srcDir ->
+                srcDir.walkTopDown()
+                    .filter { file ->
+                        file.isFile &&
+                            file.extension == "kt" &&
+                            file.canRead()
+                    }
+                    .filter { file ->
+                        try {
+                            val content = file.readText()
+                            // Check for annotation in various forms
+                            content.contains("@GenerateOpenApi") ||
+                                content.contains("@io.github.tabilzad.ktor.annotations.GenerateOpenApi")
+                        } catch (e: Exception) {
+                            // If we can't read the file, skip it
+                            false
+                        }
+                    }
+                    .toList()
+            }
+    }
 }
