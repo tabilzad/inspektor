@@ -67,15 +67,6 @@ class KtorMetaPlugin @Inject constructor(
             )
         }
 
-        kotlinCompilation.compileTaskProvider.configure { task ->
-            if (!openApiOutputFile.exists()) {
-                task.outputs.upToDateWhen { false }
-            }
-            // This should be a more correct way to do this:
-            // task.outputs.file(openApiOutputFile)
-            // However, setting a KotlinCompile output task.outputs.file("foo") always creates a *directory* named foo
-        }
-
         val initialConfig = ConfigInput(
             securityConfig = swaggerExtension.documentation.getSecurityConfig(),
             securitySchemes = swaggerExtension.documentation.getSecuritySchemes(),
@@ -83,6 +74,35 @@ class KtorMetaPlugin @Inject constructor(
             overrides = swaggerExtension.documentation.serialOverrides.getOverrides().map { it.toConfigInput() },
             discriminator = swaggerExtension.documentation.polymorphicDiscriminator
         )
+
+        // Serialize the config to use as an input hash for Gradle caching
+        val initialConfigJson = Json.encodeToString<ConfigInput>(initialConfig)
+
+        // Configure Gradle task inputs/outputs for proper incremental build support
+        kotlinCompilation.compileTaskProvider.configure { task ->
+            // Register the OpenAPI output file so Gradle can track it for up-to-date checks.
+            // We use outputs.files() instead of outputs.file() because outputs.file() on
+            // KotlinCompile tasks creates a directory instead of tracking a file.
+            task.outputs.files(openApiOutputFile)
+                .withPropertyName("openApiSpec")
+
+            if (!openApiOutputFile.exists()) {
+                task.outputs.upToDateWhen { false }
+            }
+
+            // Register plugin configuration as inputs so changes trigger regeneration.
+            // This ensures that changing swagger { } config invalidates the build cache.
+            task.inputs.property("swagger.enabled", swaggerExtension.pluginOptions.enabled)
+            task.inputs.property("swagger.format", swaggerExtension.pluginOptions.format)
+            task.inputs.property("swagger.generateRequestSchemas", swaggerExtension.documentation.generateRequestSchemas)
+            task.inputs.property("swagger.hideTransientFields", swaggerExtension.documentation.hideTransientFields)
+            task.inputs.property("swagger.hidePrivateAndInternalFields", swaggerExtension.documentation.hidePrivateAndInternalFields)
+            task.inputs.property("swagger.deriveFieldRequirementFromTypeNullability", swaggerExtension.documentation.deriveFieldRequirementFromTypeNullability)
+            task.inputs.property("swagger.useKDocsForDescriptions", swaggerExtension.documentation.useKDocsForDescriptions)
+            task.inputs.property("swagger.servers", swaggerExtension.documentation.servers.joinToString(","))
+            // Track complex config (info, security, overrides) as a single hash
+            task.inputs.property("swagger.initialConfig", initialConfigJson.hashCode())
+        }
 
         val subpluginOptions = listOf(
             SubpluginOption(
@@ -123,7 +143,7 @@ class KtorMetaPlugin @Inject constructor(
             ),
             SubpluginOption(
                 key = "initialConfig",
-                value = Base64.encode(Json.encodeToString<ConfigInput>(initialConfig).toByteArray())
+                value = Base64.encode(initialConfigJson.toByteArray())
             )
         )
         return project.provider { subpluginOptions }
