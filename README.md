@@ -21,14 +21,17 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"/>
   </a>
+  <a href="https://tabilzad.github.io/inspektor/">
+    <img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue?logo=github" alt="Documentation"/>
+  </a>
 </p>
 
 <p align="center">
+  <a href="https://tabilzad.github.io/inspektor/"><strong>📖 Full Documentation</strong></a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#features">Features</a> •
   <a href="#configuration">Configuration</a> •
-  <a href="#usage-guide">Usage Guide</a> •
-  <a href="#examples">Examples</a>
+  <a href="#usage-guide">Usage Guide</a>
 </p>
 
 ---
@@ -426,6 +429,7 @@ discuss what you would like to change.
 
 ## Support
 
+- [Full Documentation](https://tabilzad.github.io/inspektor/) - Comprehensive guides, API reference, and examples
 - [GitHub Issues](https://github.com/tabilzad/inspektor/issues) - Bug reports and feature requests
 - [Sample Project](https://github.com/tabilzad/ktor-inspektor-example) - Complete working example
 
