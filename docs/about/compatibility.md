@@ -96,26 +96,6 @@ Or run:
 ./gradlew wrapper --gradle-version 8.5
 ```
 
-## Java Version
-
-InspeKtor supports Java 11 and later.
-
-```kotlin title="build.gradle.kts"
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
-}
-```
-
-### Recommended Java Versions
-
-| Java Version | Status                 |
-|--------------|------------------------|
-| Java 11      | Supported (minimum)    |
-| Java 17      | Recommended (LTS)      |
-| Java 21      | Supported (latest LTS) |
-
 ## Build Systems
 
 ### Gradle (Kotlin DSL)
@@ -149,34 +129,6 @@ swagger {
 
 Maven is not currently supported. Please use Gradle.
 
-## IDE Support
-
-### IntelliJ IDEA
-
-InspeKtor works with IntelliJ IDEA 2023.1 and later.
-
-For best experience:
-
-- Use IntelliJ IDEA 2024.1+
-- Enable the K2 Kotlin plugin
-- Import as a Gradle project
-
-### VS Code
-
-Works with the Kotlin extension, but IntelliJ IDEA provides better support for Kotlin compiler plugins.
-
-### Other IDEs
-
-Any IDE that supports Gradle and Kotlin should work, though with varying levels of support for compiler plugin features.
-
-## Operating Systems
-
-InspeKtor works on all major operating systems:
-
-- **Linux** (tested on Ubuntu, Debian, CentOS)
-- **macOS** (Intel and Apple Silicon)
-- **Windows** (Windows 10/11)
-
 ## Serialization Libraries
 
 ### kotlinx.serialization
@@ -193,60 +145,23 @@ data class User(
 
 `@SerialName` annotations are respected for discriminator values.
 
-### Jackson
-
-Supported for basic use cases:
+### com.squareup.moshi
 
 ```kotlin
+@JsonClass(generateAdapter = true)
 data class User(
-    @JsonProperty("user_id")
+    @Json(name = "id") val id: Long,
     val id: Long,
     val name: String
 )
 ```
+ No custom polymorphic factory support.
 
-### Gson
+### Gradle Caching Issues
 
-Basic support. Consider using kotlinx.serialization for best results.
-
-## Known Limitations
-
-### Current Limitations
-
-1. **No Maven support** - Gradle only
-2. **No multiplatform** - JVM only
-3. **Limited annotation processing** - Some advanced annotations not supported
-
-### Planned Improvements
-
-- Maven plugin support
-- Enhanced annotation support
-- More serialization library integrations
-
-## Troubleshooting
-
-### Plugin Not Found
-
-Ensure you're using the correct plugin ID:
-
-```kotlin
-plugins {
-    id("io.github.tabilzad.inspektor") version "0.10.0-alpha"
-}
+If you see the spec not updating after successful builds try running
+```bash
+./gradlew compileKotlin --rerun-tasks 
+# or 
+./gradlew my-ktor-module:compileReleaseKotlin --rerun-tasks 
 ```
-
-### Kotlin Version Mismatch
-
-If you see errors about Kotlin version:
-
-1. Check your Kotlin version matches the compatibility matrix
-2. Run `./gradlew --refresh-dependencies`
-3. Clean and rebuild: `./gradlew clean build`
-
-### Gradle Version Issues
-
-If you see Gradle-related errors:
-
-1. Update Gradle to 8.0+
-2. Check `gradle-wrapper.properties`
-3. Run `./gradlew wrapper --gradle-version 8.5`

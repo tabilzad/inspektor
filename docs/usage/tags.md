@@ -2,7 +2,7 @@
 
 Organize your API endpoints into logical groups.
 
-## @Tag Annotation
+## `@Tag` Annotation
 
 Use the `@Tag` annotation to group related endpoints:
 

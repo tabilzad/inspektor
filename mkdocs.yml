@@ -151,7 +151,6 @@ nav:
   - About:
       - about/index.md
       - Compatibility: about/compatibility.md
-      - Changelog: about/changelog.md
       - Contributing: about/contributing.md
       - License: about/license.md
 

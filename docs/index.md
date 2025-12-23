@@ -51,11 +51,11 @@ Zero runtime overhead. Full type safety. Always in sync.
 
     Documentation is generated at compile time, not runtime. Your application performance stays completely unaffected.
 
--   :material-shield-check:{ .lg .middle } **Type-Safe**
+-   :material-shield-check:{ .lg .middle } **No third-party DSL**
 
     ---
 
-    Leverages Kotlin's type system to generate accurate schemas. Supports sealed classes, generics, and nullability.
+    Leverages Ktor's standard syntax to generate route definitions and Kotlin's type system to derive schemas.
 
 -   :material-code-tags:{ .lg .middle } **Minimal Annotations**
 
