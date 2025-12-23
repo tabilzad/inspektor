@@ -49,20 +49,9 @@ theme:
     - search.suggest
     - toc.follow
   palette:
-    # Dark mode first (default)
-    - scheme: slate
-      primary: indigo
-      accent: purple
-      toggle:
-        icon: material/weather-night
-        name: Switch to light mode
-    # Light mode
-    - scheme: default
-      primary: indigo
-      accent: purple
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to dark mode
+    scheme: slate
+    primary: indigo
+    accent: purple
   font:
     text: Inter
     code: JetBrains Mono

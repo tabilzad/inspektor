@@ -1,55 +1,47 @@
-/* InspeKtor Documentation - Modern Dark Theme */
+/* InspeKtor Documentation - Dark Theme Only */
 
 /* ===== CSS Variables ===== */
-:root {
-  --md-primary-fg-color: #6366f1;
-  --md-primary-fg-color--light: #818cf8;
-  --md-primary-fg-color--dark: #4f46e5;
-  --md-accent-fg-color: #a855f7;
-  --md-accent-fg-color--transparent: rgba(168, 85, 247, 0.1);
-
-  /* Custom colors */
-  --inspektor-gradient-start: #6366f1;
-  --inspektor-gradient-end: #a855f7;
-  --inspektor-glow: rgba(99, 102, 241, 0.4);
-}
-
-/* ===== Dark Mode (Default) ===== */
+:root,
 [data-md-color-scheme="slate"] {
+  /* Background colors */
   --md-default-bg-color: #0f172a;
   --md-default-bg-color--light: #1e293b;
   --md-default-bg-color--lighter: #334155;
   --md-default-bg-color--lightest: #475569;
 
+  /* Foreground colors */
   --md-default-fg-color: #f1f5f9;
   --md-default-fg-color--light: #cbd5e1;
   --md-default-fg-color--lighter: #94a3b8;
   --md-default-fg-color--lightest: #64748b;
 
+  /* Primary colors */
   --md-primary-fg-color: #818cf8;
   --md-primary-fg-color--light: #a5b4fc;
   --md-primary-fg-color--dark: #6366f1;
-  --md-accent-fg-color: #c084fc;
 
+  /* Accent colors */
+  --md-accent-fg-color: #c084fc;
+  --md-accent-fg-color--transparent: rgba(192, 132, 252, 0.15);
+
+  /* Code colors */
   --md-code-bg-color: #1e293b;
   --md-code-fg-color: #e2e8f0;
   --md-code-hl-color: rgba(99, 102, 241, 0.2);
 
+  /* Link color */
   --md-typeset-a-color: #818cf8;
 
+  /* Footer colors */
   --md-footer-bg-color: #0f172a;
   --md-footer-bg-color--dark: #020617;
+
+  /* Custom InspeKtor colors */
+  --inspektor-gradient-start: #6366f1;
+  --inspektor-gradient-end: #a855f7;
+  --inspektor-glow: rgba(99, 102, 241, 0.4);
 }
 
-/* ===== Light Mode ===== */
-[data-md-color-scheme="default"] {
-  --md-default-bg-color: #ffffff;
-  --md-primary-fg-color: #4f46e5;
-  --md-primary-fg-color--light: #6366f1;
-  --md-primary-fg-color--dark: #4338ca;
-  --md-accent-fg-color: #9333ea;
-  --md-code-bg-color: #f8fafc;
-}
 
 /* ===== Typography ===== */
 .md-typeset {
