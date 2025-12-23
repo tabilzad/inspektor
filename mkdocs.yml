@@ -1,6 +1,6 @@
 # Project information
 site_name: InspeKtor
-site_url: https://github.com/tabilzad/inspektor
+site_url: https://tabilzad.github.io/inspektor/
 site_author: tabilzad
 site_description: >-
   OpenAPI (Swagger) specification generator for Ktor.
