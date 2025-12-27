@@ -25,6 +25,15 @@ object TestUtils {
     fun loadSourceAndExpected(fileName: String): Pair<String, String> =
         loadSourceCodeFrom(fileName) to loadExpectation("$fileName-expected")
 
+    /**
+     * Loads a multi-module test source file from resources.
+     * @param fileName The source file name without extension (e.g., "UsersContributor")
+     * @return The source code content
+     */
+    fun loadMultiModuleSource(fileName: String): String =
+        this.javaClass.getResource("/sources/multimodule/$fileName.kt")?.readText()
+            ?: throw FileNotFoundException("Multi-module source $fileName does not exist")
+
     val loadNativeAnnotations by lazy {
         Paths.get("src/main/kotlin/io/github/tabilzad/ktor/annotations/Annotations.kt").toFile()
             ?: throw FileNotFoundException("annotations don't exist")
@@ -48,12 +57,15 @@ object TestUtils {
 fun String.removeTrailingNewLine(): String =
     if (endsWith(System.lineSeparator())) dropLast(System.lineSeparator().length) else this
 
-private fun classpathOf(dependency: String): File {
+/**
+ * Resolves classpath file for a dependency.
+ * @param dependency The dependency in format "artifact:version" (e.g., "ktor-server-core:3.3.0")
+ */
+fun classpathOf(dependency: String): File {
     val file =
         ClassGraph().classpathFiles.firstOrNull { classpath ->
             dependenciesMatch(classpath, dependency)
         }
-    println("classpath: ${ClassGraph().classpathFiles}")
     Assertions.assertThat(file)
         .`as`("$dependency not found in test runtime. Check your build configuration.")
         .isNotNull
@@ -82,6 +94,38 @@ private fun dependenciesMatch(classpath: File, dependency: String): Boolean {
     return testdep == dependencyName
 }
 
+/**
+ * Creates a PrintStream that filters kotlinc error prefixes for cleaner test output.
+ */
+fun createFilteredOutputStream(): java.io.PrintStream {
+    return object : java.io.PrintStream(System.out) {
+        private val kotlincErrorRegex = Regex("^e:")
+        override fun write(buf: ByteArray, off: Int, len: Int) {
+            val newLine = String(buf, off, len).run {
+                replace(kotlincErrorRegex, "error found:")
+            }.toByteArray()
+            super.write(newLine, off, newLine.size)
+        }
+    }
+}
+
+/**
+ * Standard dependencies used in compiler tests.
+ */
+val testDependencies = arrayOf(
+    "ktor-server-core:3.3.0",
+    "ktor-resources:3.3.0",
+    "ktor-server-resources:3.3.0",
+    "ktor-utils:3.3.0",
+    "ktor-server-netty:3.3.0",
+    "ktor-http:3.3.0",
+    "kotlinx-coroutines-core:1.10.1",
+    "moshi:1.14.0",
+    "kotlinx-serialization-core:2.2.21",
+    "kotlinx-serialization-json:2.2.21",
+    "annotations:0.7.2-alpha"
+)
+
 private val objectMapper by lazy { jacksonObjectMapper() }
 fun File.parseSpec(): OpenApiSpec {
     return kotlin.runCatching { objectMapper.readValue<OpenApiSpec>(readText()) }.getOrElse {
@@ -103,7 +147,7 @@ internal fun generateCompilerTest(
     val compilationData = KotlinCompilation().apply {
         compilerPluginRegistrars = listOf(KtorMetaPluginRegistrar())
         commandLineProcessors = listOf(clp)
-        classpaths = deps.map { classpathOf(it) }
+        classpaths = testDependencies.map { classpathOf(it) }
         kotlincArguments = emptyList()
         jvmTarget = "11"
         messageOutputStream =
@@ -193,17 +237,3 @@ private fun loadBaseSources(source: String): List<SourceFile> {
         SourceFile.kotlin("TestSubject.kt", source)
     )
 }
-
-private val deps = arrayOf(
-    "ktor-server-core:3.3.0",
-    "ktor-resources:3.3.0",
-    "ktor-server-resources:3.3.0",
-    "ktor-utils:3.3.0",
-    "ktor-server-netty:3.3.0",
-    "ktor-http:3.3.0",
-    "kotlinx-coroutines-core:1.10.1",
-    "moshi:1.14.0",
-    "kotlinx-serialization-core:2.2.21",
-    "kotlinx-serialization-json:2.2.21",
-    "annotations:0.7.2-alpha"
-)

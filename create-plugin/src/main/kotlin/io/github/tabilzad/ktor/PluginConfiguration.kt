@@ -16,7 +16,19 @@ internal data class PluginConfiguration(
     val deriveFieldRequirementFromTypeNullability: Boolean,
     val useKDocsForDescriptions: Boolean,
     val discriminator: String,
+    // Multi-module support
+    val moduleId: String?,
+    val isAggregator: Boolean,
+    val resourcesPath: String?,
+    val partialSpecPaths: List<String>,
 ) {
+    /**
+     * Whether this module should generate a partial spec for multi-module aggregation.
+     * A module is a contributor if it has a moduleId but is not an aggregator.
+     */
+    val isContributor: Boolean
+        get() = moduleId != null && !isAggregator
+
     companion object {
         fun createDefault(
             isEnabled: Boolean? = null,
@@ -28,7 +40,11 @@ internal data class PluginConfiguration(
             servers: List<String>? = null,
             initConfig: ConfigInput? = null,
             deriveFieldRequirementFromTypeNullability: Boolean? = null,
-            useKDocsForDescriptions: Boolean? = null
+            useKDocsForDescriptions: Boolean? = null,
+            moduleId: String? = null,
+            isAggregator: Boolean? = null,
+            resourcesPath: String? = null,
+            partialSpecPaths: List<String>? = null
         ): PluginConfiguration {
             val defaultTitle = "Open API Specification"
             val defaultVersion = "1.0.0"
@@ -53,7 +69,11 @@ internal data class PluginConfiguration(
                     )
                 ),
                 useKDocsForDescriptions = useKDocsForDescriptions ?: true,
-                discriminator = initConfig?.discriminator ?: "type"
+                discriminator = initConfig?.discriminator ?: "type",
+                moduleId = moduleId,
+                isAggregator = isAggregator ?: false,
+                resourcesPath = resourcesPath,
+                partialSpecPaths = partialSpecPaths ?: emptyList()
             )
         }
     }

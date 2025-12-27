@@ -82,7 +82,7 @@ class KtorMetaPlugin @Inject constructor(
         val regenerationMode = swaggerExtension.pluginOptions.regenerationMode.lowercase()
         require(regenerationMode in listOf("strict", "safe", "fast")) {
             "Invalid regenerationMode '${swaggerExtension.pluginOptions.regenerationMode}'. " +
-                "Must be one of: strict, safe, fast"
+                    "Must be one of: strict, safe, fast"
         }
 
         // Configure Gradle task inputs/outputs based on regeneration mode
@@ -103,12 +103,30 @@ class KtorMetaPlugin @Inject constructor(
             task.inputs.property("swagger.enabled", swaggerExtension.pluginOptions.enabled)
             task.inputs.property("swagger.format", swaggerExtension.pluginOptions.format)
             task.inputs.property("swagger.regenerationMode", regenerationMode)
-            task.inputs.property("swagger.generateRequestSchemas", swaggerExtension.documentation.generateRequestSchemas)
-            task.inputs.property("swagger.hideTransientFields", swaggerExtension.documentation.hideTransientFields)
-            task.inputs.property("swagger.hidePrivateAndInternalFields", swaggerExtension.documentation.hidePrivateAndInternalFields)
-            task.inputs.property("swagger.deriveFieldRequirementFromTypeNullability", swaggerExtension.documentation.deriveFieldRequirementFromTypeNullability)
-            task.inputs.property("swagger.useKDocsForDescriptions", swaggerExtension.documentation.useKDocsForDescriptions)
-            task.inputs.property("swagger.servers", swaggerExtension.documentation.servers.joinToString(","))
+            task.inputs.property(
+                "swagger.generateRequestSchemas",
+                swaggerExtension.documentation.generateRequestSchemas
+            )
+            task.inputs.property(
+                "swagger.hideTransientFields",
+                swaggerExtension.documentation.hideTransientFields
+            )
+            task.inputs.property(
+                "swagger.hidePrivateAndInternalFields",
+                swaggerExtension.documentation.hidePrivateAndInternalFields
+            )
+            task.inputs.property(
+                "swagger.deriveFieldRequirementFromTypeNullability",
+                swaggerExtension.documentation.deriveFieldRequirementFromTypeNullability
+            )
+            task.inputs.property(
+                "swagger.useKDocsForDescriptions",
+                swaggerExtension.documentation.useKDocsForDescriptions
+            )
+            task.inputs.property(
+                "swagger.servers",
+                swaggerExtension.documentation.servers.joinToString(",")
+            )
             task.inputs.property("swagger.initialConfig", initialConfigJson.hashCode())
 
             // Apply regeneration mode strategy
@@ -142,7 +160,21 @@ class KtorMetaPlugin @Inject constructor(
             }
         }
 
-        val subpluginOptions = listOf(
+        // Determine multi-module configuration
+        val moduleId = swaggerExtension.pluginOptions.moduleId
+        val isAggregator = resolveIsAggregator(
+            swaggerExtension.pluginOptions.isAggregator,
+            kotlinCompilation
+        )
+
+        // Resources path for partial spec output (only for contributors)
+        val resourcesPath = if (moduleId != null && !isAggregator) {
+            kotlinCompilation.output.resourcesDir.absolutePath
+        } else {
+            null
+        }
+
+        val subpluginOptions = mutableListOf(
             SubpluginOption(
                 key = "enabled",
                 value = swaggerExtension.pluginOptions.enabled.toString()
@@ -184,7 +216,133 @@ class KtorMetaPlugin @Inject constructor(
                 value = Base64.encode(initialConfigJson.toByteArray())
             )
         )
+
+        // Add multi-module options if configured
+        if (moduleId != null) {
+            subpluginOptions.add(SubpluginOption(key = "moduleId", value = moduleId))
+            subpluginOptions.add(SubpluginOption(key = "isAggregator", value = isAggregator.toString()))
+            if (resourcesPath != null) {
+                subpluginOptions.add(SubpluginOption(key = "resourcesPath", value = resourcesPath))
+            }
+
+            // For aggregator modules, resolve contributor partial spec paths
+            if (isAggregator && swaggerExtension.pluginOptions.contributors.isNotEmpty()) {
+                val partialSpecPaths = resolveContributorPartialSpecPaths(
+                    project,
+                    swaggerExtension.pluginOptions.contributors,
+                    kotlinCompilation
+                )
+                if (partialSpecPaths.isNotEmpty()) {
+                    subpluginOptions.add(
+                        SubpluginOption(
+                            key = "partialSpecPaths",
+                            value = partialSpecPaths.joinToString("||")
+                        )
+                    )
+                }
+            }
+        }
+
         return project.provider { subpluginOptions }
+    }
+
+    /**
+     * Resolves paths to partial OpenAPI spec files from contributor modules.
+     *
+     * For each contributor project path, this method resolves the project and
+     * constructs the expected path to its partial spec file based on the
+     * compilation's resources output directory structure.
+     *
+     * @param project The current (aggregator) project
+     * @param contributors List of Gradle project paths (e.g., ":feature-users")
+     * @param kotlinCompilation The current compilation context
+     * @return List of absolute paths to partial spec files
+     */
+    private fun resolveContributorPartialSpecPaths(
+        project: Project,
+        contributors: List<String>,
+        kotlinCompilation: KotlinCompilation<*>
+    ): List<String> {
+        val partialSpecRelativePath = "META-INF/inspektor/openapi-partial.json"
+
+        return contributors.mapNotNull { contributorPath ->
+            try {
+                val contributorProject = project.rootProject.findProject(contributorPath)
+                if (contributorProject == null) {
+                    project.logger.warn(
+                        "[inspektor] Contributor project '$contributorPath' not found. " +
+                                "Ensure the project path is correct and the project is included in the build."
+                    )
+                    return@mapNotNull null
+                }
+
+                // Construct the path to the partial spec based on the build directory
+                // The partial spec is written to: {buildDir}/processedResources/{variant}/META-INF/inspektor/openapi-partial.json
+                // We use the compilation name to determine the variant (e.g., "main", "jvm")
+                val compilationName = kotlinCompilation.compilationName
+                val resourcesDir = File(
+                    contributorProject.layout.buildDirectory.asFile.get(),
+                    "processedResources/$compilationName"
+                )
+                val partialSpecFile = File(resourcesDir, partialSpecRelativePath)
+
+                partialSpecFile.absolutePath
+            } catch (e: Exception) {
+                project.logger.warn(
+                    "[inspektor] Failed to resolve contributor '$contributorPath': ${e.message}"
+                )
+                null
+            }
+        }
+    }
+
+    /**
+     * Resolves the isAggregator setting, with support for auto-detection.
+     *
+     * - If `true` or `false` (Boolean): uses that value directly
+     * - If `"auto"` (String): auto-detects based on Ktor server engine presence
+     * - Otherwise: defaults to false
+     */
+    private fun resolveIsAggregator(
+        value: Any,
+        kotlinCompilation: KotlinCompilation<*>
+    ): Boolean {
+        return when (value) {
+            is Boolean -> value
+            "auto" -> hasKtorServerEngine(kotlinCompilation)
+            else -> false
+        }
+    }
+
+    /**
+     * Checks if this compilation has Ktor server engine on the classpath.
+     * This is used for auto-detection of aggregator modules.
+     *
+     * Ktor server engines have a common marker class: io.ktor.server.engine.ApplicationEngine
+     */
+    private fun hasKtorServerEngine(kotlinCompilation: KotlinCompilation<*>): Boolean {
+        val project = kotlinCompilation.target.project
+        for (config in project.configurations.filter { it.isCanBeResolved }) {
+            runCatching {
+                val hasEngine = config.resolvedConfiguration.resolvedArtifacts.any { artifact ->
+                    val name = artifact.moduleVersion.id.toString()
+                    // Check for any Ktor server engine (Netty, CIO, Jetty, Tomcat, etc.)
+                    name.contains("ktor-server-") && (
+                            name.contains("-netty") ||
+                                    name.contains("-cio") ||
+                                    name.contains("-jetty") ||
+                                    name.contains("-tomcat") ||
+                                    name.contains("-servlet")
+                            )
+                }
+                if (hasEngine) return true
+            }.onFailure { e ->
+                // Configuration might not be resolvable, skip it
+                continue
+            }
+        }
+
+        return false
     }
 
     private fun checkKotlinVersionCompatibility(project: Project) {
@@ -247,15 +405,15 @@ class KtorMetaPlugin @Inject constructor(
                 srcDir.walkTopDown()
                     .filter { file ->
                         file.isFile &&
-                            file.extension == "kt" &&
-                            file.canRead()
+                                file.extension == "kt" &&
+                                file.canRead()
                     }
                     .filter { file ->
                         try {
                             val content = file.readText()
                             // Check for annotation in various forms
                             content.contains("@GenerateOpenApi") ||
-                                content.contains("@io.github.tabilzad.ktor.annotations.GenerateOpenApi")
+                                    content.contains("@io.github.tabilzad.ktor.annotations.GenerateOpenApi")
                         } catch (e: Exception) {
                             // If we can't read the file, skip it
                             false

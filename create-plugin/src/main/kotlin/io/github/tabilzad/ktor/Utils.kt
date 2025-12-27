@@ -76,7 +76,7 @@ infix fun Boolean?.optionalAnd(other: Boolean?): Boolean? =
 internal fun List<KtorRouteSpec>.cleanPaths() = map {
     it.copy(
         path = it.path
-            .replace(Regex("/+"), "/")  // Replace multiple consecutive slashes with single slash
+            .replace(Regex("/+"), "/") // Replace multiple consecutive slashes with single slash
             .replace("?", "")
     )
 }
@@ -295,8 +295,14 @@ internal fun CompilerConfiguration?.buildPluginConfiguration(): PluginConfigurat
     hideTransients = this?.get(SwaggerConfigurationKeys.ARG_HIDE_TRANSIENTS),
     hidePrivateFields = this?.get(SwaggerConfigurationKeys.ARG_HIDE_PRIVATE),
     deriveFieldRequirementFromTypeNullability = this?.get(SwaggerConfigurationKeys.ARG_DERIVE_PROP_REQ),
+    useKDocsForDescriptions = this?.get(SwaggerConfigurationKeys.ARG_KDOCS),
     servers = this?.get(SwaggerConfigurationKeys.ARG_SERVERS) ?: emptyList(),
     initConfig = this?.get(SwaggerConfigurationKeys.ARG_INIT_CONFIG) ?: ConfigInput(),
+    // Multi-module support
+    moduleId = this?.get(SwaggerConfigurationKeys.ARG_MODULE_ID),
+    isAggregator = this?.get(SwaggerConfigurationKeys.ARG_IS_AGGREGATOR),
+    resourcesPath = this?.get(SwaggerConfigurationKeys.ARG_RESOURCES_PATH),
+    partialSpecPaths = this?.get(SwaggerConfigurationKeys.ARG_PARTIAL_SPEC_PATHS) ?: emptyList(),
 )
 
 operator fun OutputStream.plusAssign(str: String) {
