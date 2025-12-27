@@ -74,4 +74,88 @@ open class PluginOptions @Inject constructor(
      * ```
      */
     var regenerationMode: String = "strict"
+
+    // Multi-module support options
+
+    /**
+     * Unique identifier for this module in multi-module OpenAPI generation.
+     *
+     * When set, this module participates in multi-module spec aggregation.
+     * The module will either:
+     * - Generate a partial spec (if contributor module)
+     * - Aggregate partial specs from dependencies (if aggregator module)
+     *
+     * If null (default), the module operates in standalone mode.
+     *
+     * **Example:**
+     * ```kotlin
+     * swagger {
+     *     pluginOptions {
+     *         moduleId = project.path // e.g., ":feature-users"
+     *     }
+     * }
+     * ```
+     */
+    var moduleId: String? = null
+
+    /**
+     * Whether this module is the aggregator (main server) in multi-module setup.
+     *
+     * When set to `true`, this module will:
+     * - Read partial OpenAPI specs from all dependency JARs
+     * - Merge them with locally defined routes
+     * - Output the complete OpenAPI specification
+     *
+     * When set to `false` (default) and moduleId is set, this module will:
+     * - Generate a partial OpenAPI spec
+     * - Embed it in META-INF/inspektor/openapi-partial.json
+     *
+     * If set to `"auto"` (string), the plugin will auto-detect based on
+     * whether Ktor server engine is on the classpath.
+     *
+     * **Example:**
+     * ```kotlin
+     * // Main server module
+     * swagger {
+     *     pluginOptions {
+     *         moduleId = project.path
+     *         isAggregator = true
+     *     }
+     * }
+     *
+     * // Feature module
+     * swagger {
+     *     pluginOptions {
+     *         moduleId = project.path
+     *         isAggregator = false // or omit - this is the default
+     *     }
+     * }
+     * ```
+     */
+    var isAggregator: Any = false
+
+    /**
+     * List of contributor module paths for multi-module aggregation.
+     *
+     * Only used when `isAggregator = true`. Specifies the Gradle project paths
+     * of contributor modules whose partial OpenAPI specs should be merged.
+     *
+     * The plugin will automatically resolve the partial spec file locations
+     * based on each project's build output directory.
+     *
+     * **Example:**
+     * ```kotlin
+     * swagger {
+     *     pluginOptions {
+     *         moduleId = project.path
+     *         isAggregator = true
+     *         contributors = listOf(":feature-users", ":feature-products", ":feature-orders")
+     *     }
+     * }
+     * ```
+     *
+     * For each contributor, the plugin looks for the partial spec at:
+     * `{contributorBuildDir}/processedResources/{sourceSetName}/META-INF/inspektor/openapi-partial.json`
+     */
+    var contributors: List<String> = emptyList()
 }

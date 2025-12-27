@@ -1,5 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
 package io.github.tabilzad.ktor
-
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 
 /**
