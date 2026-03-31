@@ -103,12 +103,18 @@ class KtorMetaPlugin @Inject constructor(
             task.inputs.property("swagger.enabled", swaggerExtension.pluginOptions.enabled)
             task.inputs.property("swagger.format", swaggerExtension.pluginOptions.format)
             task.inputs.property("swagger.regenerationMode", regenerationMode)
-            task.inputs.property("swagger.generateRequestSchemas", swaggerExtension.documentation.generateRequestSchemas)
-            task.inputs.property("swagger.hideTransientFields", swaggerExtension.documentation.hideTransientFields)
-            task.inputs.property("swagger.hidePrivateAndInternalFields", swaggerExtension.documentation.hidePrivateAndInternalFields)
-            task.inputs.property("swagger.deriveFieldRequirementFromTypeNullability", swaggerExtension.documentation.deriveFieldRequirementFromTypeNullability)
-            task.inputs.property("swagger.useKDocsForDescriptions", swaggerExtension.documentation.useKDocsForDescriptions)
-            task.inputs.property("swagger.servers", swaggerExtension.documentation.servers.joinToString(","))
+            task.inputs.property("swagger.generateRequestSchemas",
+                swaggerExtension.documentation.generateRequestSchemas)
+            task.inputs.property("swagger.hideTransientFields",
+                swaggerExtension.documentation.hideTransientFields)
+            task.inputs.property("swagger.hidePrivateAndInternalFields",
+                swaggerExtension.documentation.hidePrivateAndInternalFields)
+            task.inputs.property("swagger.deriveFieldRequirementFromTypeNullability",
+                swaggerExtension.documentation.deriveFieldRequirementFromTypeNullability)
+            task.inputs.property("swagger.useKDocsForDescriptions",
+                swaggerExtension.documentation.useKDocsForDescriptions)
+            task.inputs.property("swagger.servers",
+                swaggerExtension.documentation.servers.joinToString(","))
             task.inputs.property("swagger.initialConfig", initialConfigJson.hashCode())
 
             // Apply regeneration mode strategy
