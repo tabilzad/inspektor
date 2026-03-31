@@ -181,7 +181,7 @@ class KtorMetaPlugin @Inject constructor(
                 key = "format",
                 value = swaggerExtension.pluginOptions.format
             ),
-            SubpluginOption(
+            InternalSubpluginOption(
                 key = "filePath",
                 value = openApiOutputFile.path
             ),
