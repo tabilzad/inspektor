@@ -570,6 +570,14 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should resolve a single response from inline responds under typesafe route definition`() {
+        val (source, expected) = loadSourceAndExpected("RespondsTypes2")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should resolve enum objects as a response body`() {
         val (source, expected) = loadSourceAndExpected("EnumResponse")
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault())

@@ -60,7 +60,7 @@ internal class ExpressionsVisitorK2(
     @Suppress("NestedBlockDepth")
     override fun visitBlock(block: FirBlock, parent: KtorElement?): List<KtorElement> {
 
-        if (parent is EndpointDescriptor && parent.body == null) {
+        if (parent is EndpointDescriptor) {
 
             val receiveCall = block.statements.findCallExpressionWith(ClassIds.KTOR_RECEIVE)
             val respondsDsl = block.statements.filterCallExpressionWith(ClassIds.KTOR_RESPONDS_NO_OP) +
@@ -101,7 +101,7 @@ internal class ExpressionsVisitorK2(
                 parent.responses = parent.responses?.plus(responses) ?: responses
             }
 
-            if (receiveCall != null && config.requestBody) {
+            if (parent.body == null && receiveCall != null && config.requestBody) {
                 parent.body = receiveCall.resolvedType.generateDescriptor()
             }
         }

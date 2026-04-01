@@ -1,0 +1,91 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/postBodyRequestSimple" : {
+      "post" : {
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/sources.MyGenericRespondsType_Of_String_and_Int"
+                }
+              }
+            }
+          },
+          "204" : {
+            "description" : ""
+          }
+        },
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.MyAmount_Of_String" : {
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "amount" ]
+      },
+      "sources.MyCurrency_Of_Int" : {
+        "type" : "object",
+        "properties" : {
+          "curr" : {
+            "type" : "integer"
+          }
+        },
+        "required" : [ "curr" ]
+      },
+      "sources.MyGenericRespondsType_Of_String_and_Int" : {
+        "type" : "object",
+        "properties" : {
+          "amounts" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/sources.MyAmount_Of_String"
+            }
+          },
+          "currency" : {
+            "$ref" : "#/components/schemas/sources.MyCurrency_Of_Int"
+          }
+        },
+        "required" : [ "amounts", "currency" ]
+      },
+      "sources.requests.SimpleRequest" : {
+        "type" : "object",
+        "properties" : {
+          "float" : {
+            "type" : "number"
+          },
+          "integer" : {
+            "type" : "integer"
+          },
+          "string" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "string", "integer", "float" ]
+      }
+    }
+  }
+}
