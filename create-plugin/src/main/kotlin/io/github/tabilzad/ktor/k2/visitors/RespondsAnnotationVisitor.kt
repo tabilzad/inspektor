@@ -45,8 +45,8 @@ internal class RespondsAnnotationVisitor(private val session: FirSession) : FirD
         return entries.find { it.value.name.asString() == name }?.key
     }
 
-    override fun visitArrayLiteral(arrayLiteral: FirArrayLiteral, data: KtorK2ResponseBag?): List<KtorK2ResponseBag> {
-        return arrayLiteral.arguments.flatMap {
+    override fun visitCollectionLiteral(collectionLiteral: FirCollectionLiteral, data: KtorK2ResponseBag?): List<KtorK2ResponseBag> {
+        return collectionLiteral.arguments.flatMap {
             it.accept(this, data)
         }
     }

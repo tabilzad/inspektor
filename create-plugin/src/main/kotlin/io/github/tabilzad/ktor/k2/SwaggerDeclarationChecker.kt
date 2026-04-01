@@ -10,7 +10,7 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.MppCheckerKind
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirSimpleFunctionChecker
-import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
+import org.jetbrains.kotlin.fir.declarations.FirNamedFunction
 import org.jetbrains.kotlin.fir.declarations.hasAnnotation
 
 /**
@@ -37,7 +37,7 @@ class SwaggerDeclarationChecker(
     private val config = configuration.buildPluginConfiguration()
 
     context(context: CheckerContext, reporter: DiagnosticReporter)
-    override fun check(declaration: FirSimpleFunction) {
+    override fun check(declaration: FirNamedFunction) {
         if (declaration.hasAnnotation(ClassIds.KTOR_GENERATE_ANNOTATION, session)) {
             val expressionsVisitor = ExpressionsVisitorK2(config, context, session, log)
             val ktorElements: List<KtorElement> = declaration.accept(expressionsVisitor, null)
