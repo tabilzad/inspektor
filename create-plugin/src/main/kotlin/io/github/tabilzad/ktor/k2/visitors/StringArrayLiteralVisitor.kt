@@ -1,7 +1,7 @@
 package io.github.tabilzad.ktor.k2.visitors
 
 import org.jetbrains.kotlin.fir.FirElement
-import org.jetbrains.kotlin.fir.expressions.FirArrayLiteral
+import org.jetbrains.kotlin.fir.expressions.FirCollectionLiteral
 import org.jetbrains.kotlin.fir.expressions.FirLiteralExpression
 import org.jetbrains.kotlin.fir.expressions.arguments
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
@@ -16,8 +16,8 @@ internal class StringArrayLiteralVisitor : FirDefaultVisitor<List<String>, List<
     override fun visitLiteralExpression(literalExpression: FirLiteralExpression, data: List<String>): List<String> =
         listOf(literalExpression.value.toString())
 
-    override fun visitArrayLiteral(arrayLiteral: FirArrayLiteral, data: List<String>): List<String> {
-        return arrayLiteral.arguments.flatMap {
+    override fun visitCollectionLiteral(collectionLiteral: FirCollectionLiteral, data: List<String>): List<String> {
+        return collectionLiteral.arguments.flatMap {
             it.accept(this, data)
         }
     }

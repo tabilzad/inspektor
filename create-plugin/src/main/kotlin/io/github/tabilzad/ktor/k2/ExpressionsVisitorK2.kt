@@ -40,17 +40,17 @@ internal class ExpressionsVisitorK2(
     }
 
     // Evaluation Order 1
-    override fun visitSimpleFunction(simpleFunction: FirSimpleFunction, parent: KtorElement?): List<KtorElement> {
-        val extractedTags = simpleFunction.findTags(session)
-        val isDeprecated = simpleFunction.findDeprecated()
+    override fun visitNamedFunction(namedFunction: FirNamedFunction, parent: KtorElement?): List<KtorElement> {
+        val extractedTags = namedFunction.findTags(session)
+        val isDeprecated = namedFunction.findDeprecated()
         val descriptor = parent ?: RouteDescriptor("/", tags = extractedTags, isDeprecated = isDeprecated)
-        simpleFunction.acceptChildren(this, descriptor)
+        namedFunction.acceptChildren(this, descriptor)
         return descriptor.wrapAsList()
     }
 
     // Evaluation Order 2
     override fun visitDeclaration(declaration: FirDeclaration, parent: KtorElement?): List<KtorElement> =
-        if (declaration is FirSimpleFunction) {
+        if (declaration is FirNamedFunction) {
             declaration.body?.accept(this, parent) ?: emptyList()
         } else {
             emptyList()

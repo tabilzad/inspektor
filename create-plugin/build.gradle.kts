@@ -27,6 +27,7 @@ dependencies {
     testImplementation(projects.common)
     testImplementation(libs.classGraph)
     testImplementation(libs.compilerTest)
+    testImplementation(libs.kotlinCompiler)
     testImplementation(libs.bundles.ktor)
     testImplementation(libs.assertJ)
     testImplementation(platform(libs.junit))
