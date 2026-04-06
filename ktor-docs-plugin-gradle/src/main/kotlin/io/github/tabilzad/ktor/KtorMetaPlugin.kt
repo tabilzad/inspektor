@@ -8,6 +8,8 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
 import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
 import org.jetbrains.kotlin.tooling.core.toKotlinVersion
 import java.io.File
@@ -118,11 +120,6 @@ class KtorMetaPlugin @Inject constructor(
             task.outputs.dir(canonicalOutputDir)
                 .withPropertyName("openApiSpec")
 
-            // Always force regeneration if output file doesn't exist
-            if (!canonicalOutputFile.exists()) {
-                task.outputs.upToDateWhen { false }
-            }
-
             // Register plugin configuration as inputs so config changes trigger regeneration.
             // This applies to all modes - changing swagger { } config should always regenerate.
             task.inputs.property("swagger.enabled", swaggerExtension.pluginOptions.enabled)
@@ -148,7 +145,11 @@ class KtorMetaPlugin @Inject constructor(
                     // STRICT MODE: Always regenerate on every compilation.
                     // Guarantees correctness but disables incremental compilation benefits.
                     // Recommended for CI/CD and release builds.
-                    task.outputs.upToDateWhen { false }
+                    if (task is KotlinCompile) {
+                        task.incremental = false
+                    } else {
+                        task.outputs.upToDateWhen { false }
+                    }
                 }
 
                 "safe" -> {
