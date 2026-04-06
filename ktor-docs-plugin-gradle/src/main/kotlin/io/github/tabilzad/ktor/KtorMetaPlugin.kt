@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.Copy
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
 import org.jetbrains.kotlin.tooling.core.toKotlinVersion
@@ -55,8 +56,16 @@ class KtorMetaPlugin @Inject constructor(
             implementation("io.github.tabilzad.inspektor:annotations:$inspektorVersion")
         }
 
-        val openApiOutputFile = with(swaggerExtension.pluginOptions) {
-            getOpenApiOutputFile(
+        val format = swaggerExtension.pluginOptions.format
+
+        // Canonical output file lives under build/openapi/ — a fixed, build-relative path
+        // that Gradle can relocate across machines for remote build cache compatibility.
+        val canonicalOutputDir = File(project.layout.buildDirectory.get().asFile, "openapi")
+        val canonicalOutputFile = File(canonicalOutputDir, "openapi.$format")
+
+        // The user's desired destination, which may differ from the canonical location.
+        val userDesiredFile = with(swaggerExtension.pluginOptions) {
+            getUserDesiredOutputFile(
                 filePath = filePath,
                 saveInBuild = saveInBuild,
                 // This is build/processedResources/release,
@@ -65,6 +74,22 @@ class KtorMetaPlugin @Inject constructor(
                 modulePath = project.projectDir.absolutePath,
                 format = format
             )
+        }
+
+        // If the user wants the file somewhere other than the canonical location,
+        // register a copy task to move it there after compilation.
+        if (userDesiredFile != canonicalOutputFile) {
+            val compilationName = kotlinCompilation.name.replaceFirstChar { it.uppercase() }
+            val copyTaskName = "copyOpenApiSpec$compilationName"
+
+            val copyTask = project.tasks.register(copyTaskName, Copy::class.java) { copy ->
+                copy.description = "Copies generated OpenAPI spec to configured destination"
+                copy.from(canonicalOutputFile)
+                copy.into(userDesiredFile.parentFile)
+                copy.rename { userDesiredFile.name }
+                copy.onlyIf { canonicalOutputFile.exists() }
+            }
+            kotlinCompilation.compileTaskProvider.configure { it.finalizedBy(copyTask) }
         }
 
         val initialConfig = ConfigInput(
@@ -87,14 +112,14 @@ class KtorMetaPlugin @Inject constructor(
 
         // Configure Gradle task inputs/outputs based on regeneration mode
         kotlinCompilation.compileTaskProvider.configure { task ->
-            // Register the OpenAPI output file so Gradle can track it for up-to-date checks.
-            // We use outputs.files() instead of outputs.file() because outputs.file() on
-            // KotlinCompile tasks creates a directory instead of tracking a file.
-            task.outputs.files(openApiOutputFile)
+            // Register the canonical output directory so Gradle can track it for
+            // up-to-date checks and remote build cache. Using a directory under build/
+            // ensures the path is build-relative and relocatable across machines.
+            task.outputs.dir(canonicalOutputDir)
                 .withPropertyName("openApiSpec")
 
             // Always force regeneration if output file doesn't exist
-            if (!openApiOutputFile.exists()) {
+            if (!canonicalOutputFile.exists()) {
                 task.outputs.upToDateWhen { false }
             }
 
@@ -181,9 +206,9 @@ class KtorMetaPlugin @Inject constructor(
                 key = "format",
                 value = swaggerExtension.pluginOptions.format
             ),
-            SubpluginOption(
+            InternalSubpluginOption(
                 key = "filePath",
-                value = openApiOutputFile.path
+                value = canonicalOutputFile.path
             ),
             SubpluginOption(
                 key = "initialConfig",
@@ -206,7 +231,7 @@ class KtorMetaPlugin @Inject constructor(
         }
     }
 
-    private fun getOpenApiOutputFile(
+    private fun getUserDesiredOutputFile(
         filePath: String?,
         saveInBuild: Boolean,
         buildPath: String,
