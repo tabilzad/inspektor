@@ -91,6 +91,8 @@ class KtorMetaPlugin @Inject constructor(
 
             val copyTask = project.tasks.register(copyTaskName, Copy::class.java) { copy ->
                 copy.description = "Copies generated OpenAPI spec to configured destination"
+                // Declare an explicit task dependency so Gradle 8+ implicit-dependency validation is satisfied
+                copy.dependsOn(kotlinCompilation.compileTaskProvider)
                 copy.from(canonicalOutputFile)
                 copy.into(userDesiredFile.parentFile)
                 copy.rename { userDesiredFile.name }
