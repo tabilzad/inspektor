@@ -33,9 +33,15 @@ class KtorMetaPlugin @Inject constructor(
             version = inspektorVersion
         )
 
-    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>) = kotlinCompilation.target.project.run {
-        checkKotlinVersionCompatibility(this)
-        plugins.hasPlugin(KtorMetaPlugin::class.java)
+    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean {
+        val project = kotlinCompilation.target.project
+        checkKotlinVersionCompatibility(project)
+
+        val hasKtorMetaPlugin = project.plugins.hasPlugin(KtorMetaPlugin::class.java)
+        val isTestCompilation = kotlinCompilation.name.contains("test", ignoreCase = true)
+
+        // Skip test compilations — OpenAPI spec generation is only meaningful for main compilations
+        return hasKtorMetaPlugin && !isTestCompilation
     }
 
     override fun apply(target: Project) {
