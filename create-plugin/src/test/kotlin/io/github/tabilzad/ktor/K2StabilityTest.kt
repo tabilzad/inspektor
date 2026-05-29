@@ -586,6 +586,14 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should emit custom content type and binary schema for ByteArray responses`() {
+        val (source, expected) = loadSourceAndExpected("BinaryResponseContentType")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should resolve multiple responses with nested generics from inline responds endpoint extension`() {
         val (source, expected) = loadSourceAndExpected("MultipleRespondsTypes")
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
