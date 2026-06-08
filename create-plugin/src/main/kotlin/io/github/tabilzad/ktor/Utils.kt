@@ -166,7 +166,7 @@ private fun addPostBody(it: KtorRouteSpec): OpenApiSpec.RequestBody? {
         OpenApiSpec.RequestBody(
             required = true,
             content = mapOf(
-                ContentType.APPLICATION_JSON to mapOf(
+                ContentTypes.APPLICATION_JSON to mapOf(
                     "schema" to OpenApiSpec.TypeDescriptor(
                         type = null,
                         ref = "${it.body.ref}"
@@ -178,7 +178,7 @@ private fun addPostBody(it: KtorRouteSpec): OpenApiSpec.RequestBody? {
         OpenApiSpec.RequestBody(
             required = true,
             content = mapOf(
-                ContentType.TEXT_PLAIN to mapOf(
+                ContentTypes.TEXT_PLAIN to mapOf(
                     "schema" to OpenApiSpec.TypeDescriptor(
                         type = "${it.body.type}",
                         description = it.body.description

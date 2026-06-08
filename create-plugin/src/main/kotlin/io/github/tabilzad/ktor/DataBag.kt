@@ -1,6 +1,5 @@
 package io.github.tabilzad.ktor
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.tabilzad.ktor.output.OpenApiSpec
 
 interface OpenApiSpecParam {
@@ -87,10 +86,7 @@ data class RouteDescriptor(
     }
 }
 
-enum class ContentType {
-    @JsonProperty("application/json")
-    APPLICATION_JSON,
-
-    @JsonProperty("text/plain")
-    TEXT_PLAIN
+object ContentTypes {
+    const val APPLICATION_JSON = "application/json"
+    const val TEXT_PLAIN = "text/plain"
 }

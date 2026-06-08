@@ -115,20 +115,29 @@ internal class ExpressionsVisitorK2(
             (typeArguments.first() as FirTypeProjectionWithVariance).typeRef.coneType
         }
 
-        val code = ((arguments.first() as? FirPropertyAccessExpression)
+        val argByName = resolvedArgumentMapping?.entries
+            ?.associate { it.value.name.asString() to it.key }
+            .orEmpty()
+
+        val code = ((argByName["status"] as? FirPropertyAccessExpression)
             ?.calleeReference as? FirResolvedNamedReference)
             ?.name?.asString()
 
-        val descriptionExpression = arguments.lastOrNull()
-        val description = descriptionExpression
+        val description = (argByName["description"] as? FirLiteralExpression)
             ?.accept(StringResolutionVisitor(session), "")
             ?.ifBlank { null }
+
+        val contentType = (argByName["contentType"] as? FirLiteralExpression)
+            ?.accept(StringResolutionVisitor(session), "")
+            ?.ifBlank { null }
+            ?: "application/json"
 
         return KtorK2ResponseBag(
             descr = description ?: docs ?: "",
             status = HttpCodeResolver.resolve(code),
             type = type,
-            isCollection = false
+            isCollection = false,
+            contentType = contentType
         )
     }
 
@@ -369,24 +378,31 @@ internal class ExpressionsVisitorK2(
             if (kotlinType?.isNothing == true) {
                 response.status to OpenApiSpec.ResponseDetails(response.descr, null)
             } else {
-                val schema = response.type?.generateDescriptor()
                 response.status to OpenApiSpec.ResponseDetails(
                     response.descr,
                     mapOf(
-                        ContentType.APPLICATION_JSON to mapOf(
-                            "schema" to if (response.isCollection) {
-                                OpenApiSpec.TypeDescriptor(
-                                    type = "array",
-                                    items = OpenApiSpec.TypeDescriptor(type = null, ref = schema?.ref)
-                                )
-                            } else {
-                                schema ?: OpenApiSpec.TypeDescriptor("object")
-                            }
-                        )
+                        response.contentType to mapOf("schema" to response.toResponseSchema())
                     )
                 )
             }
         }
+
+    private fun KtorK2ResponseBag.toResponseSchema(): OpenApiSpec.TypeDescriptor {
+        val typeName = type?.classId?.shortClassName?.asString()
+        val isJsonLike = contentType == "application/json" || contentType.endsWith("+json")
+        if (!isJsonLike && typeName == "ByteArray") {
+            return OpenApiSpec.TypeDescriptor(type = "string", format = "binary")
+        }
+        val schema = type?.generateDescriptor()
+        return if (isCollection) {
+            OpenApiSpec.TypeDescriptor(
+                type = "array",
+                items = OpenApiSpec.TypeDescriptor(type = null, ref = schema?.ref)
+            )
+        } else {
+            schema ?: OpenApiSpec.TypeDescriptor("object")
+        }
+    }
 
     @OptIn(SymbolInternals::class)
     private fun FirFunctionCall.findResource(

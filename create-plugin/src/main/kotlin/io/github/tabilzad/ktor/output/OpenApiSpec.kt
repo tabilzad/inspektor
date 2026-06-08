@@ -2,14 +2,13 @@ package io.github.tabilzad.ktor.output
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
-import io.github.tabilzad.ktor.ContentType
 import io.github.tabilzad.ktor.OpenApiSpecParam
 import io.github.tabilzad.ktor.model.Info
 import io.github.tabilzad.ktor.model.SecurityScheme
 
 internal typealias ContentSchema = Map<String, OpenApiSpec.TypeDescriptor>
 
-internal typealias BodyContent = Map<ContentType, ContentSchema>
+internal typealias BodyContent = Map<String, ContentSchema>
 
 data class OpenApiSpec(
     val openapi: String = "3.1.0",

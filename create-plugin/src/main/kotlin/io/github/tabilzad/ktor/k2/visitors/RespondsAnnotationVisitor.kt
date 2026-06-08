@@ -13,7 +13,8 @@ internal data class KtorK2ResponseBag(
     val descr: String,
     val status: String,
     val type: ConeKotlinType?,
-    val isCollection: Boolean = false
+    val isCollection: Boolean = false,
+    val contentType: String = "application/json"
 )
 
 internal class RespondsAnnotationVisitor(private val session: FirSession) : FirDefaultVisitor<List<KtorK2ResponseBag>, KtorK2ResponseBag?>() {
@@ -30,13 +31,17 @@ internal class RespondsAnnotationVisitor(private val session: FirSession) : FirD
         val isCollection = functionCall.resolvedArgumentMapping?.findValueOfField("isCollection") as? FirLiteralExpression
         val description =
             functionCall.resolvedArgumentMapping?.findValueOfField("description") as? FirLiteralExpression
+        val contentType =
+            functionCall.resolvedArgumentMapping?.findValueOfField("contentType") as? FirLiteralExpression
 
         return listOf(
             KtorK2ResponseBag(
                 descr = description?.accept(StringResolutionVisitor(session), "") ?: "",
                 status = status?.accept(StringResolutionVisitor(session), "") ?: "UNKNOWN",
                 type = type?.resolvedType?.typeArguments?.firstOrNull()?.type,
-                isCollection = isCollection?.value as? Boolean ?: false
+                isCollection = isCollection?.value as? Boolean ?: false,
+                contentType = contentType?.accept(StringResolutionVisitor(session), "")
+                    ?.ifBlank { null } ?: "application/json"
             )
         )
     }

@@ -26,7 +26,8 @@ annotation class ResponseEntry(
     val status: String,
     val type: KClass<*>,
     val isCollection: Boolean = false,
-    val description: String = ""
+    val description: String = "",
+    val contentType: String = "application/json"
 )
 
 @Retention(AnnotationRetention.SOURCE)
