@@ -327,7 +327,7 @@ private fun FirRegularClassSymbol.resolveDiscriminator(session: FirSession, conf
     val discriminatorFq = SerializationFramework.KOTLINX_JSON_DISCRIMINATOR
     return annotations
         .find { annotation -> annotation.fqName(session) == discriminatorFq.fqName }
-        ?.getStringArgument(discriminatorFq.identifier, session) ?: config.discriminator
+        ?.getStringArgument(discriminatorFq.identifier) ?: config.discriminator
 }
 
 @OptIn(SymbolInternals::class)
@@ -336,7 +336,7 @@ private fun ClassId.resolveDiscriminatorValue(session: FirSession): String {
     val symbol = toLookupTag().toClassSymbol(session)
     val explicitlyAnnotated = symbol?.annotations
         ?.find { annotation -> annotation.fqName(session) == serialNameFq.fqName }
-        ?.getStringArgument(serialNameFq.identifier, session)
+        ?.getStringArgument(serialNameFq.identifier)
     return explicitlyAnnotated ?: asFqNameString()
 }
 

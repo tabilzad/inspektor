@@ -29,7 +29,7 @@ object JsonNameResolver {
         SerializationFramework.entries.mapNotNull {
             annotations
                 .find { annotation -> annotation.fqName(session) == it.fqName }
-                ?.getStringArgument(it.identifier, session)
+                ?.getStringArgument(it.identifier)
         }
     }?.firstOrNull()
 

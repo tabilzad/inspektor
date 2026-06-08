@@ -7,10 +7,11 @@ import io.github.tabilzad.ktor.output.OpenApiSpec
 import org.jetbrains.kotlin.KtSourceElement
 import org.jetbrains.kotlin.com.intellij.lang.LighterASTNode
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.fir.FirElement
+import org.jetbrains.kotlin.fir.FirEvaluatorResult
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
-import org.jetbrains.kotlin.fir.declarations.result
 import org.jetbrains.kotlin.fir.expressions.FirAnnotation
 import org.jetbrains.kotlin.fir.expressions.FirExpressionEvaluator
 import org.jetbrains.kotlin.fir.expressions.FirGetClassCall
@@ -25,6 +26,14 @@ import org.jetbrains.kotlin.psi.stubs.elements.KtModifierListElementType
 import org.jetbrains.kotlin.util.PrivateForInline
 import org.jetbrains.kotlin.util.getChildren
 import java.io.OutputStream
+
+/**
+ * In Kotlin 2.4 the `FirEvaluatorResult.result` accessor (previously in
+ * `org.jetbrains.kotlin.fir.declarations`) was removed. The evaluated element is now only exposed
+ * on the [FirEvaluatorResult.Evaluated] subclass, so unwrap it here for non-evaluated results.
+ */
+internal val FirEvaluatorResult?.result: FirElement?
+    get() = (this as? FirEvaluatorResult.Evaluated)?.result
 
 fun Boolean.byFeatureFlag(flag: Boolean): Boolean = if (flag) {
     this
