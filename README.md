@@ -16,7 +16,7 @@
     <img src="https://img.shields.io/maven-central/v/io.github.tabilzad.inspektor/ktor-docs-plugin?color=blue" alt="Maven Central"/>
   </a>
   <a href="https://kotlinlang.org">
-    <img src="https://img.shields.io/badge/kotlin-2.3.0-blue.svg?logo=kotlin" alt="Kotlin"/>
+    <img src="https://img.shields.io/badge/kotlin-2.4.0-blue.svg?logo=kotlin" alt="Kotlin"/>
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License"/>
