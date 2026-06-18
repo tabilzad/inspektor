@@ -44,23 +44,38 @@
       "sources.ActionOne" : {
         "type" : "object",
         "properties" : {
+          "__typename" : {
+            "type" : "string",
+            "enum" : [ "ACTION_ONE" ]
+          },
           "field" : {
             "type" : "integer"
           }
         },
-        "required" : [ "field" ]
+        "required" : [ "__typename", "field" ]
       },
       "sources.ActionThree" : {
-        "type" : "object"
+        "type" : "object",
+        "properties" : {
+          "__typename" : {
+            "type" : "string",
+            "enum" : [ "ACTION_THREE" ]
+          }
+        },
+        "required" : [ "__typename" ]
       },
       "sources.ActionTwo" : {
         "type" : "object",
         "properties" : {
+          "__typename" : {
+            "type" : "string",
+            "enum" : [ "ACTION_TWO" ]
+          },
           "value" : {
             "type" : "string"
           }
         },
-        "required" : [ "value" ]
+        "required" : [ "__typename", "value" ]
       },
       "sources.RequestBody" : {
         "type" : "object",

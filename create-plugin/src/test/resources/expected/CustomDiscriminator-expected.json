@@ -39,23 +39,38 @@
       "sources.ActionOne" : {
         "type" : "object",
         "properties" : {
+          "__myCustomDiscriminator" : {
+            "type" : "string",
+            "enum" : [ "sources.ActionOne" ]
+          },
           "field" : {
             "type" : "integer"
           }
         },
-        "required" : [ "field" ]
+        "required" : [ "__myCustomDiscriminator", "field" ]
       },
       "sources.ActionThree" : {
-        "type" : "object"
+        "type" : "object",
+        "properties" : {
+          "__myCustomDiscriminator" : {
+            "type" : "string",
+            "enum" : [ "sources.ActionThree" ]
+          }
+        },
+        "required" : [ "__myCustomDiscriminator" ]
       },
       "sources.ActionTwo" : {
         "type" : "object",
         "properties" : {
+          "__myCustomDiscriminator" : {
+            "type" : "string",
+            "enum" : [ "sources.ActionTwo" ]
+          },
           "value" : {
             "type" : "string"
           }
         },
-        "required" : [ "value" ]
+        "required" : [ "__myCustomDiscriminator", "value" ]
       },
       "sources.RequestBody" : {
         "type" : "object",

@@ -37,6 +37,8 @@ Circle:
   properties:
     type:
       type: string
+      enum:
+        - Circle
     radius:
       type: number
       format: double
@@ -50,6 +52,8 @@ Rectangle:
   properties:
     type:
       type: string
+      enum:
+        - Rectangle
     width:
       type: number
       format: double
@@ -57,6 +61,11 @@ Rectangle:
       type: number
       format: double
 ```
+
+Each variant carries the discriminator property as a required, single-value `enum` pinned to its
+`mapping` key. This is required by the OpenAPI spec and by Redoc/Redocly: when a `discriminator` is
+present but the property is missing from the variants, Redoc collapses the `oneOf` and renders only
+the first variant.
 
 ## Discriminator Property
 

@@ -120,6 +120,13 @@ internal class ClassDescriptorVisitorK2(
             val discriminator = typeSymbol.resolveDiscriminator(session, config)
             val inheritorClassIds = typeSymbol.fir.sealedInheritorsAttr?.getValueOrNull()
 
+            // Single source of truth for each variant's serial name. The same value drives both the
+            // discriminator `mapping` key and the constant injected into the variant schema below, so
+            // the two can never drift (respects @SerialName on the subtype).
+            val discriminatorValues = inheritorClassIds
+                ?.associateWith { it.resolveDiscriminatorValue(session) }
+                .orEmpty()
+
             val sealedDescriptor = TypeDescriptor(
                 "object",
                 fqName = fqClassName,
@@ -128,9 +135,9 @@ internal class ClassDescriptorVisitorK2(
                 },
                 discriminator = OpenApiSpec.DiscriminatorDescriptor(
                     propertyName = discriminator,
-                    mapping = inheritorClassIds?.associate {
-                        it.resolveDiscriminatorValue(session) to "#/components/schemas/${it.asFqNameString()}"
-                    } ?: emptyMap()
+                    mapping = discriminatorValues.entries.associate { (classId, value) ->
+                        value to "#/components/schemas/${classId.asFqNameString()}"
+                    }
                 )
             )
 
@@ -140,14 +147,34 @@ internal class ClassDescriptorVisitorK2(
 
             inheritorClassIds?.forEach { classId ->
                 val inheritorFqName = classId.asFqNameString()
-                if (!classNames.names.contains(inheritorFqName)) {
-                    val inheritorType = TypeDescriptor("object", fqName = inheritorFqName)
-                    classNames.add(inheritorType)
-                    classId.toLookupTag().toClassSymbol(session)?.fir?.accept(this, inheritorType)
-                }
+                val inheritorType = classNames.firstOrNull { it.fqName == inheritorFqName }
+                    ?: TypeDescriptor("object", fqName = inheritorFqName).also { newType ->
+                        classNames.add(newType)
+                        classId.toLookupTag().toClassSymbol(session)?.fir?.accept(this, newType)
+                    }
+
+                // Redoc/OpenAPI require the discriminator property to physically exist on every
+                // variant referenced by the mapping (otherwise Redoc collapses the oneOf to the first
+                // entry); kotlinx.serialization also writes this key into each subtype's payload.
+                inheritorType.injectDiscriminatorProperty(discriminator, discriminatorValues[classId])
             }
 
             sealedDescriptor
+        }
+    }
+
+    /**
+     * Injects the polymorphic discriminator into a sealed subtype (variant) schema, pinned to the
+     * single [value] that is also used as its `mapping` key, and marks it required. If the variant
+     * already declares a field with this name (e.g. modeled explicitly), it is reconciled to the
+     * pinned value rather than duplicated.
+     */
+    private fun TypeDescriptor.injectDiscriminatorProperty(propertyName: String, value: String?) {
+        if (value == null) return
+        val pinned = TypeDescriptor(type = "string", enum = listOf(value))
+        properties = (properties ?: mutableMapOf()).apply { put(propertyName, pinned) }
+        if (required?.contains(propertyName) != true) {
+            required = mutableListOf(propertyName).apply { addAll(required ?: emptyList()) }
         }
     }
 

@@ -40,8 +40,13 @@
         "properties" : {
           "size" : {
             "type" : "integer"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "kotlinx.serialization.json.JsonArray" ]
           }
-        }
+        },
+        "required" : [ "type" ]
       },
       "kotlinx.serialization.json.JsonElement" : {
         "type" : "object",
@@ -79,13 +84,18 @@
           "size" : {
             "type" : "integer"
           },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "kotlinx.serialization.json.JsonObject" ]
+          },
           "values" : {
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/kotlinx.serialization.json.JsonElement"
             }
           }
-        }
+        },
+        "required" : [ "type" ]
       },
       "kotlinx.serialization.json.JsonPrimitive" : {
         "type" : "object",
@@ -95,9 +105,13 @@
           },
           "isString" : {
             "type" : "boolean"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "kotlinx.serialization.json.JsonPrimitive" ]
           }
         },
-        "required" : [ "isString", "content" ]
+        "required" : [ "type", "isString", "content" ]
       },
       "sources.SelfReferencingSealed" : {
         "type" : "object",

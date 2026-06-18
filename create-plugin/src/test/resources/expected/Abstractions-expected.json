@@ -46,21 +46,36 @@
         "properties" : {
           "field" : {
             "type" : "integer"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.ActionOne" ]
           }
         },
-        "required" : [ "field" ]
+        "required" : [ "type", "field" ]
       },
       "sources.ActionThree" : {
-        "type" : "object"
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.ActionThree" ]
+          }
+        },
+        "required" : [ "type" ]
       },
       "sources.ActionTwo" : {
         "type" : "object",
         "properties" : {
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.ActionTwo" ]
+          },
           "value" : {
             "type" : "string"
           }
         },
-        "required" : [ "value" ]
+        "required" : [ "type", "value" ]
       },
       "sources.RequestBody" : {
         "type" : "object",

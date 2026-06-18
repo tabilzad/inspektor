@@ -40,18 +40,26 @@
         "properties" : {
           "property" : {
             "type" : "string"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.SubSealedInterface1" ]
           }
         },
-        "required" : [ "property" ]
+        "required" : [ "type", "property" ]
       },
       "sources.SubSealedInterface2" : {
         "type" : "object",
         "properties" : {
           "property" : {
             "type" : "string"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.SubSealedInterface2" ]
           }
         },
-        "required" : [ "property" ]
+        "required" : [ "type", "property" ]
       },
       "sources.SubSealedInterface3" : {
         "type" : "object",
@@ -64,9 +72,13 @@
           },
           "property" : {
             "type" : "string"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.SubSealedInterface3" ]
           }
         },
-        "required" : [ "list", "property" ]
+        "required" : [ "type", "list", "property" ]
       },
       "sources.TopSealedInterface" : {
         "type" : "object",

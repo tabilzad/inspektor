@@ -40,9 +40,13 @@
         "properties" : {
           "property" : {
             "type" : "integer"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.SunSealedClass2" ]
           }
         },
-        "required" : [ "property" ]
+        "required" : [ "type", "property" ]
       },
       "sources.SunSealedClass3" : {
         "type" : "object",
@@ -52,9 +56,13 @@
             "items" : {
               "type" : "string"
             }
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.SunSealedClass3" ]
           }
         },
-        "required" : [ "list" ]
+        "required" : [ "type", "list" ]
       },
       "sources.TopSealedClass" : {
         "type" : "object",
@@ -79,9 +87,13 @@
         "properties" : {
           "property" : {
             "type" : "string"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.TopSealedClass.SunSealedClass1" ]
           }
         },
-        "required" : [ "property" ]
+        "required" : [ "type", "property" ]
       }
     }
   }
