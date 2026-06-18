@@ -6,36 +6,19 @@
     "version" : "1.0.0"
   },
   "paths" : {
-    "/v5/postBodyRequestSimple" : {
-      "post" : {
+    "/v5/implicitArgs" : {
+      "get" : {
         "responses" : {
           "200" : {
-            "description" : "line0line1line3",
+            "description" : "",
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
+                  }
                 }
-              }
-            }
-          },
-          "500" : {
-            "description" : "external",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/sources.requests.PrivateBodyRequest"
-                }
-              }
-            }
-          }
-        },
-        "requestBody" : {
-          "required" : true,
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
               }
             }
           }
@@ -71,19 +54,36 @@
         }
       }
     },
-    "/v5/implicitArgs" : {
-      "get" : {
+    "/v5/postBodyRequestSimple" : {
+      "post" : {
         "responses" : {
           "200" : {
-            "description" : "",
+            "description" : "line0line1line3",
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
-                  }
+                  "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
                 }
+              }
+            }
+          },
+          "500" : {
+            "description" : "external",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/sources.requests.PrivateBodyRequest"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
               }
             }
           }

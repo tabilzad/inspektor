@@ -6,12 +6,6 @@
     "version" : "1.0.0"
   },
   "paths" : {
-    "/v1/multilineOperationsId" : {
-      "get" : {
-        "description" : "getOrdersFromPreviousDay",
-        "operationId" : "thisisOpertaionId"
-      }
-    },
     "/v1/else/endpointWithOperationId" : {
       "get" : {
         "summary" : "My Summary",
@@ -22,6 +16,12 @@
       "get" : {
         "description" : "getOrdersFromPreviousDay",
         "operationId" : "getOrdersAndCart2"
+      }
+    },
+    "/v1/multilineOperationsId" : {
+      "get" : {
+        "description" : "getOrdersFromPreviousDay",
+        "operationId" : "thisisOpertaionId"
       }
     }
   },

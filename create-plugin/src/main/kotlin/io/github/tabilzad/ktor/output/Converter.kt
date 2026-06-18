@@ -22,8 +22,19 @@ internal fun convertInternalToOpenSpec(
                     summary = acc.summary ?: spec.summary,
                     description = acc.description ?: spec.description,
                     operationId = acc.operationId ?: spec.operationId,
-                    parameters = acc.parameters ?: spec.parameters,
-                    responses = acc.responses ?: spec.responses,
+                    // Union parameters/responses across duplicate path+method declarations
+                    // (e.g. the same endpoint defined in two @GenerateOpenApi functions) instead
+                    // of keeping only the first, which silently dropped the others. Both unions are
+                    // first-wins (consistent with the scalar fields above) and order-stable:
+                    //  - parameters dedupe on (location, name) — OpenAPI's uniqueness key — so two
+                    //    params with the same name+location can't both be emitted, while params that
+                    //    differ in name OR location are kept.
+                    //  - responses keep acc's entry on a status-code collision (putIfAbsent).
+                    parameters = (acc.parameters merge spec.parameters)?.distinctBy { it::class to it.name },
+                    responses = buildMap {
+                        acc.responses?.let { putAll(it) }
+                        spec.responses?.forEach { (code, details) -> putIfAbsent(code, details) }
+                    }.ifEmpty { null },
                     deprecated = acc.deprecated ?: spec.deprecated
                 )
             }

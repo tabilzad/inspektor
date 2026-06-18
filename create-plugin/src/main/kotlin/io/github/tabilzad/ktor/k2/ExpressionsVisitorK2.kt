@@ -112,7 +112,10 @@ internal class ExpressionsVisitorK2(
         val type = if (isNothingResponse) {
             BuiltinTypes().nothingType.coneType
         } else {
-            (typeArguments.first() as FirTypeProjectionWithVariance).typeRef.coneType
+            // Guard against a missing/star type argument instead of crashing the compilation;
+            // treat an unresolvable responds<T>() as an empty (Nothing) response.
+            (typeArguments.firstOrNull() as? FirTypeProjectionWithVariance)?.typeRef?.coneType
+                ?: BuiltinTypes().nothingType.coneType
         }
 
         val argByName = resolvedArgumentMapping?.entries
@@ -336,8 +339,9 @@ internal class ExpressionsVisitorK2(
     @OptIn(SymbolInternals::class)
     private fun FirFunctionCall.resolvePath(): String? {
         val expression = this
-        val pathExpressionIndex = (expression.calleeReference.resolved?.resolvedSymbol?.fir as FirFunction)
-            .valueParameters.indexOfFirst { it.name.asString() == "path" }
+        val pathFunction = expression.calleeReference.resolved?.resolvedSymbol?.fir as? FirFunction
+        val pathExpressionIndex = pathFunction
+            ?.valueParameters?.indexOfFirst { it.name.asString() == "path" } ?: -1
 
         val pathExpression = expression.arguments.getOrElse(pathExpressionIndex) {
             expression.arguments.find { it is FirLiteralExpression }
@@ -494,7 +498,7 @@ internal class ExpressionsVisitorK2(
     private fun FirStatement.findTags(session: FirSession): Set<String>? {
         val annotation = findAnnotation(ClassIds.KTOR_TAGS_ANNOTATION, session) ?: return null
         val resolved = FirExpressionEvaluator.evaluateAnnotationArguments(annotation, session)
-        return resolved?.entries?.find { it.key.asString() == "tags" }?.value?.result?.accept(
+        return resolved.entries.find { it.key.asString() == "tags" }?.value?.result?.accept(
             StringArrayLiteralVisitor(),
             emptyList()
         )?.toSet()
@@ -518,7 +522,7 @@ internal class ExpressionsVisitorK2(
         val annotation = findAnnotationNamed(ClassIds.KTOR_RESPONDS)
         return annotation?.let {
             val resolved = FirExpressionEvaluator.evaluateAnnotationArguments(annotation, session)
-            val mapping = resolved?.entries?.find { it.key.asString() == "mapping" }?.value?.result
+            val mapping = resolved.entries.find { it.key.asString() == "mapping" }?.value?.result
             mapping?.accept(RespondsAnnotationVisitor(session), null)
         }
     }

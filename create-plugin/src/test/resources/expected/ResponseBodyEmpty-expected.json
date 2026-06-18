@@ -6,6 +6,25 @@
     "version" : "1.0.0"
   },
   "paths" : {
+    "/v1/implicitArgNames" : {
+      "post" : {
+        "responses" : {
+          "204" : {
+            "description" : ""
+          }
+        },
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/noResponseBody" : {
       "post" : {
         "responses" : {
@@ -21,25 +40,6 @@
                 }
               }
             }
-          }
-        },
-        "requestBody" : {
-          "required" : true,
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/implicitArgNames" : {
-      "post" : {
-        "responses" : {
-          "204" : {
-            "description" : ""
           }
         },
         "requestBody" : {

@@ -6,6 +6,18 @@
     "version" : "1.0.0"
   },
   "paths" : {
+    "/subRoute2/tagged1AndSubModule" : {
+      "get" : {
+        "summary" : "My Summary",
+        "description" : "My Description",
+        "tags" : [ "subModule", "tag1" ]
+      }
+    },
+    "/v1/noTagsUnderModule1" : {
+      "get" : {
+        "tags" : [ "module1" ]
+      }
+    },
     "/v1/tagged1" : {
       "get" : {
         "summary" : "My Summary",
@@ -27,16 +39,9 @@
         "tags" : [ "module1", "tag5", "tag6" ]
       }
     },
-    "/v1/noTagsUnderModule1" : {
+    "/v2/subRoute1/noTagsUnderModule2" : {
       "get" : {
-        "tags" : [ "module1" ]
-      }
-    },
-    "/v2/subRoute2/tagged1AndSubModule" : {
-      "get" : {
-        "summary" : "My Summary",
-        "description" : "My Description",
-        "tags" : [ "module2", "subModule", "tag1" ]
+        "tags" : [ "module2" ]
       }
     },
     "/v2/subRoute1/tagged1AndModule2" : {
@@ -46,16 +51,11 @@
         "tags" : [ "module2", "tag1" ]
       }
     },
-    "/v2/subRoute1/noTagsUnderModule2" : {
-      "get" : {
-        "tags" : [ "module2" ]
-      }
-    },
-    "/subRoute2/tagged1AndSubModule" : {
+    "/v2/subRoute2/tagged1AndSubModule" : {
       "get" : {
         "summary" : "My Summary",
         "description" : "My Description",
-        "tags" : [ "subModule", "tag1" ]
+        "tags" : [ "module2", "subModule", "tag1" ]
       }
     }
   },

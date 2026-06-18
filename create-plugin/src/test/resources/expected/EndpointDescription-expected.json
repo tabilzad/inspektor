@@ -6,12 +6,6 @@
     "version" : "1.0.0"
   },
   "paths" : {
-    "/base/moreBase/getMixedExplicitParamName" : {
-      "get" : {
-        "summary" : "My Summary",
-        "description" : "My Description"
-      }
-    },
     "/base/moreBase/getExplicitParamName" : {
       "get" : {
         "summary" : "My Description multi lined",
@@ -22,6 +16,12 @@
       "get" : {
         "summary" : "My Summarymulti lined",
         "description" : "1 2 34"
+      }
+    },
+    "/base/moreBase/getMixedExplicitParamName" : {
+      "get" : {
+        "summary" : "My Summary",
+        "description" : "My Description"
       }
     }
   },

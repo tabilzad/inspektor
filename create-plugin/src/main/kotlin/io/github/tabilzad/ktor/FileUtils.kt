@@ -25,6 +25,9 @@ internal fun OpenApiSpec.writeFreshTo(configuration: PluginConfiguration) {
     }
 
     val sorted = this.copy(
+        // Sort paths and their HTTP methods so output is stable regardless of FIR visitation order.
+        paths = paths.toSortedMap()
+            .mapValues { (_, methods) -> methods.toSortedMap() },
         components = components.copy(
             schemas = components.schemas.toSortedMap()
                 .mapValues {

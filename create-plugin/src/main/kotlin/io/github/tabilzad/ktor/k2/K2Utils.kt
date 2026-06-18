@@ -12,7 +12,6 @@ import org.jetbrains.kotlin.fir.expressions.FirAnnotation
 import org.jetbrains.kotlin.fir.expressions.FirPropertyAccessExpression
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 import org.jetbrains.kotlin.fir.expressions.toResolvedCallableSymbol
-import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.fqName
 import org.jetbrains.kotlin.fir.resolve.toClassSymbol
 import org.jetbrains.kotlin.fir.resolve.toRegularClassSymbol
@@ -39,50 +38,6 @@ internal class AllNestedNodeCollector(private val elements: MutableSet<FirElemen
         element.acceptChildren(this)
     }
 }
-
-class ExpressionTree(
-    val node: FirElement,
-    val children: MutableList<ExpressionTree> = mutableListOf()
-) {
-
-    fun <T> walk(data: T, onVisit: (FirElement, T) -> List<T>): List<T> {
-        onVisit(node, data)
-        return children.flatMap {
-            walk(data, onVisit)
-        }
-    }
-
-    fun countAll(): Int {
-        return children.fold(children.count()) { acc, expressionTree ->
-            acc + expressionTree.countAll()
-        }
-    }
-
-    fun render(): String {
-        return buildString {
-            append("Node: ${node.render()}")
-            children.forEach {
-                append("Child: " + it.render())
-            }
-        }
-    }
-}
-
-internal class HierarchyResolver(private val root: ExpressionTree) : FirVisitorVoid() {
-
-    override fun visitElement(element: FirElement) {
-        val nextRoot = ExpressionTree(element)
-        root.children.add(nextRoot)
-        element.acceptChildren(HierarchyResolver(nextRoot))
-    }
-}
-
-val FirElement.buildHierarchy: ExpressionTree
-    get() {
-        val root = ExpressionTree(this)
-        acceptChildren(HierarchyResolver(root))
-        return root
-    }
 
 internal val FirElement.children: MutableSet<FirElement>
     get() {
@@ -203,11 +158,6 @@ private fun ConeKotlinType.isBuiltinType(classId: ClassId, isNullable: Boolean?)
 
 @OptIn(DirectDeclarationsAccess::class)
 fun FirRegularClassSymbol.resolveEnumEntries(): List<String> {
-    return declarationSymbols.filterIsInstance<FirEnumEntrySymbol>().map { it.name.asString() }
-}
-
-@OptIn(DirectDeclarationsAccess::class)
-fun FirRegularClassSymbol.findEnumParamValue(value: String): List<String> {
     return declarationSymbols.filterIsInstance<FirEnumEntrySymbol>().map { it.name.asString() }
 }
 

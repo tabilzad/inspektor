@@ -32,6 +32,16 @@
       "get" : { }
     },
     "/articles/{id}" : {
+      "delete" : {
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ]
+      },
       "get" : {
         "parameters" : [ {
           "name" : "id",
@@ -43,16 +53,6 @@
         } ]
       },
       "put" : {
-        "parameters" : [ {
-          "name" : "id",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ]
-      },
-      "delete" : {
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
