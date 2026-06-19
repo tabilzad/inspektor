@@ -304,6 +304,7 @@ internal fun CompilerConfiguration?.buildPluginConfiguration(): PluginConfigurat
     hideTransients = this?.get(SwaggerConfigurationKeys.ARG_HIDE_TRANSIENTS),
     hidePrivateFields = this?.get(SwaggerConfigurationKeys.ARG_HIDE_PRIVATE),
     deriveFieldRequirementFromTypeNullability = this?.get(SwaggerConfigurationKeys.ARG_DERIVE_PROP_REQ),
+    useKDocsForDescriptions = this?.get(SwaggerConfigurationKeys.ARG_KDOCS),
     servers = this?.get(SwaggerConfigurationKeys.ARG_SERVERS) ?: emptyList(),
     initConfig = this?.get(SwaggerConfigurationKeys.ARG_INIT_CONFIG) ?: ConfigInput(),
 )
@@ -315,17 +316,17 @@ operator fun OutputStream.plusAssign(str: String) {
 @OptIn(PrivateForInline::class)
 internal fun FirAnnotation.extractDescription(session: FirSession): KtorDescriptionBag {
     val resolved = FirExpressionEvaluator.evaluateAnnotationArguments(this, session)
-    val summary = resolved?.entries?.find { it.key.asString() == "summary" }?.value?.result
-    val descr = resolved?.entries?.find { it.key.asString() == "description" }?.value?.result
-    val required = resolved?.entries?.find { it.key.asString() == "required" }?.value?.result
-    val operationId = resolved?.entries?.find { it.key.asString() == "operationId" }?.value?.result
+    val summary = resolved.entries.find { it.key.asString() == "summary" }?.value?.result
+    val descr = resolved.entries.find { it.key.asString() == "description" }?.value?.result
+    val required = resolved.entries.find { it.key.asString() == "required" }?.value?.result
+    val operationId = resolved.entries.find { it.key.asString() == "operationId" }?.value?.result
     val serializedAs =
-        resolved?.entries?.find { it.key.asString() == "serializedAs" }?.value?.result as? FirGetClassCall
-    val tags = resolved?.entries?.find { it.key.asString() == "tags" }?.value?.result
-    val explicitType = resolved?.entries
-        ?.find { it.key.asString() == "explicitType" || it.key.asString() == "type" }?.value?.result
+        resolved.entries.find { it.key.asString() == "serializedAs" }?.value?.result as? FirGetClassCall
+    val tags = resolved.entries.find { it.key.asString() == "tags" }?.value?.result
+    val explicitType = resolved.entries
+        .find { it.key.asString() == "explicitType" || it.key.asString() == "type" }?.value?.result
 
-    val format = resolved?.entries?.find { it.key.asString() == "format" }?.value?.result
+    val format = resolved.entries.find { it.key.asString() == "format" }?.value?.result
     val serializedAsType = serializedAs?.resolvedType?.typeArguments?.firstOrNull()?.type?.let {
         if (it.isNothing) null else it
     }

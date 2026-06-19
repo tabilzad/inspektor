@@ -6,10 +6,10 @@
     "version" : "1.0.0"
   },
   "paths" : {
-    "/root/expressBody" : {
+    "/root/blockBodyWithReturn" : {
       "get" : { }
     },
-    "/root/blockBodyWithReturn" : {
+    "/root/expressBody" : {
       "get" : { }
     },
     "/root/noReturnType/returnGet" : {

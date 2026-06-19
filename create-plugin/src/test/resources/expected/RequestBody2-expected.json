@@ -6,8 +6,8 @@
     "version" : "1.0.0"
   },
   "paths" : {
-    "/v1/else/putBodyRequestWithLambda" : {
-      "put" : {
+    "/v1/else/postBodyRequestWithLambda" : {
+      "patch" : {
         "tags" : [ "module1", "submodule" ],
         "requestBody" : {
           "required" : true,
@@ -21,8 +21,8 @@
         }
       }
     },
-    "/v1/else/postBodyRequestWithLambda" : {
-      "patch" : {
+    "/v1/else/putBodyRequestWithLambda" : {
+      "put" : {
         "tags" : [ "module1", "submodule" ],
         "requestBody" : {
           "required" : true,

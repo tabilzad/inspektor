@@ -14,11 +14,11 @@
       "get" : { },
       "post" : { }
     },
-    "/v3/v3a/getRequest3" : {
+    "/v3/getRequest3" : {
       "get" : { },
       "post" : { }
     },
-    "/v3/getRequest3" : {
+    "/v3/v3a/getRequest3" : {
       "get" : { },
       "post" : { }
     }

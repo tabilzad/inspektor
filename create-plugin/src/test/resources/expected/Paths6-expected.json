@@ -6,9 +6,6 @@
     "version" : "1.0.0"
   },
   "paths" : {
-    "/v1/order/get" : {
-      "post" : { }
-    },
     "/v1/global/v2/order/get" : {
       "get" : { }
     },
@@ -20,6 +17,9 @@
     },
     "/v1/order/another/order" : {
       "get" : { }
+    },
+    "/v1/order/get" : {
+      "post" : { }
     },
     "/v1/order/yetAnother/order" : {
       "get" : { }

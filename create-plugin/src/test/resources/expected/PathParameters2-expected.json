@@ -6,10 +6,10 @@
     "version" : "1.0.0"
   },
   "paths" : {
-    "/v1/order/{param_with_body}" : {
+    "/v1/complexExpression/{order_id}" : {
       "post" : {
         "parameters" : [ {
-          "name" : "param_with_body",
+          "name" : "order_id",
           "in" : "path",
           "required" : true,
           "schema" : {
@@ -28,10 +28,10 @@
         }
       }
     },
-    "/v1/complexExpression/{order_id}" : {
+    "/v1/order/{param_with_body}" : {
       "post" : {
         "parameters" : [ {
-          "name" : "order_id",
+          "name" : "param_with_body",
           "in" : "path",
           "required" : true,
           "schema" : {

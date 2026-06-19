@@ -23,13 +23,13 @@
         }
       }
     },
-    "/png" : {
+    "/pdfAnnotation" : {
       "post" : {
         "responses" : {
           "200" : {
-            "description" : "",
+            "description" : "PDF document",
             "content" : {
-              "image/png" : {
+              "application/pdf" : {
                 "schema" : {
                   "type" : "string",
                   "format" : "binary"
@@ -40,13 +40,13 @@
         }
       }
     },
-    "/pdfAnnotation" : {
+    "/png" : {
       "post" : {
         "responses" : {
           "200" : {
-            "description" : "PDF document",
+            "description" : "",
             "content" : {
-              "application/pdf" : {
+              "image/png" : {
                 "schema" : {
                   "type" : "string",
                   "format" : "binary"

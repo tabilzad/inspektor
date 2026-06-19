@@ -151,6 +151,11 @@ internal fun generateCompilerTest(
             ),
             com.tschuchort.compiletesting.PluginOption(
                 clp.pluginId,
+                KtorDocsCommandLineProcessor.useKDocs.optionName,
+                config.useKDocsForDescriptions.toString()
+            ),
+            com.tschuchort.compiletesting.PluginOption(
+                clp.pluginId,
                 KtorDocsCommandLineProcessor.serverUrls.optionName,
                 config.servers.joinToString("||")
             ),

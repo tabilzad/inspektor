@@ -30,32 +30,6 @@
         } ]
       }
     },
-    "/v1/multipleQueryParams" : {
-      "get" : {
-        "parameters" : [ {
-          "name" : "employeeId",
-          "in" : "query",
-          "required" : false,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "name" : "employeeId2",
-          "in" : "query",
-          "required" : false,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "name" : "employeeId3",
-          "in" : "query",
-          "required" : false,
-          "schema" : {
-            "type" : "string"
-          }
-        } ]
-      }
-    },
     "/v1/multipleNestedQueryParams" : {
       "get" : {
         "parameters" : [ {
@@ -75,10 +49,24 @@
         } ]
       }
     },
-    "/v1/unusedParams" : {
+    "/v1/multipleQueryParams" : {
       "get" : {
         "parameters" : [ {
           "name" : "employeeId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "employeeId2",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "employeeId3",
           "in" : "query",
           "required" : false,
           "schema" : {
@@ -107,6 +95,18 @@
             }
           }
         }
+      }
+    },
+    "/v1/unusedParams" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "employeeId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ]
       }
     }
   },

@@ -59,8 +59,8 @@ open class DocumentationOptions @Inject constructor(
             title = infoBlock.title ?: info.title,
             description = infoBlock.description ?: info.description,
             version = infoBlock.version ?: info.version,
-            license = infoBlock.license,
-            contact = infoBlock.contact
+            license = infoBlock.license ?: info.license,
+            contact = infoBlock.contact ?: info.contact
         )
     }
 

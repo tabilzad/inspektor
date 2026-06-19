@@ -6,20 +6,6 @@
     "version" : "1.0.0"
   },
   "paths" : {
-    "/v1/wrapped" : {
-      "post" : {
-        "requestBody" : {
-          "required" : true,
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/sources.ValueWrapper"
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/plain" : {
       "post" : {
         "requestBody" : {
@@ -29,6 +15,20 @@
               "schema" : {
                 "type" : "integer",
                 "description" : "Value class"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/wrapped" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.ValueWrapper"
               }
             }
           }

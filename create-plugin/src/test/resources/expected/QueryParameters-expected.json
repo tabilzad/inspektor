@@ -18,17 +18,10 @@
         } ]
       }
     },
-    "/v1/orderWithPath/{myPathParameter}" : {
+    "/v1/order10" : {
       "get" : {
         "parameters" : [ {
-          "name" : "myPathParameter",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        }, {
-          "name" : "my_query_param2",
+          "name" : "unused_param_part1_my_string_query_param",
           "in" : "query",
           "required" : false,
           "schema" : {
@@ -166,10 +159,17 @@
         } ]
       }
     },
-    "/v1/order10" : {
+    "/v1/orderWithPath/{myPathParameter}" : {
       "get" : {
         "parameters" : [ {
-          "name" : "unused_param_part1_my_string_query_param",
+          "name" : "myPathParameter",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "my_query_param2",
           "in" : "query",
           "required" : false,
           "schema" : {

@@ -20,20 +20,6 @@
         }
       }
     },
-    "/v1/postBodyRequestWithVariableDeclaration" : {
-      "post" : {
-        "requestBody" : {
-          "required" : true,
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/postBodyRequestWithLambda" : {
       "post" : {
         "requestBody" : {
@@ -48,14 +34,14 @@
         }
       }
     },
-    "/v2/postBodyNestedRequest" : {
+    "/v1/postBodyRequestWithVariableDeclaration" : {
       "post" : {
         "requestBody" : {
           "required" : true,
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/sources.requests.NestedRequest"
+                "$ref" : "#/components/schemas/sources.requests.SimpleRequest"
               }
             }
           }
@@ -70,6 +56,20 @@
             "application/json" : {
               "schema" : {
                 "$ref" : "#/components/schemas/sources.requests.ComplexRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/postBodyNestedRequest" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.requests.NestedRequest"
               }
             }
           }

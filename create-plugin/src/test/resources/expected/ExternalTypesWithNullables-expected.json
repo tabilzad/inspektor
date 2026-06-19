@@ -6,20 +6,6 @@
     "version" : "1.0.0"
   },
   "paths" : {
-    "/v1/requiredOrOptionalFieldsOnLocalType" : {
-      "post" : {
-        "requestBody" : {
-          "required" : true,
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/sources.MyLocalType"
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/requiredOrOptionalFieldsOnExternalType" : {
       "post" : {
         "requestBody" : {
@@ -28,6 +14,20 @@
             "application/json" : {
               "schema" : {
                 "$ref" : "#/components/schemas/sources.precompiled.MyExternalType"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/requiredOrOptionalFieldsOnLocalType" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.MyLocalType"
               }
             }
           }

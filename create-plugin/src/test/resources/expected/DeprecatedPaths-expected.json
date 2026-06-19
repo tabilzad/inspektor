@@ -14,7 +14,7 @@
         "summary" : "should not be deprecated"
       }
     },
-    "/v3/v3a/getRequest3" : {
+    "/v2/getRequest2" : {
       "get" : {
         "summary" : "should be deprecated",
         "deprecated" : true
@@ -34,7 +34,7 @@
         "deprecated" : true
       }
     },
-    "/v2/getRequest2" : {
+    "/v3/v3a/getRequest3" : {
       "get" : {
         "summary" : "should be deprecated",
         "deprecated" : true

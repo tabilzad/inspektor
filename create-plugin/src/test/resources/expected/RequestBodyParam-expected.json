@@ -6,7 +6,7 @@
     "version" : "1.0.0"
   },
   "paths" : {
-    "/v1/post" : {
+    "/v1/otherPost" : {
       "post" : {
         "requestBody" : {
           "required" : true,
@@ -20,7 +20,7 @@
         }
       }
     },
-    "/v1/otherPost" : {
+    "/v1/post" : {
       "post" : {
         "requestBody" : {
           "required" : true,
