@@ -137,7 +137,7 @@ Your OpenAPI spec is generated at `build/resources/main/openapi/openapi.yaml` :m
 | **Route Detection** | Automatically detects routes from Ktor's routing DSL |
 | **Schema Generation** | Generates schemas from Kotlin data classes |
 | **Request Bodies** | Infers request schemas from `call.receive<T>()` |
-| **Response Types** | Documents responses with the `responds<T>()` function |
+| **Response Types** | Infers responses from `call.respond<T>()` (opt-in) or the `responds<T>()` function |
 | **Path Parameters** | Detects parameters from `{param}` syntax |
 | **Query Parameters** | Extracts query parameters from code |
 | **KDoc Integration** | Extracts descriptions from KDoc comments |

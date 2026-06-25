@@ -113,6 +113,7 @@ Options that control how schemas are generated from your Kotlin types.
 ```kotlin
 documentation {
     generateRequestSchemas = true
+    inferResponseSchemas = false
     hideTransientFields = true
     hidePrivateAndInternalFields = true
     deriveFieldRequirementFromTypeNullability = true
@@ -124,6 +125,7 @@ documentation {
 | Property                                    | Type      | Default  | Description                                    |
 |---------------------------------------------|-----------|----------|------------------------------------------------|
 | `generateRequestSchemas`                    | `Boolean` | `true`   | Auto-generate schemas from `call.receive<T>()` |
+| `inferResponseSchemas`                      | `Boolean` | `false`  | Infer schemas from `call.respond<T>()` handlers |
 | `hideTransientFields`                       | `Boolean` | `true`   | Exclude `@Transient` fields                    |
 | `hidePrivateAndInternalFields`              | `Boolean` | `true`   | Exclude private/internal fields                |
 | `deriveFieldRequirementFromTypeNullability` | `Boolean` | `true`   | Non-null = required                            |

@@ -86,6 +86,27 @@ post("/users") {
 }
 ```
 
+### inferResponseSchemas
+
+Controls whether response schemas are inferred from `call.respond*(...)` handler calls. Disabled by
+default while in alpha (enabling it changes generated specs for existing projects). Explicit
+`responds<T>()` / `@KtorResponds` always override inferred responses.
+
+```kotlin
+inferResponseSchemas = false // default
+```
+
+When enabled:
+
+```kotlin
+get("/users/{id}") {
+    call.respond(service.find(id))                // -> 200, schema inferred
+    call.respond(HttpStatusCode.NotFound, error)  // -> 404, schema inferred
+}
+```
+
+See [Responses](../usage/responses.md#automatic-response-inference) for the full behaviour and limitations.
+
 ### hideTransientFields
 
 Excludes fields marked with `@Transient` from generated schemas.
@@ -226,6 +247,7 @@ PaymentMethod:
 | `info.version`                              | `String`       | `"1.0.0"`                  | API version                      |
 | `servers`                                   | `List<String>` | `[]`                       | Server URLs                      |
 | `generateRequestSchemas`                    | `Boolean`      | `true`                     | Auto-generate request schemas    |
+| `inferResponseSchemas`                      | `Boolean`      | `false`                    | Infer response schemas from `call.respond<T>()` |
 | `hideTransientFields`                       | `Boolean`      | `true`                     | Hide @Transient fields           |
 | `hidePrivateAndInternalFields`              | `Boolean`      | `true`                     | Hide private/internal fields     |
 | `deriveFieldRequirementFromTypeNullability` | `Boolean`      | `true`                     | Derive required from nullability |

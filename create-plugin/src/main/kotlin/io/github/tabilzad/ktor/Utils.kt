@@ -305,6 +305,7 @@ internal fun CompilerConfiguration?.buildPluginConfiguration(): PluginConfigurat
     hidePrivateFields = this?.get(SwaggerConfigurationKeys.ARG_HIDE_PRIVATE),
     deriveFieldRequirementFromTypeNullability = this?.get(SwaggerConfigurationKeys.ARG_DERIVE_PROP_REQ),
     useKDocsForDescriptions = this?.get(SwaggerConfigurationKeys.ARG_KDOCS),
+    inferResponseSchemas = this?.get(SwaggerConfigurationKeys.ARG_INFER_RESPONSE),
     servers = this?.get(SwaggerConfigurationKeys.ARG_SERVERS) ?: emptyList(),
     initConfig = this?.get(SwaggerConfigurationKeys.ARG_INIT_CONFIG) ?: ConfigInput(),
 )
