@@ -16,6 +16,8 @@ import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_HIDE_PRIVATE
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_HIDE_TRANSIENT
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_INIT_CONFIG
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_IS_ENABLED
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_INFER_RESPONSE
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_INFER_RESPONSE
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_PATH
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_REQUEST_BODY
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_SERVERS
@@ -42,6 +44,7 @@ object SwaggerConfigurationKeys {
     const val OPTION_SERVERS = "servers"
     const val OPTION_INIT_CONFIG = "initialConfig"
     const val OPTION_FORMAT = "format"
+    const val OPTION_INFER_RESPONSE = "inferResponseSchemas"
 
     val ARG_ENABLED = CompilerConfigurationKey.create<Boolean>(OPTION_IS_ENABLED)
     val ARG_PATH = CompilerConfigurationKey.create<String>(OPTION_PATH)
@@ -53,6 +56,7 @@ object SwaggerConfigurationKeys {
     val ARG_SERVERS = CompilerConfigurationKey.create<List<String>>(OPTION_SERVERS)
     val ARG_INIT_CONFIG = CompilerConfigurationKey.create<ConfigInput>(OPTION_INIT_CONFIG)
     val ARG_KDOCS = CompilerConfigurationKey.create<Boolean>(OPTION_USE_KDOCS)
+    val ARG_INFER_RESPONSE = CompilerConfigurationKey.create<Boolean>(OPTION_INFER_RESPONSE)
 }
 
 @ExperimentalEncodingApi
@@ -101,6 +105,12 @@ class KtorDocsCommandLineProcessor : CommandLineProcessor {
             "Resolve schema descriptions from kdocs",
             false
         )
+        val inferResponseSchemas = CliOption(
+            OPTION_INFER_RESPONSE,
+            "true enables response schema inference from handlers",
+            "Infer response body schemas from call.respond* handler calls",
+            false
+        )
         val formatOption = CliOption(
             OPTION_FORMAT,
             "Specification format",
@@ -138,6 +148,7 @@ class KtorDocsCommandLineProcessor : CommandLineProcessor {
             formatOption,
             serverUrls,
             useKDocs,
+            inferResponseSchemas,
             initConfig
         )
 
@@ -163,6 +174,9 @@ class KtorDocsCommandLineProcessor : CommandLineProcessor {
             hidePrivateAndInternalFields -> configuration.put(ARG_HIDE_PRIVATE, value.toBooleanStrictOrNull() ?: true)
 
             useKDocs -> configuration.put(ARG_KDOCS, value.toBooleanStrictOrNull() ?: true)
+
+            inferResponseSchemas ->
+                configuration.put(ARG_INFER_RESPONSE, value.toBooleanStrictOrNull() ?: true)
 
             serverUrls -> configuration.put(ARG_SERVERS, value.split("||").filter { it.isNotBlank() })
 

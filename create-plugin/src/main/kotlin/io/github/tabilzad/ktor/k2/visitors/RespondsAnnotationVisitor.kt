@@ -14,7 +14,12 @@ internal data class KtorK2ResponseBag(
     val status: String,
     val type: ConeKotlinType?,
     val isCollection: Boolean = false,
-    val contentType: String = "application/json"
+    val contentType: String = "application/json",
+    /**
+     * When true the response carries its content type but no schema (e.g. an inferred streaming/file
+     * response, or an erased `Any` body). Defaults to false so explicit DSL/annotation paths are unaffected.
+     */
+    val noSchema: Boolean = false
 )
 
 internal class RespondsAnnotationVisitor(private val session: FirSession) : FirDefaultVisitor<List<KtorK2ResponseBag>, KtorK2ResponseBag?>() {

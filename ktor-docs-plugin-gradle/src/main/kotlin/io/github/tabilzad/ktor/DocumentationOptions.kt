@@ -22,6 +22,13 @@ open class DocumentationOptions @Inject constructor(
     var hidePrivateAndInternalFields: Boolean = true
     var deriveFieldRequirementFromTypeNullability: Boolean = true
     var useKDocsForDescriptions: Boolean = true
+
+    /**
+     * Infer response schemas from `call.respond*(...)` handler calls. Explicit `responds<T>()` /
+     * `@KtorResponds` always override inference. Defaults to `false` for the first alpha because
+     * enabling it changes generated specs for existing projects.
+     */
+    var inferResponseSchemas: Boolean = false
     var polymorphicDiscriminator: String = "type"
     var servers: List<String> = emptyList()
 

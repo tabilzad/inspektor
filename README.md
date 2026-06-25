@@ -105,7 +105,7 @@ Your OpenAPI specification is generated at `build/resources/main/openapi/openapi
 | **Path & Endpoint Detection** | Automatic     | Extracts all routes from annotated functions   |
 | **Ktor Resources Support**    | Automatic     | Full support for type-safe routing             |
 | **Request Body Schemas**      | Automatic     | Generates schemas from `call.receive<T>()`     |
-| **Response Schemas**          | Explicit      | Define with `responds<T>()` or `@KtorResponds` |
+| **Response Schemas**          | Automatic     | Inferred from `call.respond<T>()` (opt-in via `inferResponseSchemas`); `responds<T>()` / `@KtorResponds` override |
 | **Descriptions**              | Explicit      | Add summaries via `@KtorDescription` or KDocs  |
 | **Tags**                      | Explicit      | Organize endpoints with `@Tag`                 |
 | **Security Schemes**          | Configuration | JWT, API Key, OAuth2, etc.                     |
@@ -148,6 +148,7 @@ swagger {
 | `info.description`                          | `"Generated using Ktor Docs Plugin"` | API description                          |
 | `info.version`                              | `"1.0.0"`                            | API version                              |
 | `generateRequestSchemas`                    | `true`                               | Auto-resolve request body schemas        |
+| `inferResponseSchemas`                      | `false`                              | Infer response schemas from `call.respond<T>()` handlers (alpha; `responds<T>()`/`@KtorResponds` override) |
 | `hideTransientFields`                       | `true`                               | Omit `@Transient` fields from schemas    |
 | `hidePrivateAndInternalFields`              | `true`                               | Omit private/internal fields             |
 | `deriveFieldRequirementFromTypeNullability` | `true`                               | Nullable = optional, non-null = required |
@@ -415,7 +416,7 @@ swagger {
 
 ## Roadmap
 
-- [ ] Automatic response type inference from handler code
+- [x] Automatic response type inference from handler code *(alpha, opt-in via `inferResponseSchemas`)*
 - [ ] Auto-tagging based on module/route function names
 - [ ] Tag descriptions
 - [ ] OpenAPI 3.1 full support

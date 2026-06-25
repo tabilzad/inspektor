@@ -15,6 +15,7 @@ internal data class PluginConfiguration(
     val initConfig: ConfigInput,
     val deriveFieldRequirementFromTypeNullability: Boolean,
     val useKDocsForDescriptions: Boolean,
+    val inferResponseSchemas: Boolean,
     val discriminator: String,
 ) {
     companion object {
@@ -28,7 +29,8 @@ internal data class PluginConfiguration(
             servers: List<String>? = null,
             initConfig: ConfigInput? = null,
             deriveFieldRequirementFromTypeNullability: Boolean? = null,
-            useKDocsForDescriptions: Boolean? = null
+            useKDocsForDescriptions: Boolean? = null,
+            inferResponseSchemas: Boolean? = null
         ): PluginConfiguration {
             val defaultTitle = "Open API Specification"
             val defaultVersion = "1.0.0"
@@ -53,6 +55,9 @@ internal data class PluginConfiguration(
                     )
                 ),
                 useKDocsForDescriptions = useKDocsForDescriptions ?: true,
+                // Default OFF for the first alpha: enabling inference changes generated specs for
+                // existing users. See PLAN.md / PR open questions.
+                inferResponseSchemas = inferResponseSchemas ?: false,
                 discriminator = initConfig?.discriminator ?: "type"
             )
         }

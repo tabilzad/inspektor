@@ -2,6 +2,80 @@
 
 Document your API's response types and status codes.
 
+## Automatic Response Inference
+
+InspeKtor can infer responses directly from your handler's `call.respond*(...)` calls, so for the
+common case you don't need the `responds<T>()` DSL or `@KtorResponds` at all.
+
+It is **opt-in** while in alpha — enable it in the Gradle DSL:
+
+```kotlin
+swagger {
+    documentation {
+        inferResponseSchemas = true // default: false
+    }
+}
+```
+
+With it enabled:
+
+```kotlin
+get("/users/{id}") {
+    val user: User = service.find(id)
+    call.respond(user)                                  // -> 200, schema User
+    call.respond(HttpStatusCode.NotFound, ErrorResponse(...)) // -> 404, schema ErrorResponse
+}
+```
+
+```yaml
+/users/{id}:
+  get:
+    responses:
+      "200":
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      "404":
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ErrorResponse'
+```
+
+What is inferred:
+
+- **Body type** — the static type of the responded value (works through `val` bindings, control-flow
+  branches, and **extracted handler functions** that take the `call`, e.g. `get { handle(call) }`).
+  Sealed (`oneOf`), generic, and value-class types reuse the same schema generator as request bodies.
+- **Status code** — from an `HttpStatusCode` argument (e.g. `HttpStatusCode.Created` → `201`),
+  otherwise `200` (`respondRedirect` → `302`).
+- **Content type** — `respondText` → `text/plain`, `respondBytes` → `application/octet-stream`,
+  `respondFile`/`respondPath` → `*/*`, otherwise `application/json`.
+- **Multiple responses** — every `respond*` site in the handler (success + error branches, early
+  `return@get`, and inside nested lambdas / custom DSLs such as `withContext { … }`) contributes a
+  response.
+
+### Precedence
+
+Explicit declarations always win. For a given status code, `responds<T>()` / `@KtorResponds` override
+the inferred response; inference only fills in the status codes you didn't declare.
+
+### Limitations
+
+- Disabled by default (opt-in) for the first alpha — enabling it changes generated specs.
+- Erased (`Any`) bodies, and generics resolved only through a generic extracted function, emit the
+  response (status + content type) **without** a schema rather than a misleading one.
+- A non-constant status code (a variable or `HttpStatusCode(code, …)`) cannot be read statically and
+  defaults to `200`; `respondRedirect` is always documented as `302` (a `permanent = true` 301 is not
+  detected). Declare these explicitly with `responds<T>()` if needed.
+- Inference descends into nested lambdas and custom DSLs, so a `respond` inside a **detached** builder
+  (`launch { … }`, `async { … }`) is also attributed to the endpoint even though it doesn't produce
+  the HTTP response. Avoid responding from detached coroutines, or declare the real responses
+  explicitly. (Scope-aware detection is a planned follow-up.)
+- Explicit `ContentType` arguments and response headers are not inferred yet (use `@KtorDescription`
+  / the DSL). `respondHtml` (from `ktor-server-html-builder`) is not recognised.
+
 ## The responds Function
 
 Use the `responds` function to document response types:

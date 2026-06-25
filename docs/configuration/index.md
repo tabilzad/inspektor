@@ -80,6 +80,7 @@ swagger {
 
         // Schema generation options
         generateRequestSchemas = true
+        inferResponseSchemas = false
         hideTransientFields = true
         hidePrivateAndInternalFields = true
         deriveFieldRequirementFromTypeNullability = true

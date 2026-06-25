@@ -156,6 +156,11 @@ internal fun generateCompilerTest(
             ),
             com.tschuchort.compiletesting.PluginOption(
                 clp.pluginId,
+                KtorDocsCommandLineProcessor.inferResponseSchemas.optionName,
+                config.inferResponseSchemas.toString()
+            ),
+            com.tschuchort.compiletesting.PluginOption(
+                clp.pluginId,
                 KtorDocsCommandLineProcessor.serverUrls.optionName,
                 config.servers.joinToString("||")
             ),

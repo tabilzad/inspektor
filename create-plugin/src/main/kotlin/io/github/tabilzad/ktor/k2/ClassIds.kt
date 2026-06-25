@@ -14,6 +14,11 @@ object ClassIds {
     val KTOR_RESPONDS_NO_OP = FqName("io.github.tabilzad.ktor.annotations.responds")
     val KTOR_RESPONDS_NOTHING_NO_OP = FqName("io.github.tabilzad.ktor.annotations.respondsNothing")
 
+    // Automatic response inference: the `respond*` family lives in this package.
+    val KTOR_RESPONSE_PACKAGE = FqName("io.ktor.server.response")
+    val KTOR_HTTP_STATUS_CODE = ClassId(FqName("io.ktor.http"), FqName("HttpStatusCode"), false)
+    val KTOR_CONTENT_TYPE = ClassId(FqName("io.ktor.http"), FqName("ContentType"), false)
+
     val KTOR_APPLICATION = ClassId(FqName("io.ktor.server.application"), FqName("Application"), false)
 
     val KTOR_ROUTE = ClassId(KTOR_ROUTING_PACKAGE, FqName("Route"), false)

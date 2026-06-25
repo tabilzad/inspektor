@@ -1,6 +1,8 @@
 package io.github.tabilzad.ktor.k2
 
 import io.github.tabilzad.ktor.*
+import io.github.tabilzad.ktor.k2.inference.CallRespondInference
+import io.github.tabilzad.ktor.k2.inference.ResponseInferenceRule
 import io.github.tabilzad.ktor.k2.visitors.*
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
@@ -16,9 +18,11 @@ import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.resolved
 import org.jetbrains.kotlin.fir.references.toResolvedFunctionSymbol
 import org.jetbrains.kotlin.fir.resolve.toRegularClassSymbol
+import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
+import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi
 import org.jetbrains.kotlin.util.PrivateForInline
@@ -31,6 +35,9 @@ internal class ExpressionsVisitorK2(
 ) : FirDefaultVisitor<List<KtorElement>, KtorElement?>() {
 
     val classNames = mutableListOf<OpenApiSpec.TypeDescriptor>()
+
+    // Composable response-inference rules (OCP): adding a new inference is adding a rule here.
+    private val responseInferenceRules: List<ResponseInferenceRule> = listOf(CallRespondInference())
 
     override fun visitElement(expression: FirElement, parent: KtorElement?): List<KtorElement> {
         return parent.wrapAsList()
@@ -101,6 +108,89 @@ internal class ExpressionsVisitorK2(
 
         val responses = respondsCalls.map { it.toResponseBag() }.resolveToOpenSpecFormat()
         endpoint.responses = endpoint.responses?.plus(responses) ?: responses
+    }
+
+    /**
+     * Infers responses for an endpoint from the `call.respond*(...)` calls reachable on its handler's
+     * execution path, and merges them into [endpoint] filling only the status codes not already declared
+     * by `@KtorResponds` / `responds<T>()` (explicit declarations always win). Gated by
+     * [PluginConfiguration.inferResponseSchemas].
+     *
+     * The walk descends through control-flow, nested lambdas (scoping functions such as `withContext`
+     * and custom DSLs that wrap the response), and **follows extracted handler functions** (those passed
+     * a Ktor type, e.g. `get { handle(call) }`) with a cycle guard. A `respond` inside a detached builder
+     * (`launch`/`async`) is therefore also attributed — see the documented limitation.
+     *
+     * If analysis of one endpoint throws it is logged and skipped rather than failing the build.
+     */
+    private fun FirFunctionCall.inferResponsesInto(endpoint: EndpointDescriptor) {
+        if (!config.inferResponseSchemas) return
+        val handlerBody = findLambda()?.anonymousFunction?.body ?: return
+        try {
+            val respondCalls = mutableListOf<FirFunctionCall>()
+            handlerBody.acceptChildren(RespondCallCollector(mutableSetOf(), respondCalls))
+
+            val inferred = respondCalls
+                .flatMap { call -> responseInferenceRules.flatMap { rule -> rule.infer(call, session) } }
+                .resolveToOpenSpecFormat()
+
+            if (inferred.isEmpty()) return
+            endpoint.responses = mergeFillingGaps(endpoint.responses, inferred)
+        } catch (ex: Throwable) {
+            log?.report(
+                CompilerMessageSeverity.WARNING,
+                "Failed to infer responses for endpoint: ${ex.message}",
+                null
+            )
+        }
+    }
+
+    /**
+     * Collects candidate `respond*` calls anywhere in the handler — including inside nested lambdas
+     * (scoping functions / custom DSLs) — and follows Ktor-typed extracted functions (cycle-guarded).
+     * Descending into all lambdas mirrors the upstream Ktor plugin and maximizes coverage of DSL-wrapped
+     * responses; the trade-off is that a `respond` inside a detached `launch`/`async` is also collected.
+     */
+    private inner class RespondCallCollector(
+        private val visited: MutableSet<FirBasedSymbol<*>>,
+        private val calls: MutableList<FirFunctionCall>
+    ) : FirVisitorVoid() {
+
+        override fun visitElement(element: FirElement) {
+            element.acceptChildren(this)
+        }
+
+        @OptIn(SymbolInternals::class)
+        override fun visitFunctionCall(functionCall: FirFunctionCall) {
+            calls.add(functionCall)
+            functionCall.acceptChildren(this)
+
+            // Interprocedural: follow a user handler-helper's body once (e.g. get { handle(call) }).
+            val symbol = functionCall.calleeReference.toResolvedFunctionSymbol() ?: return
+            if (symbol in visited || !functionCall.passesKtorType()) return
+            visited.add(symbol)
+            symbol.fir.body?.acceptChildren(this)
+        }
+    }
+
+    private fun FirFunctionCall.passesKtorType(): Boolean {
+        val receiverAndArgTypes = buildList {
+            dispatchReceiver?.let { add(it.resolvedType) }
+            extensionReceiver?.let { add(it.resolvedType) }
+            resolvedArgumentMapping?.keys?.forEach { add(it.resolvedType) }
+        }
+        return receiverAndArgTypes.any {
+            it.classId?.packageFqName?.asString()?.startsWith("io.ktor") == true
+        }
+    }
+
+    /** Keeps existing (explicit) responses and adds inferred ones only for absent status codes. */
+    private fun mergeFillingGaps(
+        existing: Map<String, OpenApiSpec.ResponseDetails>?,
+        inferred: Map<String, OpenApiSpec.ResponseDetails>
+    ): Map<String, OpenApiSpec.ResponseDetails> = buildMap {
+        existing?.let { putAll(it) }
+        inferred.forEach { (status, details) -> putIfAbsent(status, details) }
     }
 
     private fun FirFunctionCall.toResponseBag(): KtorK2ResponseBag {
@@ -256,6 +346,9 @@ internal class ExpressionsVisitorK2(
             responses = responses
         )
 
+        // Fill response gaps from inferred call.respond* schemas (explicit DSL/annotation still wins).
+        inferResponsesInto(endpoint)
+
         val resource = findResource(endpoint)
         val type = typeArguments.firstOrNull()?.toConeTypeProjection()?.type
         val newElement = resource ?: endpoint.copy(path = pathValue, body = type?.toEndpointBody())
@@ -379,10 +472,17 @@ internal class ExpressionsVisitorK2(
     private fun List<KtorK2ResponseBag>.resolveToOpenSpecFormat() =
         associate { response ->
             val kotlinType = response.type
-            if (kotlinType?.isNothing == true) {
-                response.status to OpenApiSpec.ResponseDetails(response.descr, null)
-            } else {
-                response.status to OpenApiSpec.ResponseDetails(
+            when {
+                // Content type known, schema intentionally omitted (streaming/file/erased body).
+                response.noSchema -> response.status to OpenApiSpec.ResponseDetails(
+                    response.descr,
+                    mapOf(response.contentType to emptyMap<String, OpenApiSpec.TypeDescriptor>())
+                )
+
+                kotlinType?.isNothing == true ->
+                    response.status to OpenApiSpec.ResponseDetails(response.descr, null)
+
+                else -> response.status to OpenApiSpec.ResponseDetails(
                     response.descr,
                     mapOf(
                         response.contentType to mapOf("schema" to response.toResponseSchema())

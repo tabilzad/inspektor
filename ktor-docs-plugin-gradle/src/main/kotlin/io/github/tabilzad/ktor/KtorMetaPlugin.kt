@@ -140,6 +140,8 @@ class KtorMetaPlugin @Inject constructor(
                 swaggerExtension.documentation.deriveFieldRequirementFromTypeNullability)
             task.inputs.property("swagger.useKDocsForDescriptions",
                 swaggerExtension.documentation.useKDocsForDescriptions)
+            task.inputs.property("swagger.inferResponseSchemas",
+                swaggerExtension.documentation.inferResponseSchemas)
             task.inputs.property("swagger.servers",
                 swaggerExtension.documentation.servers.joinToString(","))
             task.inputs.property("swagger.initialConfig", initialConfigJson.hashCode())
@@ -207,6 +209,10 @@ class KtorMetaPlugin @Inject constructor(
             SubpluginOption(
                 key = "useKDocs",
                 value = swaggerExtension.documentation.useKDocsForDescriptions.toString()
+            ),
+            SubpluginOption(
+                key = "inferResponseSchemas",
+                value = swaggerExtension.documentation.inferResponseSchemas.toString()
             ),
             SubpluginOption(
                 key = "format",
