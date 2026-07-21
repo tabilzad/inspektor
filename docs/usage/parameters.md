@@ -116,12 +116,14 @@ get("/products") {
 
 ## Header Parameters
 
-Header parameters are detected from `call.request.headers`:
+Header parameters are detected from `call.request.headers` indexing, the
+`call.request.header(...)` accessor, and Ktor's typed header accessors:
 
 ```kotlin
 get("/users") {
     val apiVersion = call.request.headers["X-API-Version"]
-    val requestId = call.request.headers["X-Request-ID"]
+    val requestId = call.request.header("X-Request-ID")
+    val agent = call.request.userAgent() // documented as User-Agent
 }
 ```
 
@@ -139,11 +141,91 @@ Generated:
         in: header
         schema:
           type: string
+      - name: User-Agent
+        in: header
+        schema:
+          type: string
 ```
+
+Header names can be string literals, references to constants (including `HttpHeaders.*`),
+or string templates combining both.
+
+The typed accessors `userAgent()`, `acceptLanguage()`, `acceptCharset()`, `acceptEncoding()`,
+`cacheControl()` and `ranges()` are resolved to their well-known header names automatically.
+
+!!! note "Ignored header names"
+    Header parameters named `Accept`, `Content-Type` or `Authorization` are never generated —
+    the OpenAPI specification requires tools to ignore them because they are described by the
+    operation's `content` and `security` definitions instead.
 
 ## Parameter Descriptions
 
-Add descriptions using KtorDescription:
+### KDoc on the local variable
+
+Attach a KDoc comment to the `val` a header or query value is assigned to, and it becomes the
+parameter's `description` for that endpoint:
+
+```kotlin
+get("/users") {
+    /** The API key issued to the client. */
+    val apiKey = call.request.headers["X-Api-Key"]
+
+    /** Zero-based page index. */
+    val page = call.request.queryParameters["page"]
+}
+```
+
+Generated:
+
+```yaml
+/users:
+  get:
+    parameters:
+      - name: X-Api-Key
+        in: header
+        description: "The API key issued to the client."
+        schema:
+          type: string
+      - name: page
+        in: query
+        description: "Zero-based page index."
+        schema:
+          type: string
+```
+
+### KDoc on a shared name constant
+
+When the parameter name is a reference to a documented constant, the constant's KDoc is used
+everywhere the constant is referenced — handy for headers shared across many endpoints:
+
+```kotlin
+object ApiHeaders {
+    /** Identifies the tenant the request is scoped to. */
+    const val TENANT_ID = "X-Tenant-Id"
+}
+
+get("/orders") {
+    val tenant = call.request.headers[ApiHeaders.TENANT_ID]
+}
+
+get("/invoices") {
+    val tenant = call.request.header(ApiHeaders.TENANT_ID)
+}
+```
+
+Both endpoints document `X-Tenant-Id` with "Identifies the tenant the request is scoped to."
+
+A KDoc on the local `val` takes precedence over the constant's KDoc, so an individual endpoint
+can override the shared description. If the same parameter is read in several statements, the
+documented access wins.
+
+Both conventions are controlled by the existing `useKDocsForDescriptions` option (enabled by
+default). Descriptions are not derived for names built from string templates or concatenation,
+since a single piece's KDoc would not describe the full name.
+
+### Operation-level descriptions
+
+You can also describe parameters as part of the endpoint text using KtorDescription:
 
 ```kotlin
 @KtorDescription(

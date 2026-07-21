@@ -1,5 +1,7 @@
 package io.github.tabilzad.ktor.k2.visitors
 
+import io.github.tabilzad.ktor.PluginConfiguration
+import io.github.tabilzad.ktor.getKDocComments
 import io.github.tabilzad.ktor.k2.isEnum
 import io.ktor.http.*
 import org.jetbrains.kotlin.fir.FirElement
@@ -17,32 +19,59 @@ import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitor
 import org.jetbrains.kotlin.name.FqName
 import kotlin.reflect.full.memberProperties
 
-class ParametersVisitor(
-    private val session: FirSession,
-    private val functionIds: List<FqName>
-) : FirDefaultVisitor<Unit, MutableList<String>>() {
+/**
+ * A parameter name extracted from a request parameter access expression, together with a
+ * description resolved from the KDoc of the referenced name constant (when the whole key is a
+ * single documented property reference).
+ */
+data class ParamMeta(
+    val name: String,
+    val description: String? = null
+)
 
-    override fun visitElement(element: FirElement, data: MutableList<String>) {
+internal class ParametersVisitor(
+    private val session: FirSession,
+    private val functionIds: List<FqName>,
+    private val config: PluginConfiguration? = null,
+    private val implicitHeaderAccessors: Map<FqName, String> = emptyMap()
+) : FirDefaultVisitor<Unit, MutableList<ParamMeta>>() {
+
+    override fun visitElement(element: FirElement, data: MutableList<ParamMeta>) {
         // no-op
     }
 
     override fun visitStringConcatenationCall(
         stringConcatenationCall: FirStringConcatenationCall,
-        data: MutableList<String>
+        data: MutableList<ParamMeta>
     ) {
-        data.add(stringConcatenationCall.argumentList.arguments.flatMap { acc ->
-            buildList {
-                acc.accept(this@ParametersVisitor, this)
-            }
-        }.joinToString(""))
+        // A concatenated/templated key is only partially described by any single piece,
+        // so the joined name deliberately carries no description.
+        data.add(
+            ParamMeta(
+                name = stringConcatenationCall.argumentList.arguments.flatMap { acc ->
+                    buildList {
+                        acc.accept(this@ParametersVisitor, this)
+                    }
+                }.joinToString("") { it.name }
+            )
+        )
     }
 
-    override fun visitFunctionCall(functionCall: FirFunctionCall, data: MutableList<String>) {
+    override fun visitFunctionCall(functionCall: FirFunctionCall, data: MutableList<ParamMeta>) {
         val functionFqName =
             functionCall.dispatchReceiver?.toResolvedCallableSymbol(session)?.callableId?.asSingleFqName()
 
         val functionFqName2 =
             functionCall.toResolvedCallableSymbol()?.callableId?.asSingleFqName()
+
+        // Typed accessors like `call.request.userAgent()` take no argument; the header name is
+        // implied by the function itself.
+        val implicitHeader = implicitHeaderAccessors[functionFqName2] ?: implicitHeaderAccessors[functionFqName]
+        if (implicitHeader != null) {
+            data.add(ParamMeta(implicitHeader))
+            return
+        }
+
         if (functionIds.any { it == functionFqName || it == functionFqName2 }
         ) {
             functionCall.acceptChildren(this, data)
@@ -51,29 +80,29 @@ class ParametersVisitor(
         }
     }
 
-    override fun visitLiteralExpression(literalExpression: FirLiteralExpression, data: MutableList<String>) {
+    override fun visitLiteralExpression(literalExpression: FirLiteralExpression, data: MutableList<ParamMeta>) {
         val element = literalExpression.value
-        element?.let { data.add(it.toString()) }
+        element?.let { data.add(ParamMeta(it.toString())) }
     }
 
     @OptIn(SymbolInternals::class)
     override fun visitResolvedNamedReference(
         resolvedNamedReference: FirResolvedNamedReference,
-        data: MutableList<String>
+        data: MutableList<ParamMeta>
     ) {
         val fir = resolvedNamedReference.resolvedSymbol.fir
         if (fir is FirProperty) {
             val init = fir.initializer
 
             if (init is FirLiteralExpression) {
-                init.accept(this, data)
+                init.value?.let { data.add(ParamMeta(it.toString(), fir.kDocDescription())) }
             }
         }
     }
 
     @OptIn(PrivateConstantEvaluatorAPI::class)
     // TODO(Look into evaluatePropertyInitializer instead of evaluateExpression)
-    override fun visitArgumentList(argumentList: FirArgumentList, data: MutableList<String>) {
+    override fun visitArgumentList(argumentList: FirArgumentList, data: MutableList<ParamMeta>) {
         if (argumentList is FirResolvedArgumentList) {
             val g = argumentList.mapping.keys
                 .filterIsInstance<FirFunctionCall>()
@@ -92,7 +121,7 @@ class ParametersVisitor(
     @Suppress("NestedBlockDepth")
     override fun visitPropertyAccessExpression(
         propertyAccessExpression: FirPropertyAccessExpression,
-        data: MutableList<String>
+        data: MutableList<ParamMeta>
     ) {
         val enumInfo: EnumValueArgumentInfo? = propertyAccessExpression.dispatchReceiver?.extractEnumValueArgumentInfo()
         val enumEntryAccessor = propertyAccessExpression.calleeReference.toResolvedCallableSymbol()?.name
@@ -110,7 +139,7 @@ class ParametersVisitor(
 
             val queryParam = (paramLiteral as? FirLiteralExpression)?.value
             queryParam?.let {
-                data.add(queryParam.toString())
+                data.add(ParamMeta(queryParam.toString()))
             }
         } else {
             val calleeReference = propertyAccessExpression.calleeReference
@@ -120,7 +149,7 @@ class ParametersVisitor(
                     val init = fir.initializer
 
                     if (init is FirLiteralExpression) {
-                        init.accept(this, data)
+                        init.value?.let { data.add(ParamMeta(it.toString(), fir.kDocDescription())) }
                     } else if (init == null) {
                         // if initializer is null it is likely because the value
                         // is coming from an external library like ktor itself
@@ -129,11 +158,14 @@ class ParametersVisitor(
                             HttpHeaders::class.memberProperties.find { it.name == calleeReference.name.asString() }
 
                         if (ktorHeader != null) {
-                            data.add(ktorHeader.getter.call(HttpHeaders).toString())
+                            data.add(ParamMeta(ktorHeader.getter.call(HttpHeaders).toString()))
                         }
                     }
                 }
             }
         }
     }
+
+    private fun FirProperty.kDocDescription(): String? =
+        config?.let { getKDocComments(it) }?.ifBlank { null }
 }

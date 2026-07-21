@@ -103,6 +103,7 @@ Your OpenAPI specification is generated at `build/resources/main/openapi/openapi
 | Feature                       | Type          | Description                                    |
 |-------------------------------|---------------|------------------------------------------------|
 | **Path & Endpoint Detection** | Automatic     | Extracts all routes from annotated functions   |
+| **Parameter Detection**       | Automatic     | Path, query & header parameters from handler code, described via KDoc |
 | **Ktor Resources Support**    | Automatic     | Full support for type-safe routing             |
 | **Request Body Schemas**      | Automatic     | Generates schemas from `call.receive<T>()`     |
 | **Response Schemas**          | Automatic     | Inferred from `call.respond<T>()` (opt-in via `inferResponseSchemas`); `responds<T>()` / `@KtorResponds` override |
@@ -248,6 +249,34 @@ data class CreateOrderRequest(
     val discountCode: String? = null
 )
 ```
+
+### Documenting Headers and Query Parameters
+
+Query and header parameters read in a handler (`call.request.queryParameters[...]`,
+`call.request.headers[...]`, `call.request.header(...)`, or typed accessors like
+`call.request.userAgent()`) are detected automatically. To give them a `description`,
+attach a KDoc to the local `val` or to the shared name constant:
+
+```kotlin
+object ApiHeaders {
+    /** Identifies the tenant the request is scoped to. */
+    const val TENANT_ID = "X-Tenant-Id"
+}
+
+get("/orders") {
+    /** The API key issued to the client. */
+    val apiKey = call.request.headers["X-Api-Key"]
+
+    val tenant = call.request.header(ApiHeaders.TENANT_ID) // description from the constant's KDoc
+
+    /** Zero-based page index. */
+    val page = call.request.queryParameters["page"]
+}
+```
+
+A KDoc on the local `val` overrides the constant's KDoc. Both conventions honor
+`useKDocsForDescriptions`. Header parameters named `Accept`, `Content-Type` or
+`Authorization` are never emitted, as the OpenAPI specification requires tools to ignore them.
 
 ### Defining Responses
 

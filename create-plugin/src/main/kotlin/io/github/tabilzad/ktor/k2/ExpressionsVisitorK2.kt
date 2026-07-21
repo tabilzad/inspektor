@@ -71,33 +71,52 @@ internal class ExpressionsVisitorK2(
     }
 
     private fun extractParameters(statements: List<FirStatement>, endpoint: EndpointDescriptor) {
-        val queryParams = statements.findParameterExpressions(
-            ClassIds.KTOR_QUERY_PARAM,
-            ClassIds.KTOR_RAW_QUERY_PARAM,
-            ClassIds.KTOR_3_QUERY_PARAM,
-            ClassIds.KTOR_3_RAW_QUERY_PARAM,
-            includeDirectStatements = true
-        ).map { QueryParamSpec(it) }
+        val queryVisitor = ParametersVisitor(
+            session,
+            listOf(
+                ClassIds.KTOR_QUERY_PARAM,
+                ClassIds.KTOR_RAW_QUERY_PARAM,
+                ClassIds.KTOR_3_QUERY_PARAM,
+                ClassIds.KTOR_3_RAW_QUERY_PARAM
+            ),
+            config
+        )
+        val headerVisitor = ParametersVisitor(
+            session,
+            listOf(
+                ClassIds.KTOR_HEADER_PARAM,
+                ClassIds.KTOR_3_HEADER_PARAM,
+                ClassIds.KTOR_HEADER_ACCESSOR,
+                ClassIds.KTOR_3_HEADER_ACCESSOR
+            ),
+            config,
+            implicitHeaderAccessors = ClassIds.KTOR_IMPLICIT_HEADER_ACCESSORS
+        )
 
-        val headerParams = statements.findParameterExpressions(
-            ClassIds.KTOR_HEADER_PARAM,
-            ClassIds.KTOR_3_HEADER_PARAM,
-            ClassIds.KTOR_HEADER_ACCESSOR,
-            ClassIds.KTOR_3_HEADER_ACCESSOR
-        ).map { HeaderParamSpec(it) }
+        val queryParams = mutableListOf<QueryParamSpec>()
+        val headerParams = mutableListOf<HeaderParamSpec>()
 
-        // Header accessors also need to be checked at the top-level statement level
-        val topLevelHeaderParams = statements.filterIsInstance<FirFunctionCall>()
-            .flatMap { call ->
-                mutableListOf<String>().also { params ->
-                    call.accept(ParametersVisitor(session, listOf(ClassIds.KTOR_HEADER_ACCESSOR)), params)
-                }
-            }.map { HeaderParamSpec(it) }
+        statements.forEach { statement ->
+            // KDoc on the local `val` a parameter value is assigned to documents the parameters
+            // extracted from that statement; it wins over KDoc on a referenced name constant.
+            val statementDoc = (statement as? FirProperty)
+                ?.getKDocComments(config)
+                ?.ifBlank { null }
 
-        val allHeaderParams = headerParams + topLevelHeaderParams
+            val calls = (listOf(statement) + statement.allChildren).filterIsInstance<FirFunctionCall>()
+
+            val query = mutableListOf<ParamMeta>()
+            val headers = mutableListOf<ParamMeta>()
+            calls.forEach {
+                it.accept(queryVisitor, query)
+                it.accept(headerVisitor, headers)
+            }
+            queryParams += query.map { QueryParamSpec(it.name, description = statementDoc ?: it.description) }
+            headerParams += headers.map { HeaderParamSpec(it.name, description = statementDoc ?: it.description) }
+        }
 
         if (queryParams.isNotEmpty()) endpoint.parameters = endpoint.parameters merge queryParams.toSet()
-        if (allHeaderParams.isNotEmpty()) endpoint.parameters = endpoint.parameters merge allHeaderParams.toSet()
+        if (headerParams.isNotEmpty()) endpoint.parameters = endpoint.parameters merge headerParams.toSet()
     }
 
     private fun extractRespondsDsl(statements: List<FirStatement>, endpoint: EndpointDescriptor) {
@@ -550,21 +569,6 @@ internal class ExpressionsVisitorK2(
                 null
             }
         }
-    }
-
-    private fun List<FirStatement>.findParameterExpressions(
-        vararg classIds: FqName,
-        includeDirectStatements: Boolean = false
-    ): List<String> {
-        val params = mutableListOf<String>()
-        val visitor = ParametersVisitor(session, classIds.toList())
-        val calls = if (includeDirectStatements) {
-            (this + flatMap { it.allChildren }).filterIsInstance<FirFunctionCall>()
-        } else {
-            flatMap { it.allChildren }.filterIsInstance<FirFunctionCall>()
-        }
-        calls.forEach { it.accept(visitor, params) }
-        return params
     }
 
     private fun List<FirStatement>.findCallWith(callable: FqName): FirFunctionCall? {

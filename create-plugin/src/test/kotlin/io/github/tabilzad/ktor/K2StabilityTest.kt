@@ -306,6 +306,14 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should describe inferred header and query parameters from KDocs and resolve typed header accessors`() {
+        val (source, expected) = loadSourceAndExpected("HeaderParameters3")
+        generateCompilerTest(testFile, source)
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should include private fields or ones annotated with @Transient`() {
         val (source, expected) = loadSourceAndExpected("PrivateFieldsNegation")
         generateCompilerTest(

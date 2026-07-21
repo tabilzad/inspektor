@@ -36,6 +36,21 @@ object ClassIds {
     val KTOR_HEADER_ACCESSOR = FqName("io.ktor.server.request.header")
     val KTOR_3_HEADER_ACCESSOR = FqName("io.ktor.server.routing.RoutingRequest.header")
 
+    /**
+     * Ktor's typed request accessors that read a well-known header without taking the header
+     * name as an argument. `accept()`, `authorization()`, `contentType()` and `contentCharset()`
+     * are intentionally absent: OpenAPI mandates that header parameters named `Accept`,
+     * `Content-Type` or `Authorization` be ignored, so no parameter is generated for them.
+     */
+    val KTOR_IMPLICIT_HEADER_ACCESSORS: Map<FqName, String> = mapOf(
+        FqName("io.ktor.server.request.userAgent") to "User-Agent",
+        FqName("io.ktor.server.request.acceptLanguage") to "Accept-Language",
+        FqName("io.ktor.server.request.acceptCharset") to "Accept-Charset",
+        FqName("io.ktor.server.request.acceptEncoding") to "Accept-Encoding",
+        FqName("io.ktor.server.request.cacheControl") to "Cache-Control",
+        FqName("io.ktor.server.request.ranges") to "Range",
+    )
+
     val KTOR_TAGS_ANNOTATION =
         ClassId(FqName("io.github.tabilzad.ktor.annotations"), Tag::class.asSimpleFqName(), false)
     val KTOR_GENERATE_ANNOTATION =

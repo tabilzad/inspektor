@@ -99,7 +99,8 @@ internal fun List<KtorRouteSpec>.convertToSpec(): Map<String, Map<String, OpenAp
             description = it.description,
             operationId = it.operationId,
             tags = it.tags?.toList()?.sorted(),
-            parameters = mapPathParams(it) merge mapQueryParams(it) merge mapHeaderParams(it),
+            parameters = (mapPathParams(it) merge mapQueryParams(it) merge mapHeaderParams(it))
+                ?.takeIf { params -> params.isNotEmpty() },
             requestBody = addPostBody(it),
             responses = it.responses,
             deprecated = it.deprecated
@@ -144,28 +145,49 @@ private fun mapPathParams(spec: KtorRouteSpec): List<OpenApiSpec.Parameter>? {
 }
 
 private fun mapQueryParams(it: KtorRouteSpec): List<OpenApiSpec.Parameter>? {
-    return it.parameters?.filterIsInstance<QueryParamSpec>()?.map {
-        OpenApiSpec.Parameter(
-            name = it.name,
-            `in` = "query",
-            required = it.isRequired,
-            schema = OpenApiSpec.TypeDescriptor("string"),
-            description = it.description
-        )
-    }
+    return it.parameters?.filterIsInstance<QueryParamSpec>()
+        ?.dedupeByName()
+        ?.map {
+            OpenApiSpec.Parameter(
+                name = it.name,
+                `in` = "query",
+                required = it.isRequired,
+                schema = OpenApiSpec.TypeDescriptor("string"),
+                description = it.description
+            )
+        }
 }
 
+/**
+ * Header parameters named `Accept`, `Content-Type` or `Authorization` SHALL be ignored per the
+ * OpenAPI specification (they are described by the operation's content and security definitions),
+ * so generating them would only add noise.
+ */
+private val ignoredHeaderParameters = setOf("accept", "content-type", "authorization")
+
 private fun mapHeaderParams(it: KtorRouteSpec): List<OpenApiSpec.Parameter>? {
-    return it.parameters?.filterIsInstance<HeaderParamSpec>()?.map {
-        OpenApiSpec.Parameter(
-            name = it.name,
-            `in` = "header",
-            required = it.isRequired,
-            schema = OpenApiSpec.TypeDescriptor("string"),
-            description = it.description
-        )
-    }
+    return it.parameters?.filterIsInstance<HeaderParamSpec>()
+        ?.filterNot { header -> header.name.lowercase() in ignoredHeaderParameters }
+        ?.dedupeByName()
+        ?.map {
+            OpenApiSpec.Parameter(
+                name = it.name,
+                `in` = "header",
+                required = it.isRequired,
+                schema = OpenApiSpec.TypeDescriptor("string"),
+                description = it.description
+            )
+        }
 }
+
+/**
+ * The same parameter can be picked up more than once (e.g. accessed in several statements, only
+ * one of which is documented). Collapse duplicates by name, preferring an entry with a description.
+ */
+private fun <T : ParamSpec> List<T>.dedupeByName(): List<T> =
+    groupBy { it.name }.map { (_, group) ->
+        group.firstOrNull { it.description != null } ?: group.first()
+    }
 
 internal fun ConeKotlinType.isStringOrPrimitive(): Boolean =
     isPrimitiveOrNullablePrimitive || isString || isNullableString || isPrimitive
