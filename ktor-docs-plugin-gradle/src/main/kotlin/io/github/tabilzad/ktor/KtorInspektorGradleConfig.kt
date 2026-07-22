@@ -99,19 +99,17 @@ open class PluginOptions @Inject constructor(
     var moduleId: String? = null
 
     /**
-     * Whether this module is the aggregator (main server) in multi-module setup.
+     * Whether this module is the aggregator (main server) in a multi-module setup.
      *
      * When set to `true`, this module will:
-     * - Read partial OpenAPI specs from all dependency JARs
+     * - Discover partial OpenAPI specs on its compile classpath — from project dependencies
+     *   and published library JARs alike — plus any explicitly listed [contributors]
      * - Merge them with locally defined routes
      * - Output the complete OpenAPI specification
      *
-     * When set to `false` (default) and moduleId is set, this module will:
+     * When set to `false` (default) and [moduleId] is set, this module will:
      * - Generate a partial OpenAPI spec
-     * - Embed it in META-INF/inspektor/openapi-partial.json
-     *
-     * If set to `"auto"` (string), the plugin will auto-detect based on
-     * whether Ktor server engine is on the classpath.
+     * - Embed it in META-INF/inspektor/openapi-partial.json inside its resources/JAR
      *
      * **Example:**
      * ```kotlin
@@ -132,16 +130,15 @@ open class PluginOptions @Inject constructor(
      * }
      * ```
      */
-    var isAggregator: Any = false
+    var isAggregator: Boolean = false
 
     /**
-     * List of contributor module paths for multi-module aggregation.
+     * Optional list of contributor module paths for multi-module aggregation.
      *
-     * Only used when `isAggregator = true`. Specifies the Gradle project paths
-     * of contributor modules whose partial OpenAPI specs should be merged.
-     *
-     * The plugin will automatically resolve the partial spec file locations
-     * based on each project's build output directory.
+     * Aggregators discover contributor partial specs automatically from the compile
+     * classpath, so this is normally not needed. Use it only to point at contributors
+     * that are NOT on the aggregator's compile classpath. Explicitly listed contributors
+     * take precedence over classpath discoveries of the same module id.
      *
      * **Example:**
      * ```kotlin
@@ -149,7 +146,7 @@ open class PluginOptions @Inject constructor(
      *     pluginOptions {
      *         moduleId = project.path
      *         isAggregator = true
-     *         contributors = listOf(":feature-users", ":feature-products", ":feature-orders")
+     *         contributors = listOf(":feature-not-on-classpath")
      *     }
      * }
      * ```

@@ -4,8 +4,9 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
-import io.github.tabilzad.ktor.model.PartialOpenApiSpec
 import io.github.tabilzad.ktor.model.PartialSpecLocation
+import io.github.tabilzad.ktor.output.PartialOpenApiSpec
+import io.github.tabilzad.ktor.output.PartialSpecs
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import kotlinx.serialization.json.Json
 import org.assertj.core.api.Assertions.assertThat
@@ -33,7 +34,6 @@ class MultiModuleIntegrationTest {
     lateinit var tempDir: Path
 
     private val objectMapper = jacksonObjectMapper()
-    private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
 
     private lateinit var contributorResourcesDir: File
     private lateinit var aggregatorOutputFile: File
@@ -57,14 +57,14 @@ class MultiModuleIntegrationTest {
         val partialSpecFile = File(contributorResourcesDir, PartialSpecLocation.FULL_PATH)
         assertThat(partialSpecFile).exists()
 
-        val partialSpec = json.decodeFromString(PartialOpenApiSpec.serializer(), partialSpecFile.readText())
+        val partialSpec: PartialOpenApiSpec = PartialSpecs.decode(partialSpecFile.readText())
 
         assertThat(partialSpec.moduleId).isEqualTo(":feature-users")
-        assertThat(partialSpec.paths).hasSize(2) // /users and /users/{id}
-        assertThat(partialSpec.paths["/users"]).containsKeys("get", "post")
-        assertThat(partialSpec.paths["/users/{id}"]).containsKey("get")
+        assertThat(partialSpec.spec.paths).hasSize(2) // /users and /users/{id}
+        assertThat(partialSpec.spec.paths["/users"]).containsKeys("get", "post")
+        assertThat(partialSpec.spec.paths["/users/{id}"]).containsKey("get")
         // Plugin extracts schemas from receive<> calls (request bodies)
-        assertThat(partialSpec.schemas).containsKey("com.example.users.CreateUserRequest")
+        assertThat(partialSpec.spec.components.schemas).containsKey("com.example.users.CreateUserRequest")
     }
 
     @Test
@@ -98,6 +98,30 @@ class MultiModuleIntegrationTest {
 
         // Verify the aggregator's local routes are present
         assertThat(mergedSpec.paths["/health"]?.get("get")?.summary).isEqualTo("Health check endpoint")
+    }
+
+    @Test
+    fun `aggregator should discover contributor partial specs from the compile classpath`() {
+        compileContributorModule(
+            moduleId = ":feature-products",
+            source = TestUtils.loadMultiModuleSource("ProductsContributor"),
+            resourcesDir = contributorResourcesDir
+        )
+
+        compileAggregatorModule(
+            moduleId = ":server",
+            source = TestUtils.loadMultiModuleSource("HealthAggregator"),
+            outputFile = aggregatorOutputFile,
+            contributorResourcesDirs = listOf(contributorResourcesDir),
+            viaClasspathDiscovery = true
+        )
+
+        assertThat(aggregatorOutputFile).exists()
+        val mergedSpec = objectMapper.readValue<OpenApiSpec>(aggregatorOutputFile.readText())
+
+        // No partialSpecPaths were configured; the specs must come from classpath discovery
+        assertThat(mergedSpec.paths).containsKeys("/health", "/products", "/products/{id}")
+        assertThat(mergedSpec.paths["/products"]?.get("get")?.summary).isEqualTo("Get all products")
     }
 
     @Test
@@ -303,7 +327,8 @@ class MultiModuleIntegrationTest {
         moduleId: String,
         source: String,
         outputFile: File,
-        contributorResourcesDirs: List<File>
+        contributorResourcesDirs: List<File>,
+        viaClasspathDiscovery: Boolean = false
     ) {
         val clp = KtorDocsCommandLineProcessor()
 
@@ -315,14 +340,17 @@ class MultiModuleIntegrationTest {
         val compilation = KotlinCompilation().apply {
             compilerPluginRegistrars = listOf(KtorMetaPluginRegistrar())
             commandLineProcessors = listOf(clp)
-            classpaths = testDependencies.map { classpathOf(it) }
+            // In discovery mode the contributor resources dirs go on the compile classpath and
+            // the aggregator must find the partial specs there on its own.
+            classpaths = testDependencies.map { classpathOf(it) } +
+                if (viaClasspathDiscovery) contributorResourcesDirs else emptyList()
             sources = listOf(
                 SourceFile.kotlin("RequestDataClasses.kt", loadRequestDataClasses()),
                 SourceFile.kotlin("AggregatorModule.kt", source)
             )
             jvmTarget = "11"
             messageOutputStream = createFilteredOutputStream()
-            pluginOptions = createPluginOptions(clp, outputFile.absolutePath) + listOf(
+            pluginOptions = createPluginOptions(clp, outputFile.absolutePath) + listOfNotNull(
                 com.tschuchort.compiletesting.PluginOption(
                     clp.pluginId,
                     KtorDocsCommandLineProcessor.moduleIdOption.optionName,
@@ -333,11 +361,15 @@ class MultiModuleIntegrationTest {
                     KtorDocsCommandLineProcessor.isAggregatorOption.optionName,
                     "true"
                 ),
-                com.tschuchort.compiletesting.PluginOption(
-                    clp.pluginId,
-                    KtorDocsCommandLineProcessor.partialSpecPathsOption.optionName,
-                    partialSpecPaths.joinToString("||")
-                )
+                if (viaClasspathDiscovery) {
+                    null
+                } else {
+                    com.tschuchort.compiletesting.PluginOption(
+                        clp.pluginId,
+                        KtorDocsCommandLineProcessor.partialSpecPathsOption.optionName,
+                        partialSpecPaths.joinToString("||")
+                    )
+                }
             )
         }
 

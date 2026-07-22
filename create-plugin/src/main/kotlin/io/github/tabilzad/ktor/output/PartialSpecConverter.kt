@@ -1,251 +1,158 @@
 package io.github.tabilzad.ktor.output
 
-import io.github.tabilzad.ktor.model.*
+import io.github.tabilzad.ktor.model.SecurityScheme
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 /**
- * Converts between OpenApiSpec (internal representation) and PartialOpenApiSpec (serializable for multi-module).
+ * The intermediate representation a contributor module embeds at
+ * `META-INF/inspektor/openapi-partial.json` for aggregation. The payload is the plugin's own
+ * [OpenApiSpec] model serialized verbatim — there is deliberately no parallel mirror model to
+ * keep in sync: any field added to [OpenApiSpec] is carried through multi-module aggregation
+ * automatically.
+ *
+ * Because partials are baked into published JARs, the envelope carries a [version] so an
+ * aggregator can recognize partials produced by a newer plugin than itself.
  */
-internal object PartialSpecConverter {
+@Serializable
+data class PartialOpenApiSpec(
+    val version: Int = CURRENT_VERSION,
+    val moduleId: String,
+    val spec: OpenApiSpec
+) {
+    companion object {
+        /** Bump when the IR format changes incompatibly. */
+        const val CURRENT_VERSION = 1
+    }
+}
 
-    /**
-     * Converts an OpenApiSpec to a PartialOpenApiSpec for multi-module storage.
-     */
-    fun toPartialSpec(spec: OpenApiSpec, moduleId: String): PartialOpenApiSpec {
-        return PartialOpenApiSpec(
-            moduleId = moduleId,
-            openapi = spec.openapi,
-            paths = spec.paths.mapValues { (_, methods) ->
-                methods.mapValues { (_, path) -> path.toPartialPath() }
-            },
-            schemas = spec.components.schemas.mapValues { (_, descriptor) ->
-                descriptor.toPartialDescriptor()
-            },
-            securitySchemes = spec.components.securitySchemes ?: emptyMap()
-        )
+/**
+ * Serialization and merge logic for multi-module partial specs.
+ */
+internal object PartialSpecs {
+
+    val json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+        // The IR is a persistent format baked into published JARs: always write defaulted
+        // fields (most importantly the envelope version) so readers never have to guess.
+        encodeDefaults = true
+        prettyPrint = true
     }
 
-    /**
-     * Converts a PartialOpenApiSpec back to an OpenApiSpec for merging.
-     */
-    fun fromPartialSpec(partial: PartialOpenApiSpec): OpenApiSpec {
-        return OpenApiSpec(
-            openapi = partial.openapi,
-            info = null,
-            servers = null,
-            paths = partial.paths.mapValues { (_, methods) ->
-                methods.mapValues { (_, path) -> path.toOpenApiPath() }
-            },
-            components = OpenApiSpec.OpenApiComponents(
-                schemas = partial.schemas.mapValues { (_, descriptor) ->
-                    descriptor.toOpenApiDescriptor()
-                },
-                securitySchemes = partial.securitySchemes.takeIf { it.isNotEmpty() }
-            ),
-            security = null
-        )
-    }
+    fun encode(spec: OpenApiSpec, moduleId: String): String =
+        json.encodeToString(PartialOpenApiSpec.serializer(), PartialOpenApiSpec(moduleId = moduleId, spec = spec))
+
+    fun decode(text: String): PartialOpenApiSpec =
+        json.decodeFromString(PartialOpenApiSpec.serializer(), text)
 
     /**
-     * Merges multiple partial specs into a single OpenApiSpec.
+     * Merges contributor partials with the aggregator's own [localSpec].
+     *
+     * Precedence:
+     * - across contributors, the first definition of a path+method / schema / security scheme
+     *   wins; a structurally different duplicate is reported through [report];
+     * - the aggregator's local definitions always override contributor ones (reported when
+     *   they actually differ).
+     *
+     * Top-level metadata (info, servers, global security) comes from the aggregator only.
      */
-    @Suppress("NestedBlockDepth")
-    fun mergePartialSpecs(
-        partialSpecs: List<PartialOpenApiSpec>,
-        localSpec: OpenApiSpec?
+    fun merge(
+        partials: List<PartialOpenApiSpec>,
+        localSpec: OpenApiSpec?,
+        report: (String) -> Unit
     ): OpenApiSpec {
-        // Start with empty collections
-        val mergedPaths = mutableMapOf<String, MutableMap<String, OpenApiSpec.Path>>()
-        val mergedSchemas = mutableMapOf<String, OpenApiSpec.TypeDescriptor>()
-        val mergedSecuritySchemes = mutableMapOf<String, SecurityScheme>()
-
-        // Merge all partial specs
-        for (partial in partialSpecs) {
-            // Merge paths
-            for ((path, methods) in partial.paths) {
-                val existingMethods = mergedPaths.getOrPut(path) { mutableMapOf() }
-                for ((method, operation) in methods) {
-                    if (existingMethods.containsKey(method)) {
-                        // Path+method conflict - log warning but use the newer one
-                        println("Warning: Duplicate path $method $path from module ${partial.moduleId}")
-                    }
-                    existingMethods[method] = operation.toOpenApiPath()
-                }
-            }
-
-            // Merge schemas
-            for ((name, schema) in partial.schemas) {
-                if (mergedSchemas.containsKey(name)) {
-                    // Schema conflict - log warning but use the newer one
-                    println("Warning: Duplicate schema $name from module ${partial.moduleId}")
-                }
-                mergedSchemas[name] = schema.toOpenApiDescriptor()
-            }
-
-            // Merge security schemes
-            for ((name, scheme) in partial.securitySchemes) {
-                if (mergedSecuritySchemes.containsKey(name)) {
-                    // Security scheme conflict - log warning
-                    println("Warning: Duplicate security scheme $name from module ${partial.moduleId}")
-                }
-                mergedSecuritySchemes[name] = scheme
-            }
-        }
-
-        // Merge local spec if present
-        if (localSpec != null) {
-            for ((path, methods) in localSpec.paths) {
-                val existingMethods = mergedPaths.getOrPut(path) { mutableMapOf() }
-                for ((method, operation) in methods) {
-                    existingMethods[method] = operation
-                }
-            }
-            for ((name, schema) in localSpec.components.schemas) {
-                mergedSchemas[name] = schema
-            }
-            localSpec.components.securitySchemes?.let { mergedSecuritySchemes.putAll(it) }
-        }
+        val merger = Merger(report)
+        partials.forEach(merger::addContributor)
+        localSpec?.let(merger::overlayLocal)
 
         return OpenApiSpec(
-            openapi = "3.1.0",
             info = localSpec?.info,
             servers = localSpec?.servers,
-            paths = mergedPaths.mapValues { it.value.toMap() },
+            paths = merger.paths.mapValues { it.value.toMap() },
             components = OpenApiSpec.OpenApiComponents(
-                schemas = mergedSchemas,
-                securitySchemes = mergedSecuritySchemes.takeIf { it.isNotEmpty() }
+                schemas = merger.schemas,
+                securitySchemes = merger.securitySchemes.takeIf { it.isNotEmpty() }
             ),
             security = localSpec?.security
         )
     }
 
-    // Extension functions for conversion
+    private class Merger(private val report: (String) -> Unit) {
+        val paths = mutableMapOf<String, MutableMap<String, OpenApiSpec.Path>>()
+        val schemas = mutableMapOf<String, OpenApiSpec.TypeDescriptor>()
+        val securitySchemes = mutableMapOf<String, SecurityScheme>()
 
-    /**
-     * Converts BodyContent to the serializable partial format. Content-type keys are plain
-     * strings and pass through unchanged, preserving custom types such as "application/pdf".
-     */
-    private fun BodyContent.toPartialContent(): Map<String, Map<String, PartialTypeDescriptor>> =
-        mapValues { (_, schemaMap) ->
-            schemaMap.mapValues { (_, schema) -> schema.toPartialDescriptor() }
+        private val pathOrigin = mutableMapOf<Pair<String, String>, String>()
+        private val schemaOrigin = mutableMapOf<String, String>()
+
+        fun addContributor(partial: PartialOpenApiSpec) {
+            for ((path, methods) in partial.spec.paths) {
+                val existing = paths.getOrPut(path) { mutableMapOf() }
+                for ((method, operation) in methods) {
+                    val previous = existing[method]
+                    when {
+                        previous == null -> {
+                            existing[method] = operation
+                            pathOrigin[path to method] = partial.moduleId
+                        }
+
+                        previous.structurallyDiffersFrom(operation) -> report(
+                            "Conflicting definitions of '$method $path' from modules " +
+                                "'${pathOrigin[path to method]}' and '${partial.moduleId}'; keeping the first."
+                        )
+                    }
+                }
+            }
+
+            for ((name, schema) in partial.spec.components.schemas) {
+                val previous = schemas[name]
+                when {
+                    previous == null -> {
+                        schemas[name] = schema
+                        schemaOrigin[name] = partial.moduleId
+                    }
+
+                    previous.structurallyDiffersFrom(schema) -> report(
+                        "Conflicting definitions of schema '$name' from modules " +
+                            "'${schemaOrigin[name]}' and '${partial.moduleId}'; keeping the first."
+                    )
+                }
+            }
+
+            partial.spec.components.securitySchemes?.forEach { (name, scheme) ->
+                if (!securitySchemes.containsKey(name)) securitySchemes[name] = scheme
+            }
         }
 
-    /**
-     * Converts partial content format back to BodyContent.
-     */
-    private fun Map<String, Map<String, PartialTypeDescriptor>>.toBodyContent(): BodyContent =
-        mapValues { (_, schemaMap) ->
-            schemaMap.mapValues { (_, schema) -> schema.toOpenApiDescriptor() }
+        fun overlayLocal(localSpec: OpenApiSpec) {
+            for ((path, methods) in localSpec.paths) {
+                val existing = paths.getOrPut(path) { mutableMapOf() }
+                for ((method, operation) in methods) {
+                    val previous = existing[method]
+                    if (previous != null && previous.structurallyDiffersFrom(operation)) {
+                        report(
+                            "Local definition of '$method $path' overrides the one from module " +
+                                "'${pathOrigin[path to method]}'."
+                        )
+                    }
+                    existing[method] = operation
+                }
+            }
+            schemas.putAll(localSpec.components.schemas)
+            localSpec.components.securitySchemes?.let(securitySchemes::putAll)
         }
 
-    private fun OpenApiSpec.Path.toPartialPath(): PartialPath {
-        return PartialPath(
-            summary = summary,
-            description = description,
-            operationId = operationId,
-            tags = tags,
-            responses = responses?.mapValues { (_, response) ->
-                PartialResponse(
-                    description = response.description,
-                    content = response.content?.toPartialContent()
-                )
-            },
-            parameters = parameters?.map { it.toPartialParameter() },
-            requestBody = requestBody?.let {
-                PartialRequestBody(
-                    required = it.required,
-                    content = it.content.toPartialContent()
-                )
-            },
-            security = security,
-            deprecated = deprecated
-        )
-    }
+        // Data-class equality is not structural for TypeDescriptor (it compares fqName only),
+        // so conflict detection compares the serialized forms instead.
+        private fun OpenApiSpec.Path.structurallyDiffersFrom(other: OpenApiSpec.Path): Boolean =
+            json.encodeToString(OpenApiSpec.Path.serializer(), this) !=
+                json.encodeToString(OpenApiSpec.Path.serializer(), other)
 
-    private fun PartialPath.toOpenApiPath(): OpenApiSpec.Path {
-        return OpenApiSpec.Path(
-            summary = summary,
-            description = description,
-            operationId = operationId,
-            tags = tags,
-            responses = responses?.mapValues { (_, response) ->
-                OpenApiSpec.ResponseDetails(
-                    description = response.description,
-                    content = response.content?.toBodyContent()
-                )
-            },
-            parameters = parameters?.map { it.toOpenApiParameter() },
-            requestBody = requestBody?.let {
-                OpenApiSpec.RequestBody(
-                    required = it.required,
-                    content = it.content?.toBodyContent() ?: emptyMap()
-                )
-            },
-            security = security,
-            deprecated = deprecated
-        )
-    }
-
-    private fun OpenApiSpec.Parameter.toPartialParameter(): PartialParameter {
-        return PartialParameter(
-            name = name,
-            `in` = `in`,
-            required = required,
-            description = description,
-            schema = schema.toPartialDescriptor()
-        )
-    }
-
-    private fun PartialParameter.toOpenApiParameter(): OpenApiSpec.Parameter {
-        return OpenApiSpec.Parameter(
-            name = name,
-            `in` = `in`,
-            required = required,
-            description = description,
-            schema = schema?.toOpenApiDescriptor() ?: OpenApiSpec.TypeDescriptor(type = "string")
-        )
-    }
-
-    private fun OpenApiSpec.TypeDescriptor.toPartialDescriptor(): PartialTypeDescriptor {
-        return PartialTypeDescriptor(
-            type = type,
-            properties = properties?.mapValues { (_, v) -> v.toPartialDescriptor() },
-            items = items?.toPartialDescriptor(),
-            enum = enum,
-            fqName = fqName,
-            description = description,
-            ref = ref,
-            additionalProperties = additionalProperties?.toPartialDescriptor(),
-            oneOf = oneOf?.map { it.toPartialDescriptor() },
-            required = required,
-            format = format,
-            discriminator = discriminator?.let {
-                PartialDiscriminator(
-                    propertyName = it.propertyName,
-                    mapping = it.mapping
-                )
-            }
-        )
-    }
-
-    private fun PartialTypeDescriptor.toOpenApiDescriptor(): OpenApiSpec.TypeDescriptor {
-        return OpenApiSpec.TypeDescriptor(
-            type = type,
-            properties = properties?.mapValues { (_, v) -> v.toOpenApiDescriptor() }?.toMutableMap(),
-            items = items?.toOpenApiDescriptor(),
-            enum = enum,
-            fqName = fqName,
-            description = description,
-            ref = ref,
-            additionalProperties = additionalProperties?.toOpenApiDescriptor(),
-            oneOf = oneOf?.map { it.toOpenApiDescriptor() },
-            required = required?.toMutableList(),
-            format = format,
-            discriminator = discriminator?.let {
-                OpenApiSpec.DiscriminatorDescriptor(
-                    propertyName = it.propertyName,
-                    mapping = it.mapping
-                )
-            }
-        )
+        private fun OpenApiSpec.TypeDescriptor.structurallyDiffersFrom(
+            other: OpenApiSpec.TypeDescriptor
+        ): Boolean =
+            json.encodeToString(OpenApiSpec.TypeDescriptor.serializer(), this) !=
+                json.encodeToString(OpenApiSpec.TypeDescriptor.serializer(), other)
     }
 }

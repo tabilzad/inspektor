@@ -2,6 +2,7 @@ package io.github.tabilzad.ktor
 
 import com.vdurmont.semver4j.Semver
 import io.github.tabilzad.ktor.model.ConfigInput
+import io.github.tabilzad.ktor.model.PartialSpecLocation
 import kotlinx.serialization.json.Json
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
@@ -184,10 +185,7 @@ class KtorMetaPlugin @Inject constructor(
 
         // Determine multi-module configuration
         val moduleId = swaggerExtension.pluginOptions.moduleId
-        val isAggregator = resolveIsAggregator(
-            swaggerExtension.pluginOptions.isAggregator,
-            kotlinCompilation
-        )
+        val isAggregator = swaggerExtension.pluginOptions.isAggregator
 
         // Resources path for partial spec output (only for contributors)
         val resourcesPath = if (moduleId != null && !isAggregator) {
@@ -309,7 +307,7 @@ class KtorMetaPlugin @Inject constructor(
         contributors: List<String>,
         kotlinCompilation: KotlinCompilation<*>
     ): List<String> {
-        val partialSpecRelativePath = "META-INF/inspektor/openapi-partial.json"
+        val partialSpecRelativePath = PartialSpecLocation.FULL_PATH
 
         return contributors.mapNotNull { contributorPath ->
             try {
@@ -340,55 +338,6 @@ class KtorMetaPlugin @Inject constructor(
                 null
             }
         }
-    }
-
-    /**
-     * Resolves the isAggregator setting, with support for auto-detection.
-     *
-     * - If `true` or `false` (Boolean): uses that value directly
-     * - If `"auto"` (String): auto-detects based on Ktor server engine presence
-     * - Otherwise: defaults to false
-     */
-    private fun resolveIsAggregator(
-        value: Any,
-        kotlinCompilation: KotlinCompilation<*>
-    ): Boolean {
-        return when (value) {
-            is Boolean -> value
-            "auto" -> hasKtorServerEngine(kotlinCompilation)
-            else -> false
-        }
-    }
-
-    /**
-     * Checks if this compilation has Ktor server engine on the classpath.
-     * This is used for auto-detection of aggregator modules.
-     *
-     * Ktor server engines have a common marker class: io.ktor.server.engine.ApplicationEngine
-     */
-    private fun hasKtorServerEngine(kotlinCompilation: KotlinCompilation<*>): Boolean {
-        val project = kotlinCompilation.target.project
-        for (config in project.configurations.filter { it.isCanBeResolved }) {
-            runCatching {
-                val hasEngine = config.resolvedConfiguration.resolvedArtifacts.any { artifact ->
-                    val name = artifact.moduleVersion.id.toString()
-                    // Check for any Ktor server engine (Netty, CIO, Jetty, Tomcat, etc.)
-                    name.contains("ktor-server-") && (
-                            name.contains("-netty") ||
-                                    name.contains("-cio") ||
-                                    name.contains("-jetty") ||
-                                    name.contains("-tomcat") ||
-                                    name.contains("-servlet")
-                            )
-                }
-                if (hasEngine) return true
-            }.onFailure { e ->
-                // Configuration might not be resolvable, skip it
-                continue
-            }
-        }
-
-        return false
     }
 
     private fun checkKotlinVersionCompatibility(project: Project) {
