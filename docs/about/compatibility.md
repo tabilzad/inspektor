@@ -6,18 +6,19 @@ Version compatibility information for InspeKtor.
 
 | InspeKtor | Kotlin | Ktor     | OpenAPI | Gradle |
 |-----------|--------|----------|---------|--------|
+| 0.11.x    | 2.4.x  | 2.x, 3.x | 3.1.0   | 8.0+   |
 | 0.10.x    | 2.3.0+ | 2.x, 3.x | 3.1.0   | 8.0+   |
 | 0.9.x     | 2.1.0+ | 2.x, 3.x | 3.1.0   | 7.6+   |
 | 0.8.x     | 2.0.0+ | 2.x      | 3.1.0   | 7.6+   |
 
 ## Kotlin Version
 
-InspeKtor requires Kotlin 2.3.0 or later for the latest version.
+InspeKtor 0.11.x is built against the Kotlin 2.4 compiler line.
 
 ```kotlin title="build.gradle.kts"
 plugins {
-    kotlin("jvm") version "2.3.0" // Required
-    id("io.github.tabilzad.inspektor") version "0.10.0-alpha"
+    kotlin("jvm") version "2.4.10" // Required
+    id("io.github.tabilzad.inspektor") version "0.11.3-alpha"
 }
 ```
 

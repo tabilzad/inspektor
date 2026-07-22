@@ -19,7 +19,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 const val PLUGIN_ID = "io.github.tabilzad.inspektor"
 
 @Suppress("MagicNumber")
-private val COMPATIBLE_VERSIONS = setOf(KotlinVersion(2, 3, 20))
+private val COMPATIBLE_VERSIONS = setOf(KotlinVersion(2, 4, 0))
 
 class KtorMetaPlugin @Inject constructor(
     private val objects: ObjectFactory
