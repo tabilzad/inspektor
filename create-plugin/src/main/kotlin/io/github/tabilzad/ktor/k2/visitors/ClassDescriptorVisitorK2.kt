@@ -96,8 +96,10 @@ internal class ClassDescriptorVisitorK2(
     }
 
     private fun collectMap(baseType: TypeDescriptor, parentType: ConeKotlinType): TypeDescriptor {
-        val valueType = parentType.typeArguments.last()
-        return baseType.copy(additionalProperties = collectDataTypes(valueType.type?.resolveGeneric()))
+        // A raw/erased Map (e.g. from Java interop) carries no type arguments — fall back to an
+        // unconstrained object schema instead of crashing the compilation.
+        val valueType = parentType.typeArguments.lastOrNull()
+        return baseType.copy(additionalProperties = collectDataTypes(valueType?.type?.resolveGeneric()))
     }
 
     private fun collectIterable(baseType: TypeDescriptor, parentType: ConeKotlinType): TypeDescriptor {

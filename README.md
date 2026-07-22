@@ -62,7 +62,7 @@ specification.
 ```kotlin
 // build.gradle.kts
 plugins {
-    id("io.github.tabilzad.inspektor") version "0.10.0-alpha"
+    id("io.github.tabilzad.inspektor") version "0.11.3-alpha"
 }
 ```
 
@@ -155,6 +155,7 @@ swagger {
 | `hidePrivateAndInternalFields`              | `true`                               | Omit private/internal fields             |
 | `deriveFieldRequirementFromTypeNullability` | `true`                               | Nullable = optional, non-null = required |
 | `useKDocsForDescriptions`                   | `true`                               | Extract descriptions from KDoc comments  |
+| `polymorphicDiscriminator`                  | `"type"`                             | Discriminator property for sealed types  |
 | `servers`                                   | `[]`                                 | List of server URLs                      |
 
 ### Plugin Options
@@ -464,6 +465,7 @@ swagger {
 
 | Plugin Version | Kotlin Version |
 |----------------|----------------|
+| 0.11.3-alpha   | 2.4.x          |
 | 0.10.0-alpha   | 2.3.0          |
 | 0.8.8-alpha    | 2.2.20, 2.2.21 |
 | 0.8.7-alpha    | 2.2.20         |

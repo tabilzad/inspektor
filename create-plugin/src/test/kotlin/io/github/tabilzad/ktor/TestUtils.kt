@@ -204,16 +204,18 @@ private fun loadBaseSources(source: String): List<SourceFile> {
     )
 }
 
+// Artifact names resolved from the test runtime classpath; the actual versions come from the
+// version catalog (any version suffix here would be ignored by dependenciesMatch).
 private val deps = arrayOf(
-    "ktor-server-core:3.3.0",
-    "ktor-resources:3.3.0",
-    "ktor-server-resources:3.3.0",
-    "ktor-utils:3.3.0",
-    "ktor-server-netty:3.3.0",
-    "ktor-http:3.3.0",
-    "kotlinx-coroutines-core:1.10.1",
-    "moshi:1.14.0",
-    "kotlinx-serialization-core:2.2.21",
-    "kotlinx-serialization-json:2.2.21",
-    "annotations:0.7.2-alpha"
+    "ktor-server-core",
+    "ktor-resources",
+    "ktor-server-resources",
+    "ktor-utils",
+    "ktor-server-netty",
+    "ktor-http",
+    "kotlinx-coroutines-core",
+    "moshi",
+    "kotlinx-serialization-core",
+    "kotlinx-serialization-json",
+    "annotations"
 )

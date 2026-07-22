@@ -27,7 +27,7 @@ Zero runtime overhead. Full type safety. Always in sync.
     <img src="https://img.shields.io/maven-central/v/io.github.tabilzad.inspektor/io.github.tabilzad.inspektor.gradle.plugin?color=blue" alt="Maven Central">
   </a>
   <a href="https://kotlinlang.org">
-    <img src="https://img.shields.io/badge/kotlin-2.3.0-blue.svg?logo=kotlin" alt="Kotlin">
+    <img src="https://img.shields.io/badge/kotlin-2.4.10-blue.svg?logo=kotlin" alt="Kotlin">
   </a>
   <a href="https://github.com/tabilzad/inspektor/blob/master/LICENSE">
     <img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License">
@@ -79,9 +79,9 @@ Zero runtime overhead. Full type safety. Always in sync.
 
 ```kotlin title="build.gradle.kts"
 plugins {
-    kotlin("jvm") version "2.3.0"
+    kotlin("jvm") version "2.4.10"
     id("io.ktor.plugin") version "3.0.0"
-    id("io.github.tabilzad.inspektor") version "0.10.0-alpha"
+    id("io.github.tabilzad.inspektor") version "0.11.3-alpha"
 }
 
 swagger {

@@ -117,8 +117,12 @@ internal class ExpressionsVisitorK2(
                 it.accept(queryVisitor, query)
                 it.accept(headerVisitor, headers)
             }
-            queryParams += query.map { QueryParamSpec(it.name, description = statementDoc ?: it.description) }
-            headerParams += headers.map { HeaderParamSpec(it.name, description = statementDoc ?: it.description) }
+            // A key built only from expressions that can't be statically resolved joins to an
+            // empty name — drop it rather than emitting a nameless parameter.
+            queryParams += query.filter { it.name.isNotBlank() }
+                .map { QueryParamSpec(it.name, description = statementDoc ?: it.description) }
+            headerParams += headers.filter { it.name.isNotBlank() }
+                .map { HeaderParamSpec(it.name, description = statementDoc ?: it.description) }
         }
 
         if (queryParams.isNotEmpty()) endpoint.parameters = endpoint.parameters merge queryParams.toSet()

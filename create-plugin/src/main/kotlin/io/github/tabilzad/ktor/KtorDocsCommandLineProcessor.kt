@@ -178,7 +178,11 @@ class KtorDocsCommandLineProcessor : CommandLineProcessor {
             inferResponseSchemas ->
                 configuration.put(ARG_INFER_RESPONSE, value.toBooleanStrictOrNull() ?: true)
 
-            serverUrls -> configuration.put(ARG_SERVERS, value.split("||").filter { it.isNotBlank() })
+            // serverUrls allows multiple occurrences — accumulate instead of replacing, so
+            // every occurrence survives (put() would keep only the last one).
+            serverUrls -> value.split("||").filter { it.isNotBlank() }.forEach {
+                configuration.appendList(ARG_SERVERS, it)
+            }
 
             initConfig -> configuration.put(
                 ARG_INIT_CONFIG,

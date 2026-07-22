@@ -152,13 +152,17 @@ internal class ParametersVisitor(
                         init.value?.let { data.add(ParamMeta(it.toString(), fir.kDocDescription())) }
                     } else if (init == null) {
                         // if initializer is null it is likely because the value
-                        // is coming from an external library like ktor itself
-
-                        val ktorHeader =
-                            HttpHeaders::class.memberProperties.find { it.name == calleeReference.name.asString() }
+                        // is coming from an external library like ktor itself.
+                        // Guarded: a reflective failure must degrade to "no parameter",
+                        // not crash the consumer's compilation.
+                        val ktorHeader = runCatching {
+                            HttpHeaders::class.memberProperties
+                                .find { it.name == calleeReference.name.asString() }
+                                ?.getter?.call(HttpHeaders)?.toString()
+                        }.getOrNull()
 
                         if (ktorHeader != null) {
-                            data.add(ParamMeta(ktorHeader.getter.call(HttpHeaders).toString()))
+                            data.add(ParamMeta(ktorHeader))
                         }
                     }
                 }
