@@ -104,7 +104,8 @@ class KtorMetaPlugin @Inject constructor(
             securitySchemes = swaggerExtension.documentation.getSecuritySchemes(),
             info = swaggerExtension.documentation.getInfo(),
             overrides = swaggerExtension.documentation.serialOverrides.getOverrides().map { it.toConfigInput() },
-            discriminator = swaggerExtension.documentation.polymorphicDiscriminator
+            discriminator = swaggerExtension.documentation.polymorphicDiscriminator,
+            commonHeaders = swaggerExtension.documentation.getCommonHeaders()
         )
 
         // Serialize the config to use as an input hash for Gradle caching

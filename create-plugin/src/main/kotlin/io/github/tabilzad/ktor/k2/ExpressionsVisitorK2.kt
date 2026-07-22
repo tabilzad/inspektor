@@ -47,7 +47,13 @@ internal class ExpressionsVisitorK2(
     override fun visitNamedFunction(namedFunction: FirNamedFunction, parent: KtorElement?): List<KtorElement> {
         val extractedTags = namedFunction.findTags(session)
         val isDeprecated = namedFunction.findDeprecated()
-        val descriptor = parent ?: RouteDescriptor("/", tags = extractedTags, isDeprecated = isDeprecated)
+        val declaredHeaders = namedFunction.findDeclaredHeaders(session)
+        val descriptor = parent ?: RouteDescriptor(
+            "/",
+            tags = extractedTags,
+            isDeprecated = isDeprecated,
+            headers = declaredHeaders
+        )
         namedFunction.acceptChildren(this, descriptor)
         return descriptor.wrapAsList()
     }
@@ -295,13 +301,14 @@ internal class ExpressionsVisitorK2(
         if (!isARouteDefinition() && !ExpType.METHOD.labels.contains(expName)) return null
 
         val pathValue = resolvePath()
+        val declaredHeaders = findDeclaredHeaders(session)
 
         return when {
             ExpType.ROUTE.labels.contains(expName) ->
-                handleRouteElement(parent, pathValue, expName, tagsFromAnnotation, isDeprecated)
+                handleRouteElement(parent, pathValue, expName, tagsFromAnnotation, isDeprecated, declaredHeaders)
 
             ExpType.METHOD.labels.contains(expName) ->
-                handleMethodElement(parent, pathValue, tagsFromAnnotation, isDeprecated, expName)
+                handleMethodElement(parent, pathValue, tagsFromAnnotation, isDeprecated, expName, declaredHeaders)
 
             else -> null
         }
@@ -312,20 +319,22 @@ internal class ExpressionsVisitorK2(
         pathValue: String?,
         expName: String,
         tagsFromAnnotation: Set<String>?,
-        isDeprecated: Boolean?
+        isDeprecated: Boolean?,
+        declaredHeaders: Set<HeaderParamSpec>?
     ): KtorElement? {
         return when (parent) {
             null -> {
                 pathValue?.let {
-                    RouteDescriptor(it, tags = tagsFromAnnotation, isDeprecated = isDeprecated)
-                } ?: RouteDescriptor(expName, tags = tagsFromAnnotation, isDeprecated = isDeprecated)
+                    RouteDescriptor(it, tags = tagsFromAnnotation, isDeprecated = isDeprecated, headers = declaredHeaders)
+                } ?: RouteDescriptor(expName, tags = tagsFromAnnotation, isDeprecated = isDeprecated, headers = declaredHeaders)
             }
 
             is RouteDescriptor -> {
                 val newElement = RouteDescriptor(
                     pathValue.toString(),
                     tags = parent.tags merge tagsFromAnnotation,
-                    isDeprecated = parent.isDeprecated optionalAnd isDeprecated
+                    isDeprecated = parent.isDeprecated optionalAnd isDeprecated,
+                    headers = declaredHeaders
                 )
                 parent.children.add(newElement)
                 newElement
@@ -345,12 +354,14 @@ internal class ExpressionsVisitorK2(
     }
 
     @OptIn(SymbolInternals::class)
+    @Suppress("LongParameterList")
     private fun FirFunctionCall.handleMethodElement(
         parent: KtorElement?,
         pathValue: String?,
         tagsFromAnnotation: Set<String>?,
         isDeprecated: Boolean?,
-        expName: String
+        expName: String,
+        declaredHeaders: Set<HeaderParamSpec>?
     ): KtorElement? {
         val descr = findDocsDescription(session)
         val responses = findRespondsAnnotation(session)?.resolveToOpenSpecFormat()
@@ -362,7 +373,8 @@ internal class ExpressionsVisitorK2(
             summary = descr.summary,
             operationId = descr.operationId,
             tags = descr.tags merge tagsFromAnnotation,
-            responses = responses
+            responses = responses,
+            parameters = declaredHeaders
         )
 
         // Fill response gaps from inferred call.respond* schemas (explicit DSL/annotation still wins).
@@ -629,5 +641,17 @@ internal class ExpressionsVisitorK2(
             val mapping = resolved.entries.find { it.key.asString() == "mapping" }?.value?.result
             mapping?.accept(RespondsAnnotationVisitor(session), null)
         }
+    }
+
+    /**
+     * Reads a `@KtorHeaders(headers = [HeaderParam(...)])` annotation from an endpoint or
+     * `route(...)` expression, or from an annotated route module function.
+     */
+    @OptIn(PrivateForInline::class)
+    private fun FirStatement.findDeclaredHeaders(session: FirSession): Set<HeaderParamSpec>? {
+        val annotation = findAnnotationNamed(ClassIds.KTOR_HEADERS) ?: return null
+        val resolved = FirExpressionEvaluator.evaluateAnnotationArguments(annotation, session)
+        val headers = resolved.entries.find { it.key.asString() == "headers" }?.value?.result
+        return headers?.accept(HeadersAnnotationVisitor(session), null)?.toSet()?.ifEmpty { null }
     }
 }

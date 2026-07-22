@@ -30,6 +30,49 @@ annotation class ResponseEntry(
     val contentType: String = "application/json"
 )
 
+/**
+ * Declares header parameters for endpoints whose code never reads the header explicitly —
+ * e.g. headers consumed by middleware, interceptors, or shared controller plumbing that
+ * automatic inference cannot see.
+ *
+ * Placement determines scope:
+ * - on an endpoint expression (`get`, `post`, …) — applies to that operation only;
+ * - on a `route(...)` expression — applies to every endpoint nested under that route;
+ * - on an annotated route module function (e.g. alongside `@GenerateOpenApi` on
+ *   `fun Route.adminApi()`) — applies to every endpoint the module defines.
+ *
+ * Endpoint-level declarations take precedence over route/module-level ones, which take
+ * precedence over `commonHeaders` declared in the Gradle configuration.
+ *
+ * Example usage:
+ * ```
+ * @KtorHeaders([HeaderParam("X-Tenant-Id", "Tenant the request is scoped to", required = true)])
+ * route("/admin") {
+ *     get("/users") { /* ... */ }
+ * }
+ * ```
+ */
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.EXPRESSION)
+annotation class KtorHeaders(
+    val headers: Array<HeaderParam>
+)
+
+/**
+ * A single header parameter entry used inside [KtorHeaders].
+ *
+ * @property name The header name as it appears on the wire (e.g. "X-Request-Id").
+ * @property description A description added to the parameter in the generated spec.
+ * @property required Whether the header is required. Defaults to false.
+ */
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.EXPRESSION)
+annotation class HeaderParam(
+    val name: String,
+    val description: String = "",
+    val required: Boolean = false,
+)
+
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.EXPRESSION)
 annotation class KtorDescription(

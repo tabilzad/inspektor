@@ -1,0 +1,94 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v3/admin/users" : {
+      "delete" : {
+        "parameters" : [ {
+          "name" : "X-Admin-Header",
+          "in" : "header",
+          "required" : false,
+          "description" : "Required by admin endpoints.",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "X-Module-Header",
+          "in" : "header",
+          "required" : true,
+          "description" : "Required by every endpoint in this module.",
+          "schema" : {
+            "type" : "string"
+          }
+        } ]
+      },
+      "get" : {
+        "parameters" : [ {
+          "name" : "X-Admin-Header",
+          "in" : "header",
+          "required" : false,
+          "description" : "Required by admin endpoints.",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "X-Module-Header",
+          "in" : "header",
+          "required" : true,
+          "description" : "Required by every endpoint in this module.",
+          "schema" : {
+            "type" : "string"
+          }
+        } ]
+      }
+    },
+    "/v3/merge" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "X-Module-Header",
+          "in" : "header",
+          "required" : true,
+          "description" : "Required by every endpoint in this module.",
+          "schema" : {
+            "type" : "string"
+          }
+        } ]
+      }
+    },
+    "/v3/single" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "X-Endpoint-Header",
+          "in" : "header",
+          "required" : true,
+          "description" : "Only on this endpoint.",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "X-Endpoint-Header2",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "X-Module-Header",
+          "in" : "header",
+          "required" : true,
+          "description" : "Required by every endpoint in this module.",
+          "schema" : {
+            "type" : "string"
+          }
+        } ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : { }
+  }
+}

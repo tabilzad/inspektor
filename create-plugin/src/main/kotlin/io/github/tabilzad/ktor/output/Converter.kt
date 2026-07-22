@@ -40,8 +40,24 @@ internal fun convertInternalToOpenSpec(
             }
         }
 
+    // Headers declared in the Gradle config apply to every operation. They are appended after
+    // endpoint- and route-level parameters so that more specific declarations win when the
+    // per-name merge runs during spec conversion.
+    val commonHeaders = configuration.initConfig.commonHeaders.map {
+        HeaderParamSpec(
+            name = it.name,
+            description = it.description?.ifBlank { null },
+            isRequired = it.required
+        )
+    }
+    val withCommonHeaders = if (commonHeaders.isEmpty()) {
+        mergedRouteSpecs
+    } else {
+        mergedRouteSpecs.map { spec -> spec.copy(parameters = spec.parameters merge commonHeaders) }
+    }
+
     // Convert merged specs to OpenAPI format
-    val reducedRoutes = mergedRouteSpecs
+    val reducedRoutes = withCommonHeaders
         .convertToSpec()
         .mapKeys { it.key.replace("//", "/") }
 

@@ -1,8 +1,10 @@
 package io.github.tabilzad.ktor
 
+import io.github.tabilzad.ktor.config.CommonHeadersBuilder
 import io.github.tabilzad.ktor.config.InfoConfigBuilder
 import io.github.tabilzad.ktor.config.SecurityBuilder
 import io.github.tabilzad.ktor.config.TypeOverrideExtension
+import io.github.tabilzad.ktor.model.CommonHeaderConfig
 import io.github.tabilzad.ktor.model.Info
 import io.github.tabilzad.ktor.model.SecurityScheme
 import org.gradle.api.Action
@@ -35,6 +37,18 @@ open class DocumentationOptions @Inject constructor(
     private var info = Info()
     private val securityConfig: MutableList<Map<String, List<String>>> = mutableListOf()
     private val securitySchemes: MutableMap<String, SecurityScheme> = mutableMapOf()
+    private val commonHeaders: MutableList<CommonHeaderConfig> = mutableListOf()
+
+    /**
+     * Declares header parameters added to every generated operation — for cross-cutting headers
+     * consumed by middleware rather than read inside route handlers. Endpoint-specific
+     * declarations of the same header win on precedence.
+     */
+    fun commonHeaders(action: Action<CommonHeadersBuilder>) {
+        val builder = CommonHeadersBuilder()
+        action.execute(builder)
+        commonHeaders.addAll(builder.build())
+    }
 
     internal val serialOverrides: TypeOverrideExtension =
         objects.newInstance(TypeOverrideExtension::class.java, objects)
@@ -76,4 +90,6 @@ open class DocumentationOptions @Inject constructor(
     internal fun getSecurityConfig(): List<Map<String, List<String>>> = securityConfig.toList()
 
     internal fun getSecuritySchemes(): Map<String, SecurityScheme> = securitySchemes.toMap()
+
+    internal fun getCommonHeaders(): List<CommonHeaderConfig> = commonHeaders.toList()
 }

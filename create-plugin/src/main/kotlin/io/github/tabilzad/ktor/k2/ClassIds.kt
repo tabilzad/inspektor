@@ -66,6 +66,7 @@ object ClassIds {
     val KTOR_SCHEMA = KtorSchema::class.asQualifiedFqName()
     val KTOR_FIELD = KtorField::class.asQualifiedFqName()
     val KTOR_RESPONDS = KtorResponds::class.asQualifiedFqName()
+    val KTOR_HEADERS = KtorHeaders::class.asQualifiedFqName()
     val DEPRECATED = Deprecated::class.asQualifiedFqName()
 }
 

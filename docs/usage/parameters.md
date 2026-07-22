@@ -223,6 +223,57 @@ Both conventions are controlled by the existing `useKDocsForDescriptions` option
 default). Descriptions are not derived for names built from string templates or concatenation,
 since a single piece's KDoc would not describe the full name.
 
+## Declaring Headers with @KtorHeaders
+
+Some headers are consumed by middleware, interceptors, or shared controller plumbing rather
+than read inside the route handler — automatic inference cannot see those. Declare them with
+`@KtorHeaders`. Placement determines scope:
+
+```kotlin
+// On a route module function: applies to every endpoint the module defines
+@GenerateOpenApi
+@KtorHeaders([HeaderParam("X-Client-Id", "Identity of the calling client", required = true)])
+fun Route.ordersApi() {
+    routing {
+        // On a route: applies to every endpoint nested under it
+        @KtorHeaders([HeaderParam("X-Admin-Token", "Admin access token", required = true)])
+        route("/admin") {
+            get("/users") { /* ... */ }
+            delete("/users") { /* ... */ }
+        }
+
+        // On an endpoint: applies to that operation only
+        @KtorHeaders([HeaderParam("X-Feature-Flag", "Enables experimental behavior")])
+        get("/orders") { /* ... */ }
+    }
+}
+```
+
+When the same header is both declared and inferred (or declared at several levels), duplicates
+are merged by name: the most specific description wins (endpoint over route over module), and
+the header is required if any declaration marks it required.
+
+## Common Headers for All Endpoints
+
+Headers that apply to *every* operation — e.g. extracted globally via
+`call.request.headers.toMap()` in an interceptor — are best declared once in the Gradle
+configuration instead of annotating every route:
+
+```kotlin
+swagger {
+    documentation {
+        commonHeaders {
+            header("X-Request-Id", description = "Correlation id propagated across services")
+            header("X-Tenant-Id", description = "Tenant the request is scoped to", required = true)
+        }
+    }
+}
+```
+
+Endpoint- and route-level declarations of the same header take precedence over `commonHeaders`
+for the description. See the [Gradle DSL reference](../api/gradle-dsl.md#commonheaders) for
+details.
+
 ### Operation-level descriptions
 
 You can also describe parameters as part of the endpoint text using KtorDescription:

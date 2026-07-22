@@ -246,6 +246,36 @@ documentation {
 | `minLength`    | `Int?`    | Minimum length (strings)                                       |
 | `maxLength`    | `Int?`    | Maximum length (strings)                                       |
 
+### commonHeaders { }
+
+Header parameters added to **every** generated operation. Use this for cross-cutting headers
+consumed by middleware, interceptors, or shared controller plumbing (correlation ids,
+tenant/client identity, etc.) that route handlers never read explicitly — automatic inference
+cannot discover those.
+
+```kotlin
+documentation {
+    commonHeaders {
+        header("X-Request-Id", description = "Correlation id propagated across services")
+        header("X-Tenant-Id", description = "Tenant the request is scoped to", required = true)
+    }
+}
+```
+
+#### header() Parameters
+
+| Parameter     | Type      | Default | Description                                |
+|---------------|-----------|---------|--------------------------------------------|
+| `name`        | `String`  | —       | Header name as it appears on the wire      |
+| `description` | `String?` | `null`  | Description emitted for the parameter      |
+| `required`    | `Boolean` | `false` | Whether the header is marked required      |
+
+If an endpoint also declares or reads the same header, the endpoint-specific description wins;
+the header is marked required if **any** declaration marks it required. Headers named `Accept`,
+`Content-Type` or `Authorization` are never emitted (the OpenAPI specification requires tools to
+ignore them). For headers needed by only a subset of routes, use the
+[`@KtorHeaders` annotation](../usage/parameters.md#declaring-headers-with-ktorheaders) instead.
+
 ---
 
 ## pluginOptions { }

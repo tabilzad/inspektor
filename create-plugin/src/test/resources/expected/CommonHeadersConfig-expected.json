@@ -1,0 +1,76 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v4/a" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "X-Tenant-Id",
+          "in" : "header",
+          "required" : true,
+          "description" : "Identifies the tenant the request is scoped to.",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "X-Request-Id",
+          "in" : "header",
+          "required" : false,
+          "description" : "Correlation id propagated across services.",
+          "schema" : {
+            "type" : "string"
+          }
+        } ]
+      }
+    },
+    "/v4/b" : {
+      "post" : {
+        "parameters" : [ {
+          "name" : "X-Tenant-Id",
+          "in" : "header",
+          "required" : true,
+          "description" : "Identifies the tenant the request is scoped to.",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "X-Request-Id",
+          "in" : "header",
+          "required" : false,
+          "description" : "Correlation id propagated across services.",
+          "schema" : {
+            "type" : "string"
+          }
+        } ]
+      }
+    },
+    "/v4/c" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "X-Tenant-Id",
+          "in" : "header",
+          "required" : true,
+          "description" : "Tenant documented at the endpoint.",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "X-Request-Id",
+          "in" : "header",
+          "required" : false,
+          "description" : "Correlation id propagated across services.",
+          "schema" : {
+            "type" : "string"
+          }
+        } ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : { }
+  }
+}

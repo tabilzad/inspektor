@@ -104,6 +104,7 @@ Your OpenAPI specification is generated at `build/resources/main/openapi/openapi
 |-------------------------------|---------------|------------------------------------------------|
 | **Path & Endpoint Detection** | Automatic     | Extracts all routes from annotated functions   |
 | **Parameter Detection**       | Automatic     | Path, query & header parameters from handler code, described via KDoc |
+| **Header Declarations**       | Explicit      | `@KtorHeaders` per endpoint/route; `commonHeaders` config for all operations |
 | **Ktor Resources Support**    | Automatic     | Full support for type-safe routing             |
 | **Request Body Schemas**      | Automatic     | Generates schemas from `call.receive<T>()`     |
 | **Response Schemas**          | Automatic     | Inferred from `call.respond<T>()` (opt-in via `inferResponseSchemas`); `responds<T>()` / `@KtorResponds` override |
@@ -277,6 +278,37 @@ get("/orders") {
 A KDoc on the local `val` overrides the constant's KDoc. Both conventions honor
 `useKDocsForDescriptions`. Header parameters named `Accept`, `Content-Type` or
 `Authorization` are never emitted, as the OpenAPI specification requires tools to ignore them.
+
+### Declaring Headers Inference Can't See
+
+Headers consumed by middleware or shared plumbing (e.g. via `call.request.headers.toMap()`)
+never appear in handler code, so they can't be inferred. Declare them explicitly instead.
+
+For a subset of routes, use `@KtorHeaders` — on an endpoint, on a `route(...)` block
+(applies to everything nested under it), or on a route module function:
+
+```kotlin
+@KtorHeaders([HeaderParam("X-Admin-Token", "Admin access token", required = true)])
+route("/admin") {
+    get("/users") { /* X-Admin-Token is documented here */ }
+}
+```
+
+For headers every operation expects, declare them once in the Gradle configuration:
+
+```kotlin
+swagger {
+    documentation {
+        commonHeaders {
+            header("X-Request-Id", description = "Correlation id propagated across services")
+            header("X-Tenant-Id", description = "Tenant the request is scoped to", required = true)
+        }
+    }
+}
+```
+
+Duplicates are merged by name with the most specific declaration winning:
+endpoint → route → module → `commonHeaders` config.
 
 ### Defining Responses
 

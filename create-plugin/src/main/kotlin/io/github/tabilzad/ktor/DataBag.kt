@@ -75,11 +75,13 @@ internal data class EndpointDescriptor(
     }
 }
 
-data class RouteDescriptor(
+internal data class RouteDescriptor(
     override var path: String? = "/",
     val children: MutableList<KtorElement> = mutableListOf(),
     override var tags: Set<String>? = null,
-    override var isDeprecated: Boolean? = null
+    override var isDeprecated: Boolean? = null,
+    /** Headers declared via `@KtorHeaders` on this route; propagated to all child endpoints. */
+    var headers: Set<HeaderParamSpec>? = null
 ) : KtorElement() {
     override fun newInstance(tags: Set<String>?): RouteDescriptor {
         return copy(tags = tags)

@@ -55,7 +55,10 @@ internal fun reduce(e: RouteDescriptor): List<KtorRouteSpec> = e.children.flatMa
                 child.copy(
                     path = e.path + child.path.addLeadingSlash(),
                     tags = e.tags merge child.tags,
-                    isDeprecated = (e.isDeprecated optionalAnd child.isDeprecated)
+                    isDeprecated = (e.isDeprecated optionalAnd child.isDeprecated),
+                    // child's own declared headers first so the innermost (most specific)
+                    // declaration wins when duplicates are merged by name later
+                    headers = child.headers merge e.headers
                 )
             )
         }
@@ -68,7 +71,7 @@ internal fun reduce(e: RouteDescriptor): List<KtorRouteSpec> = e.children.flatMa
                     body = child.body ?: OpenApiSpec.TypeDescriptor("object"),
                     summary = child.summary,
                     description = child.description,
-                    parameters = child.parameters?.toList(),
+                    parameters = (child.parameters merge e.headers)?.toList(),
                     responses = child.responses,
                     operationId = child.operationId,
                     tags = e.tags merge child.tags,
@@ -146,7 +149,13 @@ private fun mapPathParams(spec: KtorRouteSpec): List<OpenApiSpec.Parameter>? {
 
 private fun mapQueryParams(it: KtorRouteSpec): List<OpenApiSpec.Parameter>? {
     return it.parameters?.filterIsInstance<QueryParamSpec>()
-        ?.dedupeByName()
+        ?.mergeByName { group ->
+            QueryParamSpec(
+                name = group.first().name,
+                description = group.firstNotNullOfOrNull { it.description },
+                isRequired = group.any { it.isRequired }
+            )
+        }
         ?.map {
             OpenApiSpec.Parameter(
                 name = it.name,
@@ -168,7 +177,13 @@ private val ignoredHeaderParameters = setOf("accept", "content-type", "authoriza
 private fun mapHeaderParams(it: KtorRouteSpec): List<OpenApiSpec.Parameter>? {
     return it.parameters?.filterIsInstance<HeaderParamSpec>()
         ?.filterNot { header -> header.name.lowercase() in ignoredHeaderParameters }
-        ?.dedupeByName()
+        ?.mergeByName { group ->
+            HeaderParamSpec(
+                name = group.first().name,
+                description = group.firstNotNullOfOrNull { it.description },
+                isRequired = group.any { it.isRequired }
+            )
+        }
         ?.map {
             OpenApiSpec.Parameter(
                 name = it.name,
@@ -181,13 +196,14 @@ private fun mapHeaderParams(it: KtorRouteSpec): List<OpenApiSpec.Parameter>? {
 }
 
 /**
- * The same parameter can be picked up more than once (e.g. accessed in several statements, only
- * one of which is documented). Collapse duplicates by name, preferring an entry with a description.
+ * The same parameter can be declared or observed several times for one endpoint — inferred from
+ * handler code, declared via `@KtorHeaders` on the endpoint or an enclosing route, or configured
+ * through `commonHeaders`. Entries are ordered most-specific first, so collapse duplicates by
+ * name: the description comes from the first entry that has one, and the parameter is required
+ * if any declaration marks it required.
  */
-private fun <T : ParamSpec> List<T>.dedupeByName(): List<T> =
-    groupBy { it.name }.map { (_, group) ->
-        group.firstOrNull { it.description != null } ?: group.first()
-    }
+private fun <T : ParamSpec> List<T>.mergeByName(combine: (List<T>) -> T): List<T> =
+    groupBy { it.name }.map { (_, group) -> combine(group) }
 
 internal fun ConeKotlinType.isStringOrPrimitive(): Boolean =
     isPrimitiveOrNullablePrimitive || isString || isNullableString || isPrimitive

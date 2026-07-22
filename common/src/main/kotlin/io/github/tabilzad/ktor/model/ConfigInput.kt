@@ -9,7 +9,21 @@ data class ConfigInput(
     val securitySchemes: Map<String, SecurityScheme> = emptyMap(),
     val info: Info? = null,
     val overrides: List<TypeOverrideConfig> = emptyList(),
-    val discriminator: String = "type"
+    val discriminator: String = "type",
+    val commonHeaders: List<CommonHeaderConfig> = emptyList(),
+)
+
+/**
+ * A header parameter applied to every generated operation — for cross-cutting headers consumed
+ * by middleware/interceptors rather than read explicitly inside route handlers, which static
+ * inference cannot see. An endpoint-specific declaration of the same header takes precedence
+ * for the description.
+ */
+@Serializable
+data class CommonHeaderConfig(
+    val name: String,
+    val description: String? = null,
+    val required: Boolean = false,
 )
 
 @Serializable

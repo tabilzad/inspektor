@@ -2,7 +2,9 @@ package io.github.tabilzad.ktor
 
 import io.github.tabilzad.ktor.TestUtils.loadSourceAndExpected
 import io.github.tabilzad.ktor.TestUtils.loadSourceCodeFrom
+import io.github.tabilzad.ktor.model.CommonHeaderConfig
 import io.github.tabilzad.ktor.model.ConfigInput
+import io.github.tabilzad.ktor.model.Info
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -312,6 +314,39 @@ class K2StabilityTest {
         val result = testFile.readText()
         result.assertWith(expected)
     }
+
+    @Test
+    fun `should apply KtorHeaders annotations declared on endpoints routes and modules`() {
+        val (source, expected) = loadSourceAndExpected("DeclaredHeaders")
+        generateCompilerTest(testFile, source)
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
+    fun `should apply common headers from plugin configuration to all endpoints`() {
+        val (source, expected) = loadSourceAndExpected("CommonHeadersConfig")
+        generateCompilerTest(testFile, source, commonHeadersConfig())
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    private fun commonHeadersConfig() = PluginConfiguration.createDefault(
+        initConfig = ConfigInput(
+            info = Info(title = "Open API Specification", description = "", version = "1.0.0"),
+            commonHeaders = listOf(
+                CommonHeaderConfig(
+                    name = "X-Tenant-Id",
+                    description = "Identifies the tenant the request is scoped to.",
+                    required = true
+                ),
+                CommonHeaderConfig(
+                    name = "X-Request-Id",
+                    description = "Correlation id propagated across services."
+                )
+            )
+        )
+    )
 
     @Test
     fun `should include private fields or ones annotated with @Transient`() {
