@@ -105,7 +105,7 @@ Primary supported build system:
 
 ```kotlin title="build.gradle.kts"
 plugins {
-    id("io.github.tabilzad.inspektor") version "0.10.0-alpha"
+    id("io.github.tabilzad.inspektor") version "0.11.3-alpha"
 }
 ```
 
@@ -113,7 +113,7 @@ plugins {
 
 ```groovy title="build.gradle"
 plugins {
-    id 'io.github.tabilzad.inspektor' version '0.10.0-alpha'
+    id 'io.github.tabilzad.inspektor' version '0.11.3-alpha'
 }
 
 swagger {

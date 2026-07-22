@@ -72,12 +72,12 @@ import io.github.tabilzad.ktor.annotations.KtorDescription
 
 ### Properties
 
-| Property      | Type      | Default | Description                              |
-|---------------|-----------|---------|------------------------------------------|
-| `summary`     | `String`  | `""`    | Brief one-line description               |
-| `description` | `String`  | `""`    | Detailed description (supports Markdown) |
-| `operationId` | `String`  | `""`    | Custom operation ID for code generation  |
-| `deprecated`  | `Boolean` | `false` | Mark endpoint as deprecated              |
+| Property      | Type            | Default | Description                              |
+|---------------|-----------------|---------|------------------------------------------|
+| `summary`     | `String`        | `""`    | Brief one-line description               |
+| `description` | `String`        | `""`    | Detailed description (supports Markdown) |
+| `operationId` | `String`        | `""`    | Custom operation ID for code generation  |
+| `tags`        | `Array<String>` | `[]`    | Tags applied to this endpoint            |
 
 ### Usage
 
@@ -107,7 +107,7 @@ Full usage:
         - The user must verify their email within 24 hours
     """,
     operationId = "createUser",
-    deprecated = false
+    tags = ["Users"]
 )
 post("/users") {
     val request = call.receive<CreateUserRequest>()
@@ -117,11 +117,13 @@ post("/users") {
 
 ### Deprecated Endpoint
 
+Deprecation is derived from Kotlin's own `@Deprecated` annotation, not from `@KtorDescription`:
+
 ```kotlin
+@Deprecated("Use GET /api/v2/users/{id} instead")
 @KtorDescription(
     summary = "Get user (deprecated)",
-    description = "Use GET /api/v2/users/{id} instead",
-    deprecated = true
+    description = "Use GET /api/v2/users/{id} instead"
 )
 get("/api/v1/users/{id}") {
     // Old implementation
@@ -167,7 +169,7 @@ import io.github.tabilzad.ktor.annotations.Tag
 
 | Property | Type            | Description       |
 |----------|-----------------|-------------------|
-| `value`  | `Array<String>` | List of tag names |
+| `tags`   | `Array<String>` | List of tag names |
 
 ### Usage
 
@@ -250,11 +252,15 @@ route("/products") { }
 
 ## Summary Table
 
-| Annotation         | Target             | Required           | Purpose                |
-|--------------------|--------------------|--------------------|------------------------|
-| `@GenerateOpenApi` | Function           | Yes (at least one) | Enable spec generation |
-| `@KtorDescription` | Before HTTP method | No                 | Add documentation      |
-| `@Tag`             | Function or route  | No                 | Group endpoints        |
+| Annotation         | Target                     | Required           | Purpose                                                       |
+|--------------------|----------------------------|--------------------|---------------------------------------------------------------|
+| `@GenerateOpenApi` | Function                   | Yes (at least one) | Enable spec generation                                        |
+| `@KtorDescription` | Before HTTP method         | No                 | Add documentation                                             |
+| `@Tag`             | Function or route          | No                 | Group endpoints                                               |
+| `@KtorResponds`    | Before HTTP method         | No                 | Declare responses (see [Responses](../usage/responses.md))    |
+| `@KtorHeaders`     | Function, route, or method | No                 | Declare header parameters (see [Parameters](../usage/parameters.md#declaring-headers-with-ktorheaders)) |
+| `@KtorSchema`      | Class                      | No                 | Describe/override a schema (see [Descriptions](../usage/descriptions.md)) |
+| `@KtorField`       | Field                      | No                 | Describe/override a schema field                              |
 
 ## Complete Example
 

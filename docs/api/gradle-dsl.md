@@ -296,7 +296,7 @@ pluginOptions {
 |--------------------|-----------|------------|-------------------------------------|
 | `enabled`          | `Boolean` | `true`     | Enable/disable spec generation      |
 | `saveInBuild`      | `Boolean` | `true`     | Save in `build/` directory          |
-| `format`           | `String`  | `"yaml"`   | Output format: `"yaml"` or `"json"` |
+| `format`           | `String`  | `"json"`   | Output format: `"yaml"` or `"json"` |
 | `filePath`         | `String?` | `null`     | Custom output path (absolute)       |
 | `regenerationMode` | `String`  | `"strict"` | Incremental build mode              |
 
@@ -314,9 +314,9 @@ pluginOptions {
 
 ```kotlin title="build.gradle.kts"
 plugins {
-    kotlin("jvm") version "2.3.0"
+    kotlin("jvm") version "2.4.10"
     id("io.ktor.plugin") version "3.0.0"
-    id("io.github.tabilzad.inspektor") version "0.10.0-alpha"
+    id("io.github.tabilzad.inspektor") version "0.11.3-alpha"
 }
 
 swagger {
