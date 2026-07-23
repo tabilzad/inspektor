@@ -31,7 +31,9 @@ object TestUtils {
      * @return The source code content
      */
     fun loadMultiModuleSource(fileName: String): String =
-        this.javaClass.getResource("/sources/multimodule/$fileName.kt")?.readText()
+        // Path casing must match the resource directory exactly: lookups are case-sensitive
+        // on Linux CI even though they happen to resolve on Windows/macOS dev machines.
+        this.javaClass.getResource("/sources/multiModule/$fileName.kt")?.readText()
             ?: throw FileNotFoundException("Multi-module source $fileName does not exist")
 
     val loadNativeAnnotations by lazy {
