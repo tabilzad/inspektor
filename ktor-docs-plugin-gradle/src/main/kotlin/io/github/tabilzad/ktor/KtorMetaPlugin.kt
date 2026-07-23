@@ -2,6 +2,7 @@ package io.github.tabilzad.ktor
 
 import com.vdurmont.semver4j.Semver
 import io.github.tabilzad.ktor.model.ConfigInput
+import io.github.tabilzad.ktor.model.PartialSpecLocation
 import kotlinx.serialization.json.Json
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
@@ -115,7 +116,7 @@ class KtorMetaPlugin @Inject constructor(
         val regenerationMode = swaggerExtension.pluginOptions.regenerationMode.lowercase()
         require(regenerationMode in listOf("strict", "safe", "fast")) {
             "Invalid regenerationMode '${swaggerExtension.pluginOptions.regenerationMode}'. " +
-                "Must be one of: strict, safe, fast"
+                    "Must be one of: strict, safe, fast"
         }
 
         // Configure Gradle task inputs/outputs based on regeneration mode
@@ -182,7 +183,18 @@ class KtorMetaPlugin @Inject constructor(
             }
         }
 
-        val subpluginOptions = listOf(
+        // Determine multi-module configuration
+        val moduleId = swaggerExtension.pluginOptions.moduleId
+        val isAggregator = swaggerExtension.pluginOptions.isAggregator
+
+        // Resources path for partial spec output (only for contributors)
+        val resourcesPath = if (moduleId != null && !isAggregator) {
+            kotlinCompilation.output.resourcesDir.absolutePath
+        } else {
+            null
+        }
+
+        val subpluginOptions = mutableListOf(
             SubpluginOption(
                 key = "enabled",
                 value = swaggerExtension.pluginOptions.enabled.toString()
@@ -228,7 +240,104 @@ class KtorMetaPlugin @Inject constructor(
                 value = Base64.encode(initialConfigJson.toByteArray())
             )
         )
+
+        subpluginOptions.addAll(
+            multiModuleOptions(project, swaggerExtension, kotlinCompilation, moduleId, isAggregator, resourcesPath)
+        )
+
         return project.provider { subpluginOptions }
+    }
+
+    /**
+     * Builds the multi-module subplugin options when a moduleId is configured: the module's
+     * identity/role, the resources path for contributors, and — for aggregators — the resolved
+     * partial spec paths of the configured contributor modules.
+     */
+    @Suppress("LongParameterList")
+    private fun multiModuleOptions(
+        project: Project,
+        swaggerExtension: KtorInspectorGradleConfig,
+        kotlinCompilation: KotlinCompilation<*>,
+        moduleId: String?,
+        isAggregator: Boolean,
+        resourcesPath: String?
+    ): List<SubpluginOption> {
+        if (moduleId == null) return emptyList()
+
+        return buildList {
+            add(SubpluginOption(key = "moduleId", value = moduleId))
+            add(SubpluginOption(key = "isAggregator", value = isAggregator.toString()))
+            if (resourcesPath != null) {
+                add(SubpluginOption(key = "resourcesPath", value = resourcesPath))
+            }
+
+            // For aggregator modules, resolve contributor partial spec paths
+            if (isAggregator && swaggerExtension.pluginOptions.contributors.isNotEmpty()) {
+                val partialSpecPaths = resolveContributorPartialSpecPaths(
+                    project,
+                    swaggerExtension.pluginOptions.contributors,
+                    kotlinCompilation
+                )
+                if (partialSpecPaths.isNotEmpty()) {
+                    add(
+                        SubpluginOption(
+                            key = "partialSpecPaths",
+                            value = partialSpecPaths.joinToString("||")
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Resolves paths to partial OpenAPI spec files from contributor modules.
+     *
+     * For each contributor project path, this method resolves the project and
+     * constructs the expected path to its partial spec file based on the
+     * compilation's resources output directory structure.
+     *
+     * @param project The current (aggregator) project
+     * @param contributors List of Gradle project paths (e.g., ":feature-users")
+     * @param kotlinCompilation The current compilation context
+     * @return List of absolute paths to partial spec files
+     */
+    private fun resolveContributorPartialSpecPaths(
+        project: Project,
+        contributors: List<String>,
+        kotlinCompilation: KotlinCompilation<*>
+    ): List<String> {
+        val partialSpecRelativePath = PartialSpecLocation.FULL_PATH
+
+        return contributors.mapNotNull { contributorPath ->
+            try {
+                val contributorProject = project.rootProject.findProject(contributorPath)
+                if (contributorProject == null) {
+                    project.logger.warn(
+                        "[inspektor] Contributor project '$contributorPath' not found. " +
+                                "Ensure the project path is correct and the project is included in the build."
+                    )
+                    return@mapNotNull null
+                }
+
+                // Construct the path to the partial spec based on the build directory
+                // The partial spec is written to: {buildDir}/processedResources/{variant}/META-INF/inspektor/openapi-partial.json
+                // We use the compilation name to determine the variant (e.g., "main", "jvm")
+                val compilationName = kotlinCompilation.compilationName
+                val resourcesDir = File(
+                    contributorProject.layout.buildDirectory.asFile.get(),
+                    "processedResources/$compilationName"
+                )
+                val partialSpecFile = File(resourcesDir, partialSpecRelativePath)
+
+                partialSpecFile.absolutePath
+            } catch (e: Exception) {
+                project.logger.warn(
+                    "[inspektor] Failed to resolve contributor '$contributorPath': ${e.message}"
+                )
+                null
+            }
+        }
     }
 
     private fun checkKotlinVersionCompatibility(project: Project) {
@@ -291,15 +400,15 @@ class KtorMetaPlugin @Inject constructor(
                 srcDir.walkTopDown()
                     .filter { file ->
                         file.isFile &&
-                            file.extension == "kt" &&
-                            file.canRead()
+                                file.extension == "kt" &&
+                                file.canRead()
                     }
                     .filter { file ->
                         try {
                             val content = file.readText()
                             // Check for annotation in various forms
                             content.contains("@GenerateOpenApi") ||
-                                content.contains("@io.github.tabilzad.ktor.annotations.GenerateOpenApi")
+                                    content.contains("@io.github.tabilzad.ktor.annotations.GenerateOpenApi")
                         } catch (e: Exception) {
                             // If we can't read the file, skip it
                             false

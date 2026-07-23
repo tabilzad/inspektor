@@ -346,6 +346,11 @@ internal fun CompilerConfiguration?.buildPluginConfiguration(): PluginConfigurat
     inferResponseSchemas = this?.get(SwaggerConfigurationKeys.ARG_INFER_RESPONSE),
     servers = this?.get(SwaggerConfigurationKeys.ARG_SERVERS) ?: emptyList(),
     initConfig = this?.get(SwaggerConfigurationKeys.ARG_INIT_CONFIG) ?: ConfigInput(),
+    // Multi-module support
+    moduleId = this?.get(SwaggerConfigurationKeys.ARG_MODULE_ID),
+    isAggregator = this?.get(SwaggerConfigurationKeys.ARG_IS_AGGREGATOR) ?: false,
+    resourcesPath = this?.get(SwaggerConfigurationKeys.ARG_RESOURCES_PATH),
+    partialSpecPaths = this?.get(SwaggerConfigurationKeys.ARG_PARTIAL_SPEC_PATHS) ?: emptyList(),
 )
 
 operator fun OutputStream.plusAssign(str: String) {

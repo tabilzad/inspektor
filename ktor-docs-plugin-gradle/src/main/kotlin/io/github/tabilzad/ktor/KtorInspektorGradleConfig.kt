@@ -74,4 +74,85 @@ open class PluginOptions @Inject constructor(
      * ```
      */
     var regenerationMode: String = "strict"
+
+    // Multi-module support options
+
+    /**
+     * Unique identifier for this module in multi-module OpenAPI generation.
+     *
+     * When set, this module participates in multi-module spec aggregation.
+     * The module will either:
+     * - Generate a partial spec (if contributor module)
+     * - Aggregate partial specs from dependencies (if aggregator module)
+     *
+     * If null (default), the module operates in standalone mode.
+     *
+     * **Example:**
+     * ```kotlin
+     * swagger {
+     *     pluginOptions {
+     *         moduleId = project.path // e.g., ":feature-users"
+     *     }
+     * }
+     * ```
+     */
+    var moduleId: String? = null
+
+    /**
+     * Whether this module is the aggregator (main server) in a multi-module setup.
+     *
+     * When set to `true`, this module will:
+     * - Discover partial OpenAPI specs on its compile classpath — from project dependencies
+     *   and published library JARs alike — plus any explicitly listed [contributors]
+     * - Merge them with locally defined routes
+     * - Output the complete OpenAPI specification
+     *
+     * When set to `false` (default) and [moduleId] is set, this module will:
+     * - Generate a partial OpenAPI spec
+     * - Embed it in META-INF/inspektor/openapi-partial.json inside its resources/JAR
+     *
+     * **Example:**
+     * ```kotlin
+     * // Main server module
+     * swagger {
+     *     pluginOptions {
+     *         moduleId = project.path
+     *         isAggregator = true
+     *     }
+     * }
+     *
+     * // Feature module
+     * swagger {
+     *     pluginOptions {
+     *         moduleId = project.path
+     *         isAggregator = false // or omit - this is the default
+     *     }
+     * }
+     * ```
+     */
+    var isAggregator: Boolean = false
+
+    /**
+     * Optional list of contributor module paths for multi-module aggregation.
+     *
+     * Aggregators discover contributor partial specs automatically from the compile
+     * classpath, so this is normally not needed. Use it only to point at contributors
+     * that are NOT on the aggregator's compile classpath. Explicitly listed contributors
+     * take precedence over classpath discoveries of the same module id.
+     *
+     * **Example:**
+     * ```kotlin
+     * swagger {
+     *     pluginOptions {
+     *         moduleId = project.path
+     *         isAggregator = true
+     *         contributors = listOf(":feature-not-on-classpath")
+     *     }
+     * }
+     * ```
+     *
+     * For each contributor, the plugin looks for the partial spec at:
+     * `{contributorBuildDir}/processedResources/{sourceSetName}/META-INF/inspektor/openapi-partial.json`
+     */
+    var contributors: List<String> = emptyList()
 }
