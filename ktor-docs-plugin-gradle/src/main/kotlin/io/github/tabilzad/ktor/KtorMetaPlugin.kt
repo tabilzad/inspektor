@@ -7,6 +7,9 @@ import kotlinx.serialization.json.Json
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.PathSensitivity
@@ -312,7 +315,7 @@ class KtorMetaPlugin @Inject constructor(
                 // classpath serves classes-only variants for compile avoidance), so it is what
                 // the compiler must scan for embedded partial specs. Resolved lazily: this
                 // function runs inside the subplugin-options provider, i.e. at execution time.
-                val roots = kotlinCompilation.runtimeDependencyFiles?.files.orEmpty()
+                val roots = partialSpecRootsView(kotlinCompilation)?.files.orEmpty()
                 if (roots.isNotEmpty()) {
                     add(
                         InternalSubpluginOption(
@@ -323,6 +326,32 @@ class KtorMetaPlugin @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Resolvable view of the aggregator's runtime classpath, used both as the compile task's
+     * partial-spec input and as the roots the compiler scans.
+     *
+     * The runtime configuration cannot be resolved as a plain file collection on Android:
+     * AGP publishes several sub-variants per AAR (aar-metadata, art-profile, classes, java-res,
+     * ...) and an attribute-less resolution is ambiguous. Two lenient artifact views cover both
+     * worlds: `jar` selects plain JVM/library jars, and `android-java-res` selects the extracted
+     * java-resources of Android dependencies - which is where a contributor's embedded partial
+     * spec lives inside an AAR. Lenient views skip non-matching variants instead of failing.
+     */
+    private fun partialSpecRootsView(kotlinCompilation: KotlinCompilation<*>): FileCollection? {
+        val project = kotlinCompilation.target.project
+        val configurationName = kotlinCompilation.runtimeDependencyConfigurationName ?: return null
+        val runtime = project.configurations.findByName(configurationName) ?: return null
+
+        val artifactType = Attribute.of("artifactType", String::class.java)
+
+        fun viewOf(type: String): FileCollection = runtime.incoming.artifactView { view ->
+            view.lenient(true)
+            view.attributes.attribute(artifactType, type)
+        }.files
+
+        return viewOf(ArtifactTypeDefinition.JAR_TYPE) + viewOf("android-java-res")
     }
 
     /**
@@ -364,8 +393,8 @@ class KtorMetaPlugin @Inject constructor(
                         .withPropertyName("inspektorExplicitPartialSpecs")
                         .withPathSensitivity(PathSensitivity.NONE)
                 }
-                kotlinCompilation.runtimeDependencyFiles?.let { runtimeFiles ->
-                    task.inputs.files(runtimeFiles)
+                partialSpecRootsView(kotlinCompilation)?.let { runtimeRoots ->
+                    task.inputs.files(runtimeRoots)
                         .withPropertyName("inspektorPartialSpecRoots")
                         .withNormalizer(ClasspathNormalizer::class.java)
                 }

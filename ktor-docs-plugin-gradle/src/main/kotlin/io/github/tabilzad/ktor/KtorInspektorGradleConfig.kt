@@ -130,6 +130,11 @@ open class PluginOptions @Inject constructor(
      * }
      * ```
      */
+    // Pin the JVM accessor names: Kotlin strips the `is` prefix from the setter
+    // (setAggregator), which makes `isAggregator = true` unresolvable from Groovy DSL
+    // build scripts. With explicit names both Kotlin and Groovy scripts use `isAggregator`.
+    @get:JvmName("getIsAggregator")
+    @set:JvmName("setIsAggregator")
     var isAggregator: Boolean = false
 
     /**
