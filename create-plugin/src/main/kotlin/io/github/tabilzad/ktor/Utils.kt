@@ -351,6 +351,7 @@ internal fun CompilerConfiguration?.buildPluginConfiguration(): PluginConfigurat
     isAggregator = this?.get(SwaggerConfigurationKeys.ARG_IS_AGGREGATOR) ?: false,
     resourcesPath = this?.get(SwaggerConfigurationKeys.ARG_RESOURCES_PATH),
     partialSpecPaths = this?.get(SwaggerConfigurationKeys.ARG_PARTIAL_SPEC_PATHS) ?: emptyList(),
+    partialSpecRoots = this?.get(SwaggerConfigurationKeys.ARG_PARTIAL_SPEC_ROOTS) ?: emptyList(),
 )
 
 operator fun OutputStream.plusAssign(str: String) {

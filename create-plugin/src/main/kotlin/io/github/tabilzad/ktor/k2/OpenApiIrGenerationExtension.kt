@@ -139,14 +139,21 @@ internal class OpenApiIrGenerationExtension(
     }
 
     /**
-     * Loads contributor partial specs from explicitly configured paths first, then from
-     * `META-INF/inspektor/openapi-partial.json` entries discovered on the compile classpath
-     * (both class directories and JARs, so published dependencies contribute too). When the
-     * same module is found through both channels the explicitly configured path wins.
+     * Loads contributor partial specs, in precedence order:
+     * 1. explicitly configured file paths ([PluginConfiguration.partialSpecPaths]);
+     * 2. roots handed over by the build tool ([PluginConfiguration.partialSpecRoots]) — the
+     *    Gradle plugin passes the aggregator's runtime classpath here, because the *compile*
+     *    classpath serves project dependencies as classes-only variants (compile avoidance)
+     *    that do not carry resources, so embedded partials would be invisible on it;
+     * 3. the compiler's own classpath roots as a fallback for build tools that pass no roots.
+     * When the same module is found through several channels the earliest wins.
      */
     private fun loadPartialSpecs(): List<PartialOpenApiSpec> {
         val explicit = config.partialSpecPaths.mapNotNull { readPartialFile(File(it)) }
-        val discovered = discoverPartialSpecsOnClasspath()
+        val discovered = config.partialSpecRoots
+            .map(::File)
+            .ifEmpty { configuration.jvmClasspathRoots }
+            .mapNotNull(::readPartialFromRoot)
 
         val seenModules = mutableSetOf<String>()
         return (explicit + discovered)
@@ -163,14 +170,11 @@ internal class OpenApiIrGenerationExtension(
             }
     }
 
-    private fun discoverPartialSpecsOnClasspath(): List<PartialOpenApiSpec> =
-        configuration.jvmClasspathRoots.mapNotNull { root ->
-            when {
-                root.isDirectory -> readPartialFile(File(root, PartialSpecLocation.FULL_PATH))
-                root.isFile && root.extension.equals("jar", ignoreCase = true) -> readPartialFromJar(root)
-                else -> null
-            }
-        }
+    private fun readPartialFromRoot(root: File): PartialOpenApiSpec? = when {
+        root.isDirectory -> readPartialFile(File(root, PartialSpecLocation.FULL_PATH))
+        root.isFile && root.extension.equals("jar", ignoreCase = true) -> readPartialFromJar(root)
+        else -> null
+    }
 
     private fun readPartialFile(file: File): PartialOpenApiSpec? {
         if (!file.isFile) return null

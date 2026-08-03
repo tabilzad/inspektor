@@ -10,6 +10,7 @@ import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_IS_AGGREGATOR
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_KDOCS
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_MODULE_ID
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_PARTIAL_SPEC_PATHS
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_PARTIAL_SPEC_ROOTS
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_PATH
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_REQUEST_FEATURE
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_RESOURCES_PATH
@@ -58,6 +59,7 @@ object SwaggerConfigurationKeys {
     const val OPTION_IS_AGGREGATOR = "isAggregator"
     const val OPTION_RESOURCES_PATH = "resourcesPath"
     const val OPTION_PARTIAL_SPEC_PATHS = "partialSpecPaths"
+    const val OPTION_PARTIAL_SPEC_ROOTS = "partialSpecRoots"
 
     val ARG_ENABLED = CompilerConfigurationKey.create<Boolean>(OPTION_IS_ENABLED)
     val ARG_PATH = CompilerConfigurationKey.create<String>(OPTION_PATH)
@@ -76,6 +78,7 @@ object SwaggerConfigurationKeys {
     val ARG_IS_AGGREGATOR = CompilerConfigurationKey.create<Boolean>(OPTION_IS_AGGREGATOR)
     val ARG_RESOURCES_PATH = CompilerConfigurationKey.create<String>(OPTION_RESOURCES_PATH)
     val ARG_PARTIAL_SPEC_PATHS = CompilerConfigurationKey.create<List<String>>(OPTION_PARTIAL_SPEC_PATHS)
+    val ARG_PARTIAL_SPEC_ROOTS = CompilerConfigurationKey.create<List<String>>(OPTION_PARTIAL_SPEC_ROOTS)
 }
 
 @ExperimentalEncodingApi
@@ -178,6 +181,13 @@ class KtorDocsCommandLineProcessor : CommandLineProcessor {
             allowMultipleOccurrences = false,
             required = false
         )
+        val partialSpecRootsOption = CliOption(
+            SwaggerConfigurationKeys.OPTION_PARTIAL_SPEC_ROOTS,
+            "Partial spec roots",
+            "Classpath roots (jars or class dirs, pipe-separated) to scan for embedded partial specs",
+            allowMultipleOccurrences = false,
+            required = false
+        )
     }
 
     override val pluginId: String
@@ -199,7 +209,8 @@ class KtorDocsCommandLineProcessor : CommandLineProcessor {
             moduleIdOption,
             isAggregatorOption,
             resourcesPathOption,
-            partialSpecPathsOption
+            partialSpecPathsOption,
+            partialSpecRootsOption
         )
 
     @Suppress("CyclomaticComplexMethod")
@@ -250,6 +261,11 @@ class KtorDocsCommandLineProcessor : CommandLineProcessor {
 
             partialSpecPathsOption -> configuration.put(
                 ARG_PARTIAL_SPEC_PATHS,
+                value.split("||").filter { it.isNotBlank() }
+            )
+
+            partialSpecRootsOption -> configuration.put(
+                ARG_PARTIAL_SPEC_ROOTS,
                 value.split("||").filter { it.isNotBlank() }
             )
 

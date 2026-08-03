@@ -22,6 +22,8 @@ internal data class PluginConfiguration(
     val isAggregator: Boolean,
     val resourcesPath: String?,
     val partialSpecPaths: List<String>,
+    /** Classpath roots (jars or class dirs) the aggregator scans for embedded partial specs. */
+    val partialSpecRoots: List<String>,
 ) {
     /**
      * Whether this module should generate a partial spec for multi-module aggregation.
@@ -46,7 +48,8 @@ internal data class PluginConfiguration(
             moduleId: String? = null,
             isAggregator: Boolean = false,
             resourcesPath: String? = null,
-            partialSpecPaths: List<String> = emptyList()
+            partialSpecPaths: List<String> = emptyList(),
+            partialSpecRoots: List<String> = emptyList()
         ): PluginConfiguration {
             val defaultTitle = "Open API Specification"
             val defaultVersion = "1.0.0"
@@ -78,7 +81,8 @@ internal data class PluginConfiguration(
                 moduleId = moduleId,
                 isAggregator = isAggregator,
                 resourcesPath = resourcesPath,
-                partialSpecPaths = partialSpecPaths
+                partialSpecPaths = partialSpecPaths,
+                partialSpecRoots = partialSpecRoots
             )
         }
     }

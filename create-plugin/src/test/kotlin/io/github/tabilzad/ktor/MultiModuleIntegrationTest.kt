@@ -113,13 +113,37 @@ class MultiModuleIntegrationTest {
             source = TestUtils.loadMultiModuleSource("HealthAggregator"),
             outputFile = aggregatorOutputFile,
             contributorResourcesDirs = listOf(contributorResourcesDir),
-            viaClasspathDiscovery = true
+            discovery = Discovery.COMPILER_CLASSPATH
         )
 
         assertThat(aggregatorOutputFile).exists()
         val mergedSpec = objectMapper.readValue<OpenApiSpec>(aggregatorOutputFile.readText())
 
         // No partialSpecPaths were configured; the specs must come from classpath discovery
+        assertThat(mergedSpec.paths).containsKeys("/health", "/products", "/products/{id}")
+        assertThat(mergedSpec.paths["/products"]?.get("get")?.summary).isEqualTo("Get all products")
+    }
+
+    @Test
+    fun `aggregator should discover partial specs from roots passed by the build tool`() {
+        compileContributorModule(
+            moduleId = ":feature-products",
+            source = TestUtils.loadMultiModuleSource("ProductsContributor"),
+            resourcesDir = contributorResourcesDir
+        )
+
+        // Mirrors the Gradle plugin passing the runtime classpath as partialSpecRoots
+        compileAggregatorModule(
+            moduleId = ":server",
+            source = TestUtils.loadMultiModuleSource("HealthAggregator"),
+            outputFile = aggregatorOutputFile,
+            contributorResourcesDirs = listOf(contributorResourcesDir),
+            discovery = Discovery.ROOTS_OPTION
+        )
+
+        assertThat(aggregatorOutputFile).exists()
+        val mergedSpec = objectMapper.readValue<OpenApiSpec>(aggregatorOutputFile.readText())
+
         assertThat(mergedSpec.paths).containsKeys("/health", "/products", "/products/{id}")
         assertThat(mergedSpec.paths["/products"]?.get("get")?.summary).isEqualTo("Get all products")
     }
@@ -323,12 +347,24 @@ class MultiModuleIntegrationTest {
             .isEqualTo(KotlinCompilation.ExitCode.OK)
     }
 
+    /** How the aggregator learns about contributor partial specs in a given test. */
+    private enum class Discovery {
+        /** Explicit file paths via the partialSpecPaths option (the `contributors` escape hatch). */
+        EXPLICIT_PATHS,
+
+        /** Roots via the partialSpecRoots option — how the Gradle plugin passes the runtime classpath. */
+        ROOTS_OPTION,
+
+        /** No option at all: fallback scan of the compiler's own classpath roots. */
+        COMPILER_CLASSPATH
+    }
+
     private fun compileAggregatorModule(
         moduleId: String,
         source: String,
         outputFile: File,
         contributorResourcesDirs: List<File>,
-        viaClasspathDiscovery: Boolean = false
+        discovery: Discovery = Discovery.EXPLICIT_PATHS
     ) {
         val clp = KtorDocsCommandLineProcessor()
 
@@ -337,13 +373,29 @@ class MultiModuleIntegrationTest {
             File(dir, PartialSpecLocation.FULL_PATH).absolutePath
         }
 
+        val discoveryOption = when (discovery) {
+            Discovery.EXPLICIT_PATHS -> com.tschuchort.compiletesting.PluginOption(
+                clp.pluginId,
+                KtorDocsCommandLineProcessor.partialSpecPathsOption.optionName,
+                partialSpecPaths.joinToString("||")
+            )
+
+            Discovery.ROOTS_OPTION -> com.tschuchort.compiletesting.PluginOption(
+                clp.pluginId,
+                KtorDocsCommandLineProcessor.partialSpecRootsOption.optionName,
+                contributorResourcesDirs.joinToString("||") { it.absolutePath }
+            )
+
+            Discovery.COMPILER_CLASSPATH -> null
+        }
+
         val compilation = KotlinCompilation().apply {
             compilerPluginRegistrars = listOf(KtorMetaPluginRegistrar())
             commandLineProcessors = listOf(clp)
-            // In discovery mode the contributor resources dirs go on the compile classpath and
-            // the aggregator must find the partial specs there on its own.
+            // In compiler-classpath fallback mode the contributor resources dirs go on the
+            // compile classpath and the aggregator must find the partial specs there on its own.
             classpaths = testDependencies.map { classpathOf(it) } +
-                if (viaClasspathDiscovery) contributorResourcesDirs else emptyList()
+                if (discovery == Discovery.COMPILER_CLASSPATH) contributorResourcesDirs else emptyList()
             sources = listOf(
                 SourceFile.kotlin("RequestDataClasses.kt", loadRequestDataClasses()),
                 SourceFile.kotlin("AggregatorModule.kt", source)
@@ -361,15 +413,7 @@ class MultiModuleIntegrationTest {
                     KtorDocsCommandLineProcessor.isAggregatorOption.optionName,
                     "true"
                 ),
-                if (viaClasspathDiscovery) {
-                    null
-                } else {
-                    com.tschuchort.compiletesting.PluginOption(
-                        clp.pluginId,
-                        KtorDocsCommandLineProcessor.partialSpecPathsOption.optionName,
-                        partialSpecPaths.joinToString("||")
-                    )
-                }
+                discoveryOption
             )
         }
 

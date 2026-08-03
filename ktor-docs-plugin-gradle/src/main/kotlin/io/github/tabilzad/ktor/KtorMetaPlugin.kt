@@ -7,7 +7,9 @@ import kotlinx.serialization.json.Json
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.PathSensitivity
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
@@ -187,12 +189,34 @@ class KtorMetaPlugin @Inject constructor(
         val moduleId = swaggerExtension.pluginOptions.moduleId
         val isAggregator = swaggerExtension.pluginOptions.isAggregator
 
-        // Resources path for partial spec output (only for contributors)
-        val resourcesPath = if (moduleId != null && !isAggregator) {
-            kotlinCompilation.output.resourcesDir.absolutePath
+        // Contributors write the partial spec into a compile-task-OWNED output directory
+        // (declared below), never directly into processResources' output: a declared output is
+        // rewritten on re-runs, restored from the build cache, and keeps other tasks' up-to-date
+        // checks honest. It is registered as a resources srcDir so it still flows into
+        // processResources -> jar -> the runtime variants aggregators consume.
+        val partialSpecOutputDir = if (moduleId != null && !isAggregator) {
+            File(project.layout.buildDirectory.get().asFile, "openapi/partial")
         } else {
             null
         }
+
+        val explicitPartialSpecPaths = if (moduleId != null && isAggregator) {
+            resolveContributorPartialSpecPaths(
+                project,
+                swaggerExtension.pluginOptions.contributors,
+                kotlinCompilation
+            )
+        } else {
+            emptyList()
+        }
+
+        configureMultiModuleTaskWiring(
+            kotlinCompilation,
+            moduleId,
+            isAggregator,
+            partialSpecOutputDir,
+            explicitPartialSpecPaths
+        )
 
         val subpluginOptions = mutableListOf(
             SubpluginOption(
@@ -241,50 +265,109 @@ class KtorMetaPlugin @Inject constructor(
             )
         )
 
-        subpluginOptions.addAll(
-            multiModuleOptions(project, swaggerExtension, kotlinCompilation, moduleId, isAggregator, resourcesPath)
-        )
-
-        return project.provider { subpluginOptions }
+        return project.provider {
+            subpluginOptions + multiModuleOptions(
+                kotlinCompilation,
+                moduleId,
+                isAggregator,
+                partialSpecOutputDir,
+                explicitPartialSpecPaths
+            )
+        }
     }
 
     /**
-     * Builds the multi-module subplugin options when a moduleId is configured: the module's
-     * identity/role, the resources path for contributors, and — for aggregators — the resolved
-     * partial spec paths of the configured contributor modules.
+     * Builds the multi-module subplugin options. Path-typed options are [InternalSubpluginOption]s
+     * so machine-specific absolute paths never enter the compile task's input hash and remote
+     * build cache entries stay relocatable; the files' CONTENTS are tracked separately as proper
+     * task inputs/outputs in [configureMultiModuleTaskWiring].
      */
     @Suppress("LongParameterList")
     private fun multiModuleOptions(
-        project: Project,
-        swaggerExtension: KtorInspectorGradleConfig,
         kotlinCompilation: KotlinCompilation<*>,
         moduleId: String?,
         isAggregator: Boolean,
-        resourcesPath: String?
+        partialSpecOutputDir: File?,
+        explicitPartialSpecPaths: List<String>
     ): List<SubpluginOption> {
         if (moduleId == null) return emptyList()
 
         return buildList {
             add(SubpluginOption(key = "moduleId", value = moduleId))
             add(SubpluginOption(key = "isAggregator", value = isAggregator.toString()))
-            if (resourcesPath != null) {
-                add(SubpluginOption(key = "resourcesPath", value = resourcesPath))
+            if (partialSpecOutputDir != null) {
+                add(InternalSubpluginOption(key = "resourcesPath", value = partialSpecOutputDir.absolutePath))
             }
-
-            // For aggregator modules, resolve contributor partial spec paths
-            if (isAggregator && swaggerExtension.pluginOptions.contributors.isNotEmpty()) {
-                val partialSpecPaths = resolveContributorPartialSpecPaths(
-                    project,
-                    swaggerExtension.pluginOptions.contributors,
-                    kotlinCompilation
-                )
-                if (partialSpecPaths.isNotEmpty()) {
+            if (isAggregator) {
+                if (explicitPartialSpecPaths.isNotEmpty()) {
                     add(
-                        SubpluginOption(
+                        InternalSubpluginOption(
                             key = "partialSpecPaths",
-                            value = partialSpecPaths.joinToString("||")
+                            value = explicitPartialSpecPaths.joinToString("||")
                         )
                     )
+                }
+
+                // The RUNTIME classpath carries project-dependency resources (the compile
+                // classpath serves classes-only variants for compile avoidance), so it is what
+                // the compiler must scan for embedded partial specs. Resolved lazily: this
+                // function runs inside the subplugin-options provider, i.e. at execution time.
+                val roots = kotlinCompilation.runtimeDependencyFiles?.files.orEmpty()
+                if (roots.isNotEmpty()) {
+                    add(
+                        InternalSubpluginOption(
+                            key = "partialSpecRoots",
+                            value = roots.joinToString("||") { it.absolutePath }
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Wires multi-module artifacts into Gradle's incremental build machinery:
+     *
+     * - **Contributor**: the partial-spec directory is a declared task output — correct
+     *   up-to-date behavior and build-cache restoration — and a resources srcDir (built by the
+     *   compile task) so it is packaged into the JAR/runtime variants.
+     * - **Aggregator**: partial specs become declared task inputs. Explicit contributor files are
+     *   tracked content-only, and the runtime classpath is tracked with runtime-classpath
+     *   normalization — which, unlike the ABI-only compile-classpath normalization, sees resource
+     *   changes — so a contributor doc-only change re-triggers aggregation while ABI-irrelevant
+     *   rebuilds without content changes stay up-to-date.
+     */
+    private fun configureMultiModuleTaskWiring(
+        kotlinCompilation: KotlinCompilation<*>,
+        moduleId: String?,
+        isAggregator: Boolean,
+        partialSpecOutputDir: File?,
+        explicitPartialSpecPaths: List<String>
+    ) {
+        if (moduleId == null) return
+        val project = kotlinCompilation.target.project
+
+        if (partialSpecOutputDir != null) {
+            kotlinCompilation.defaultSourceSet.resources.srcDir(
+                project.files(partialSpecOutputDir).builtBy(kotlinCompilation.compileTaskProvider)
+            )
+        }
+
+        kotlinCompilation.compileTaskProvider.configure { task ->
+            if (partialSpecOutputDir != null) {
+                task.outputs.dir(partialSpecOutputDir)
+                    .withPropertyName("inspektorPartialSpec")
+            }
+            if (isAggregator) {
+                if (explicitPartialSpecPaths.isNotEmpty()) {
+                    task.inputs.files(explicitPartialSpecPaths)
+                        .withPropertyName("inspektorExplicitPartialSpecs")
+                        .withPathSensitivity(PathSensitivity.NONE)
+                }
+                kotlinCompilation.runtimeDependencyFiles?.let { runtimeFiles ->
+                    task.inputs.files(runtimeFiles)
+                        .withPropertyName("inspektorPartialSpecRoots")
+                        .withNormalizer(ClasspathNormalizer::class.java)
                 }
             }
         }
