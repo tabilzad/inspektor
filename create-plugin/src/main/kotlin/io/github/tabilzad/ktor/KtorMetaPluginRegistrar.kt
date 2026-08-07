@@ -3,6 +3,7 @@
 package io.github.tabilzad.ktor
 
 import io.github.tabilzad.ktor.k2.OpenApiIrGenerationExtension
+import io.github.tabilzad.ktor.k2.SchemaDocsCollectingChecker
 import io.github.tabilzad.ktor.k2.SwaggerDeclarationChecker
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
@@ -10,6 +11,7 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.DeclarationCheckers
+import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirRegularClassChecker
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirSimpleFunctionChecker
 import org.jetbrains.kotlin.fir.analysis.extensions.FirAdditionalCheckersExtension
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
@@ -41,6 +43,10 @@ class FirCheckers(session: FirSession, configuration: CompilerConfiguration) : F
         // these could probably be ExpressionCheckers instead of Declaration
         override val simpleFunctionCheckers: Set<FirSimpleFunctionChecker> =
             setOf(SwaggerDeclarationChecker(session, configuration))
+
+        // Contributor-mode KDoc sidecar collection; inert outside contributor mode.
+        override val regularClassCheckers: Set<FirRegularClassChecker> =
+            setOf(SchemaDocsCollectingChecker(session, configuration))
     }
 
     companion object {

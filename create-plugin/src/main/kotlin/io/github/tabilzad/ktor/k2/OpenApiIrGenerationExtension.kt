@@ -6,6 +6,7 @@ import io.github.tabilzad.ktor.model.PartialSpecLocation
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import io.github.tabilzad.ktor.output.PartialOpenApiSpec
 import io.github.tabilzad.ktor.output.PartialSpecs
+import io.github.tabilzad.ktor.output.SchemaDocs
 import io.github.tabilzad.ktor.output.convertInternalToOpenSpec
 import io.github.tabilzad.ktor.writeFreshTo
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -96,19 +97,25 @@ internal class OpenApiIrGenerationExtension(
             null
         }
 
+        // KDoc sidecar collected module-wide in contributor mode (empty otherwise).
+        val schemaDocs = OpenApiSpecCollector.consumeSchemaDocs(configuration, config.filePath)
+
         when {
-            // Contributor module: write partial spec to resources
+            // Contributor module: write partial spec to resources. A module with documented
+            // classes but no routes still contributes its KDoc sidecar.
             config.isContributor -> {
                 val moduleId = config.moduleId
-                if (localSpec != null && moduleId != null) {
-                    writePartialSpec(localSpec, moduleId)
+                if (moduleId != null && (localSpec != null || schemaDocs.isNotEmpty())) {
+                    writePartialSpec(localSpec ?: emptyOpenApiSpec(), moduleId, schemaDocs)
                 }
             }
 
-            // Aggregator module: merge partial specs from dependencies with local routes
+            // Aggregator module: merge partial specs from dependencies with local routes,
+            // then fill schema descriptions that only exist as KDocs in contributor sources.
             config.isAggregator -> {
                 val partialSpecs = loadPartialSpecs()
                 val mergedSpec = PartialSpecs.merge(partialSpecs, localSpec, ::warn)
+                PartialSpecs.enrichSchemaDescriptions(mergedSpec, partialSpecs.combinedSchemaDocs())
                 mergedSpec.writeFreshTo(config)
             }
 
@@ -129,13 +136,27 @@ internal class OpenApiIrGenerationExtension(
      * Writes a partial OpenAPI spec to the resources directory for multi-module aggregation.
      * The partial spec will be embedded in the JAR and discovered by aggregator modules.
      */
-    private fun writePartialSpec(spec: OpenApiSpec, moduleId: String) {
+    private fun writePartialSpec(spec: OpenApiSpec, moduleId: String, schemaDocs: Map<String, SchemaDocs>) {
         val resourcesPath = config.resourcesPath ?: return
 
         val outputDir = File(resourcesPath, PartialSpecLocation.RESOURCE_PATH)
         outputDir.mkdirs()
 
-        File(outputDir, PartialSpecLocation.FILE_NAME).writeText(PartialSpecs.encode(spec, moduleId))
+        File(outputDir, PartialSpecLocation.FILE_NAME)
+            .writeText(PartialSpecs.encode(spec, moduleId, schemaDocs))
+    }
+
+    private fun emptyOpenApiSpec() = OpenApiSpec(
+        info = null,
+        paths = emptyMap(),
+        components = OpenApiSpec.OpenApiComponents(schemas = emptyMap())
+    )
+
+    /** First contributor wins per class, mirroring the schema merge precedence. */
+    private fun List<PartialOpenApiSpec>.combinedSchemaDocs(): Map<String, SchemaDocs> = buildMap {
+        this@combinedSchemaDocs.forEach { partial ->
+            partial.schemaDocs.forEach { (fqName, docs) -> putIfAbsent(fqName, docs) }
+        }
     }
 
     /**

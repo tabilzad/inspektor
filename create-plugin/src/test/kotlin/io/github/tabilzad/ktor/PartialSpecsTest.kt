@@ -6,6 +6,7 @@ import io.github.tabilzad.ktor.model.SecurityScheme
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import io.github.tabilzad.ktor.output.PartialOpenApiSpec
 import io.github.tabilzad.ktor.output.PartialSpecs
+import io.github.tabilzad.ktor.output.SchemaDocs
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -103,6 +104,70 @@ class PartialSpecsTest {
 
         assertThat(decoded.version).isEqualTo(99)
         assertThat(decoded.moduleId).isEqualTo(":m")
+    }
+
+    // ==================== KDoc sidecar ====================
+
+    @Test
+    fun `envelope round trip preserves the schema docs sidecar`() {
+        val docs = mapOf(
+            "com.example.User" to SchemaDocs(
+                classDoc = "A user.",
+                propertyDocs = mapOf("id" to "The identifier.")
+            )
+        )
+
+        val decoded = PartialSpecs.decode(PartialSpecs.encode(specWith(), ":m", docs))
+
+        assertThat(decoded.schemaDocs).isEqualTo(docs)
+    }
+
+    @Test
+    fun `enrichment fills missing class and property descriptions`() {
+        val schema = typeDescriptor(fqName = "com.example.User")
+        schema.properties = mutableMapOf(
+            "id" to typeDescriptor(type = "string"),
+            "status" to typeDescriptor(type = "string", fqName = "com.example.Status")
+        )
+        val spec = specWith(schemas = mapOf("com.example.User" to schema))
+
+        PartialSpecs.enrichSchemaDescriptions(
+            spec,
+            mapOf(
+                "com.example.User" to SchemaDocs(
+                    classDoc = "A user.",
+                    propertyDocs = mapOf("id" to "The identifier.")
+                ),
+                // Inline descriptor (e.g. enum) picked up through its own fqName.
+                "com.example.Status" to SchemaDocs(classDoc = "Lifecycle status values.")
+            )
+        )
+
+        assertThat(schema.description).isEqualTo("A user.")
+        assertThat(schema.properties?.get("id")?.description).isEqualTo("The identifier.")
+        assertThat(schema.properties?.get("status")?.description).isEqualTo("Lifecycle status values.")
+    }
+
+    @Test
+    fun `enrichment never overrides existing descriptions`() {
+        val schema = typeDescriptor(fqName = "com.example.User", description = "From annotation.")
+        schema.properties = mutableMapOf(
+            "id" to typeDescriptor(type = "string", description = "Inline doc.")
+        )
+        val spec = specWith(schemas = mapOf("com.example.User" to schema))
+
+        PartialSpecs.enrichSchemaDescriptions(
+            spec,
+            mapOf(
+                "com.example.User" to SchemaDocs(
+                    classDoc = "Sidecar doc.",
+                    propertyDocs = mapOf("id" to "Sidecar field doc.")
+                )
+            )
+        )
+
+        assertThat(schema.description).isEqualTo("From annotation.")
+        assertThat(schema.properties?.get("id")?.description).isEqualTo("Inline doc.")
     }
 
     // ==================== Merge semantics ====================

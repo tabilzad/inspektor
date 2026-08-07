@@ -18,13 +18,31 @@ import kotlinx.serialization.json.Json
 data class PartialOpenApiSpec(
     val version: Int = CURRENT_VERSION,
     val moduleId: String,
-    val spec: OpenApiSpec
+    val spec: OpenApiSpec,
+    /**
+     * KDoc sidecar: class/property documentation for classes defined in the contributor,
+     * keyed by fully qualified class name. Lets the aggregator enrich schemas it derived
+     * from this module's compiled binaries, where KDocs no longer exist. Optional with a
+     * default, so the envelope format stays compatible in both directions.
+     */
+    val schemaDocs: Map<String, SchemaDocs> = emptyMap()
 ) {
     companion object {
         /** Bump when the IR format changes incompatibly. */
         const val CURRENT_VERSION = 1
     }
 }
+
+/**
+ * Class and property documentation extracted from a contributor's KDocs. Property docs are
+ * keyed by the SERIALIZED property name (honoring @SerialName / moshi @Json) so they match
+ * schema property keys directly at enrichment time.
+ */
+@Serializable
+data class SchemaDocs(
+    val classDoc: String? = null,
+    val propertyDocs: Map<String, String> = emptyMap()
+)
 
 /**
  * Serialization and merge logic for multi-module partial specs.
@@ -40,8 +58,14 @@ internal object PartialSpecs {
         prettyPrint = true
     }
 
-    fun encode(spec: OpenApiSpec, moduleId: String): String =
-        json.encodeToString(PartialOpenApiSpec.serializer(), PartialOpenApiSpec(moduleId = moduleId, spec = spec))
+    fun encode(
+        spec: OpenApiSpec,
+        moduleId: String,
+        schemaDocs: Map<String, SchemaDocs> = emptyMap()
+    ): String = json.encodeToString(
+        PartialOpenApiSpec.serializer(),
+        PartialOpenApiSpec(moduleId = moduleId, spec = spec, schemaDocs = schemaDocs)
+    )
 
     fun decode(text: String): PartialOpenApiSpec =
         json.decodeFromString(PartialOpenApiSpec.serializer(), text)
@@ -76,6 +100,48 @@ internal object PartialSpecs {
             ),
             security = localSpec?.security
         )
+    }
+
+    /**
+     * Fills in missing class/property descriptions on [spec]'s schemas from contributor KDoc
+     * sidecars. Enrichment never overrides an existing description — inline KDocs, annotations
+     * (@KtorSchema/@KtorField), and locally-derived docs always win — so it is safe to apply
+     * unconditionally after merging. Inline descriptors (enum fields, array items, nested
+     * objects) are matched through the fqName each descriptor carries in the IR.
+     */
+    fun enrichSchemaDescriptions(spec: OpenApiSpec, docs: Map<String, SchemaDocs>) {
+        if (docs.isEmpty()) return
+        val visited = java.util.Collections.newSetFromMap(
+            java.util.IdentityHashMap<OpenApiSpec.TypeDescriptor, Boolean>()
+        )
+        spec.components.schemas.forEach { (key, schema) ->
+            enrichDescriptor(schema, docs[schema.fqName ?: key], docs, visited)
+        }
+    }
+
+    private fun enrichDescriptor(
+        descriptor: OpenApiSpec.TypeDescriptor,
+        ownDocs: SchemaDocs?,
+        allDocs: Map<String, SchemaDocs>,
+        visited: MutableSet<OpenApiSpec.TypeDescriptor>
+    ) {
+        if (!visited.add(descriptor)) return
+
+        val resolvedOwn = ownDocs ?: descriptor.fqName?.let(allDocs::get)
+        if (descriptor.description == null) {
+            descriptor.description = resolvedOwn?.classDoc
+        }
+
+        descriptor.properties?.forEach { (name, child) ->
+            if (child.description == null) {
+                child.description = resolvedOwn?.propertyDocs?.get(name)
+                    ?: child.fqName?.let(allDocs::get)?.classDoc
+            }
+            enrichDescriptor(child, child.fqName?.let(allDocs::get), allDocs, visited)
+        }
+        descriptor.items?.let { enrichDescriptor(it, it.fqName?.let(allDocs::get), allDocs, visited) }
+        descriptor.additionalProperties?.let { enrichDescriptor(it, it.fqName?.let(allDocs::get), allDocs, visited) }
+        descriptor.oneOf?.forEach { enrichDescriptor(it, it.fqName?.let(allDocs::get), allDocs, visited) }
     }
 
     private class Merger(private val report: (String) -> Unit) {

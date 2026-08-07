@@ -2,7 +2,9 @@ package io.github.tabilzad.ktor
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.tschuchort.compiletesting.JvmCompilationResult
 import com.tschuchort.compiletesting.KotlinCompilation
+import com.tschuchort.compiletesting.addPreviousResultToClasspath
 import com.tschuchort.compiletesting.SourceFile
 import io.github.tabilzad.ktor.model.PartialSpecLocation
 import io.github.tabilzad.ktor.output.PartialOpenApiSpec
@@ -146,6 +148,46 @@ class MultiModuleIntegrationTest {
 
         assertThat(mergedSpec.paths).containsKeys("/health", "/products", "/products/{id}")
         assertThat(mergedSpec.paths["/products"]?.get("get")?.summary).isEqualTo("Get all products")
+    }
+
+    @Test
+    fun `docs-only contributor enriches aggregator schemas through the kdoc sidecar`() {
+        // A contributor that defines documented data classes but NO routes still emits a
+        // partial carrying its KDoc sidecar.
+        val contributorResult = compileContributorModule(
+            moduleId = ":docs-only",
+            source = TestUtils.loadMultiModuleSource("DocsOnlyContributor"),
+            resourcesDir = contributorResourcesDir
+        )
+
+        val partialFile = File(contributorResourcesDir, PartialSpecLocation.FULL_PATH)
+        assertThat(partialFile).exists()
+        val partial = PartialSpecs.decode(partialFile.readText())
+        assertThat(partial.spec.paths).isEmpty()
+        assertThat(partial.schemaDocs).containsKey("com.example.docsonly.ExternalAuditRecord")
+
+        // The aggregator receives the class from the contributor's COMPILED output, where
+        // KDocs no longer exist — descriptions must arrive through the sidecar.
+        compileAggregatorModule(
+            moduleId = ":server",
+            source = TestUtils.loadMultiModuleSource("DocsConsumerAggregator"),
+            outputFile = aggregatorOutputFile,
+            contributorResourcesDirs = listOf(contributorResourcesDir),
+            previousResults = listOf(contributorResult)
+        )
+
+        val mergedSpec = objectMapper.readValue<OpenApiSpec>(aggregatorOutputFile.readText())
+        val schema = mergedSpec.components.schemas["com.example.docsonly.ExternalAuditRecord"]
+
+        assertThat(schema?.description).isEqualTo("External audit record shared across services.")
+        assertThat(schema?.properties?.get("id")?.description)
+            .isEqualTo("Stable identifier of the record.")
+        assertThat(schema?.properties?.get("reason")?.description)
+            .isEqualTo("Human readable reason for the audit event, as entered by the operator.")
+        assertThat(schema?.properties?.get("actor")?.description)
+            .isEqualTo("Identity of the actor who triggered the event.")
+        assertThat(schema?.properties?.get("severity")?.description)
+            .isEqualTo("Severity classification of the event.")
     }
 
     @Test
@@ -310,7 +352,7 @@ class MultiModuleIntegrationTest {
         moduleId: String,
         source: String,
         resourcesDir: File
-    ) {
+    ): JvmCompilationResult {
         val clp = KtorDocsCommandLineProcessor()
         val compilation = KotlinCompilation().apply {
             compilerPluginRegistrars = listOf(KtorMetaPluginRegistrar())
@@ -345,6 +387,7 @@ class MultiModuleIntegrationTest {
         assertThat(result.exitCode)
             .withFailMessage { "Contributor compilation failed:\n${result.messages}" }
             .isEqualTo(KotlinCompilation.ExitCode.OK)
+        return result
     }
 
     /** How the aggregator learns about contributor partial specs in a given test. */
@@ -359,12 +402,14 @@ class MultiModuleIntegrationTest {
         COMPILER_CLASSPATH
     }
 
+    @Suppress("LongParameterList")
     private fun compileAggregatorModule(
         moduleId: String,
         source: String,
         outputFile: File,
         contributorResourcesDirs: List<File>,
-        discovery: Discovery = Discovery.EXPLICIT_PATHS
+        discovery: Discovery = Discovery.EXPLICIT_PATHS,
+        previousResults: List<JvmCompilationResult> = emptyList()
     ) {
         val clp = KtorDocsCommandLineProcessor()
 
@@ -416,6 +461,7 @@ class MultiModuleIntegrationTest {
                 discoveryOption
             )
         }
+        previousResults.forEach { compilation.addPreviousResultToClasspath(it) }
 
         val result = compilation.compile()
         assertThat(result.exitCode)

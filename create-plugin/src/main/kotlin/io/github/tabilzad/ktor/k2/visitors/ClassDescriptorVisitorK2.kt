@@ -247,7 +247,10 @@ internal class ClassDescriptorVisitorK2(
 
     @OptIn(SymbolInternals::class)
     private fun ConeKotlinType.toBaseType(fqClassName: String?): TypeDescriptor {
+        // @property/@param tags are field documentation, not class documentation: only the
+        // text before the first tag describes the class itself.
         val kdocs = toRegularClassSymbol(session)?.fir?.getKDocComments(config)
+            ?.let { parseKDoc(it).text }
         val typeDescription = findDocsDescriptionOnType(session)
         return TypeDescriptor(
             type = "object",
@@ -292,7 +295,9 @@ internal class ClassDescriptorVisitorK2(
         typeDescriptor: TypeDescriptor?,
         propertyDescription: KtorDescriptionBag?
     ) {
-        val kdoc = fir.getKDocComments(config)
+        // Inline property KDoc wins; otherwise fall back to an @property/@param tag on the
+        // owning class KDoc (the common way data classes are documented).
+        val kdoc = fir.getKDocComments(config) ?: fir.propertyTagDoc()
         val docsDescription = propertyDescription.let { it?.summary ?: it?.description }
         val propertyName = fir.findName()
         val spec = typeDescriptor ?: TypeDescriptor(type = "object")
@@ -307,6 +312,10 @@ internal class ClassDescriptorVisitorK2(
 
         resolvePropertyRequirement(propertyDescription?.isRequired, propertyName, fir)
     }
+
+    private fun FirProperty.propertyTagDoc(): String? = getContainingClass()
+        ?.getKDocComments(config)
+        ?.let { parseKDoc(it).propertyDocs[name.asString()] }
 
     private fun TypeDescriptor.resolvePropertyRequirement(
         isRequiredFromExplicitDesc: Boolean?,
