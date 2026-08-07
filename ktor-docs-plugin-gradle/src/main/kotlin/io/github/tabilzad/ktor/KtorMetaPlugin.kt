@@ -1,13 +1,23 @@
 package io.github.tabilzad.ktor
 
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
+import com.android.build.api.variant.LibraryAndroidComponentsExtension
+import com.android.build.api.variant.Variant
 import com.vdurmont.semver4j.Semver
 import io.github.tabilzad.ktor.model.ConfigInput
+import io.github.tabilzad.ktor.model.PartialSpecLocation
 import kotlinx.serialization.json.Json
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Provider
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.file.FileCollection
+import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.PathSensitivity
 import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
 import org.jetbrains.kotlin.tooling.core.toKotlinVersion
@@ -17,6 +27,8 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 const val PLUGIN_ID = "io.github.tabilzad.inspektor"
+
+internal const val PARTIAL_SPEC_DIR = "openapi/partial"
 
 @Suppress("MagicNumber")
 private val COMPATIBLE_VERSIONS = setOf(KotlinVersion(2, 4, 0))
@@ -49,6 +61,55 @@ class KtorMetaPlugin @Inject constructor(
             "swagger",
             KtorInspectorGradleConfig::class.java,
             objects
+        )
+        configureAndroidContributorResources(target)
+    }
+
+    /**
+     * Android counterpart of the JVM resources-srcDir wiring for contributor modules.
+     *
+     * AGP's packaging pipeline ignores Kotlin source-set `resources`, so on Android the
+     * partial spec must be registered through the variant API instead: a small staging task
+     * syncs the compile-task-produced partial, and `addGeneratedSourceDirectory` merges it
+     * into the variant's java resources (and therefore the AAR/APK) with proper task
+     * dependencies. Registered from apply() because onVariants callbacks cannot be added
+     * once AGP has computed its variants; the swagger options are read lazily inside the
+     * callback, after the consumer's build script has configured them.
+     */
+    private fun configureAndroidContributorResources(project: Project) {
+        project.plugins.withId("com.android.library") {
+            project.extensions.getByType(LibraryAndroidComponentsExtension::class.java)
+                .onVariants { variant -> wireContributorVariant(project, variant) }
+        }
+        project.plugins.withId("com.android.application") {
+            project.extensions.getByType(ApplicationAndroidComponentsExtension::class.java)
+                .onVariants { variant -> wireContributorVariant(project, variant) }
+        }
+    }
+
+    private fun wireContributorVariant(project: Project, variant: Variant) {
+        val options = project.extensions.getByType(KtorInspectorGradleConfig::class.java).pluginOptions
+        if (options.moduleId == null || options.isAggregator) return
+
+        val variantName = variant.name
+        val capitalized = variantName.replaceFirstChar { it.uppercase() }
+        val partialDir = project.layout.buildDirectory.dir("$PARTIAL_SPEC_DIR/$variantName")
+
+        val stagingTask = project.tasks.register(
+            "inspektorPartialSpec${capitalized}Resources",
+            PartialSpecResourcesTask::class.java
+        ) { task ->
+            task.description = "Stages the inspektor partial OpenAPI spec for $variantName java resources"
+            // builtBy the compile task by name: resolved lazily, so registration order
+            // between AGP variants and KGP task creation does not matter.
+            task.partialSpecDir.from(
+                project.files(partialDir).builtBy("compile${capitalized}Kotlin")
+            )
+        }
+
+        variant.sources.resources?.addGeneratedSourceDirectory(
+            stagingTask,
+            PartialSpecResourcesTask::outputDir
         )
     }
 
@@ -115,7 +176,7 @@ class KtorMetaPlugin @Inject constructor(
         val regenerationMode = swaggerExtension.pluginOptions.regenerationMode.lowercase()
         require(regenerationMode in listOf("strict", "safe", "fast")) {
             "Invalid regenerationMode '${swaggerExtension.pluginOptions.regenerationMode}'. " +
-                "Must be one of: strict, safe, fast"
+                    "Must be one of: strict, safe, fast"
         }
 
         // Configure Gradle task inputs/outputs based on regeneration mode
@@ -182,7 +243,43 @@ class KtorMetaPlugin @Inject constructor(
             }
         }
 
-        val subpluginOptions = listOf(
+        // Determine multi-module configuration
+        val moduleId = swaggerExtension.pluginOptions.moduleId
+        val isAggregator = swaggerExtension.pluginOptions.isAggregator
+
+        // Contributors write the partial spec into a compile-task-OWNED output directory
+        // (declared below), never directly into processResources' output: a declared output is
+        // rewritten on re-runs, restored from the build cache, and keeps other tasks' up-to-date
+        // checks honest. It is registered as a resources srcDir so it still flows into
+        // processResources -> jar -> the runtime variants aggregators consume.
+        val partialSpecOutputDir = if (moduleId != null && !isAggregator) {
+            File(
+                project.layout.buildDirectory.get().asFile,
+                "$PARTIAL_SPEC_DIR/${kotlinCompilation.compilationName}"
+            )
+        } else {
+            null
+        }
+
+        val explicitPartialSpecPaths = if (moduleId != null && isAggregator) {
+            resolveContributorPartialSpecPaths(
+                project,
+                swaggerExtension.pluginOptions.contributors,
+                kotlinCompilation
+            )
+        } else {
+            emptyList()
+        }
+
+        configureMultiModuleTaskWiring(
+            kotlinCompilation,
+            moduleId,
+            isAggregator,
+            partialSpecOutputDir,
+            explicitPartialSpecPaths
+        )
+
+        val subpluginOptions = mutableListOf(
             SubpluginOption(
                 key = "enabled",
                 value = swaggerExtension.pluginOptions.enabled.toString()
@@ -228,7 +325,192 @@ class KtorMetaPlugin @Inject constructor(
                 value = Base64.encode(initialConfigJson.toByteArray())
             )
         )
-        return project.provider { subpluginOptions }
+
+        return project.provider {
+            subpluginOptions + multiModuleOptions(
+                kotlinCompilation,
+                moduleId,
+                isAggregator,
+                partialSpecOutputDir,
+                explicitPartialSpecPaths
+            )
+        }
+    }
+
+    /**
+     * Builds the multi-module subplugin options. Path-typed options are [InternalSubpluginOption]s
+     * so machine-specific absolute paths never enter the compile task's input hash and remote
+     * build cache entries stay relocatable; the files' CONTENTS are tracked separately as proper
+     * task inputs/outputs in [configureMultiModuleTaskWiring].
+     */
+    @Suppress("LongParameterList")
+    private fun multiModuleOptions(
+        kotlinCompilation: KotlinCompilation<*>,
+        moduleId: String?,
+        isAggregator: Boolean,
+        partialSpecOutputDir: File?,
+        explicitPartialSpecPaths: List<String>
+    ): List<SubpluginOption> {
+        if (moduleId == null) return emptyList()
+
+        return buildList {
+            add(SubpluginOption(key = "moduleId", value = moduleId))
+            add(SubpluginOption(key = "isAggregator", value = isAggregator.toString()))
+            if (partialSpecOutputDir != null) {
+                add(InternalSubpluginOption(key = "resourcesPath", value = partialSpecOutputDir.absolutePath))
+            }
+            if (isAggregator) {
+                if (explicitPartialSpecPaths.isNotEmpty()) {
+                    add(
+                        InternalSubpluginOption(
+                            key = "partialSpecPaths",
+                            value = explicitPartialSpecPaths.joinToString("||")
+                        )
+                    )
+                }
+
+                // The RUNTIME classpath carries project-dependency resources (the compile
+                // classpath serves classes-only variants for compile avoidance), so it is what
+                // the compiler must scan for embedded partial specs. Resolved lazily: this
+                // function runs inside the subplugin-options provider, i.e. at execution time.
+                val roots = partialSpecRootsView(kotlinCompilation)?.files.orEmpty()
+                if (roots.isNotEmpty()) {
+                    add(
+                        InternalSubpluginOption(
+                            key = "partialSpecRoots",
+                            value = roots.joinToString("||") { it.absolutePath }
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Resolvable view of the aggregator's runtime classpath, used both as the compile task's
+     * partial-spec input and as the roots the compiler scans.
+     *
+     * The runtime configuration cannot be resolved as a plain file collection on Android:
+     * AGP publishes several sub-variants per AAR (aar-metadata, art-profile, classes, java-res,
+     * ...) and an attribute-less resolution is ambiguous. Two lenient artifact views cover both
+     * worlds: `jar` selects plain JVM/library jars, and `android-java-res` selects the extracted
+     * java-resources of Android dependencies - which is where a contributor's embedded partial
+     * spec lives inside an AAR. Lenient views skip non-matching variants instead of failing.
+     */
+    private fun partialSpecRootsView(kotlinCompilation: KotlinCompilation<*>): FileCollection? {
+        val project = kotlinCompilation.target.project
+        val configurationName = kotlinCompilation.runtimeDependencyConfigurationName ?: return null
+        val runtime = project.configurations.findByName(configurationName) ?: return null
+
+        val artifactType = Attribute.of("artifactType", String::class.java)
+
+        fun viewOf(type: String): FileCollection = runtime.incoming.artifactView { view ->
+            view.lenient(true)
+            view.attributes.attribute(artifactType, type)
+        }.files
+
+        return viewOf(ArtifactTypeDefinition.JAR_TYPE) + viewOf("android-java-res")
+    }
+
+    /**
+     * Wires multi-module artifacts into Gradle's incremental build machinery:
+     *
+     * - **Contributor**: the partial-spec directory is a declared task output — correct
+     *   up-to-date behavior and build-cache restoration — and a resources srcDir (built by the
+     *   compile task) so it is packaged into the JAR/runtime variants.
+     * - **Aggregator**: partial specs become declared task inputs. Explicit contributor files are
+     *   tracked content-only, and the runtime classpath is tracked with runtime-classpath
+     *   normalization — which, unlike the ABI-only compile-classpath normalization, sees resource
+     *   changes — so a contributor doc-only change re-triggers aggregation while ABI-irrelevant
+     *   rebuilds without content changes stay up-to-date.
+     */
+    private fun configureMultiModuleTaskWiring(
+        kotlinCompilation: KotlinCompilation<*>,
+        moduleId: String?,
+        isAggregator: Boolean,
+        partialSpecOutputDir: File?,
+        explicitPartialSpecPaths: List<String>
+    ) {
+        if (moduleId == null) return
+        val project = kotlinCompilation.target.project
+
+        // Kotlin source-set resources feed processResources on JVM targets only; Android
+        // packaging ignores them, so Android variants are wired separately through the AGP
+        // variant API in configureAndroidContributorResources.
+        if (partialSpecOutputDir != null && kotlinCompilation.platformType != KotlinPlatformType.androidJvm) {
+            kotlinCompilation.defaultSourceSet.resources.srcDir(
+                project.files(partialSpecOutputDir).builtBy(kotlinCompilation.compileTaskProvider)
+            )
+        }
+
+        kotlinCompilation.compileTaskProvider.configure { task ->
+            if (partialSpecOutputDir != null) {
+                task.outputs.dir(partialSpecOutputDir)
+                    .withPropertyName("inspektorPartialSpec")
+            }
+            if (isAggregator) {
+                if (explicitPartialSpecPaths.isNotEmpty()) {
+                    task.inputs.files(explicitPartialSpecPaths)
+                        .withPropertyName("inspektorExplicitPartialSpecs")
+                        .withPathSensitivity(PathSensitivity.NONE)
+                }
+                partialSpecRootsView(kotlinCompilation)?.let { runtimeRoots ->
+                    task.inputs.files(runtimeRoots)
+                        .withPropertyName("inspektorPartialSpecRoots")
+                        .withNormalizer(ClasspathNormalizer::class.java)
+                }
+            }
+        }
+    }
+
+    /**
+     * Resolves paths to partial OpenAPI spec files from contributor modules.
+     *
+     * For each contributor project path, this method resolves the project and
+     * constructs the expected path to its partial spec file based on the
+     * compilation's resources output directory structure.
+     *
+     * @param project The current (aggregator) project
+     * @param contributors List of Gradle project paths (e.g., ":feature-users")
+     * @param kotlinCompilation The current compilation context
+     * @return List of absolute paths to partial spec files
+     */
+    private fun resolveContributorPartialSpecPaths(
+        project: Project,
+        contributors: List<String>,
+        kotlinCompilation: KotlinCompilation<*>
+    ): List<String> {
+        val partialSpecRelativePath = PartialSpecLocation.FULL_PATH
+
+        return contributors.mapNotNull { contributorPath ->
+            try {
+                val contributorProject = project.rootProject.findProject(contributorPath)
+                if (contributorProject == null) {
+                    project.logger.warn(
+                        "[inspektor] Contributor project '$contributorPath' not found. " +
+                                "Ensure the project path is correct and the project is included in the build."
+                    )
+                    return@mapNotNull null
+                }
+
+                // Construct the path to the partial spec based on the build directory
+                // The partial spec is written to: {buildDir}/processedResources/{variant}/META-INF/inspektor/openapi-partial.json
+                // We use the compilation name to determine the variant (e.g., "main", "jvm")
+                val compilationName = kotlinCompilation.compilationName
+                val resourcesDir = File(
+                    contributorProject.layout.buildDirectory.asFile.get(),
+                    "processedResources/$compilationName"
+                )
+                val partialSpecFile = File(resourcesDir, partialSpecRelativePath)
+
+                partialSpecFile.absolutePath
+            } catch (e: Exception) {
+                project.logger.warn(
+                    "[inspektor] Failed to resolve contributor '$contributorPath': ${e.message}"
+                )
+                null
+            }
+        }
     }
 
     private fun checkKotlinVersionCompatibility(project: Project) {
@@ -291,15 +573,15 @@ class KtorMetaPlugin @Inject constructor(
                 srcDir.walkTopDown()
                     .filter { file ->
                         file.isFile &&
-                            file.extension == "kt" &&
-                            file.canRead()
+                                file.extension == "kt" &&
+                                file.canRead()
                     }
                     .filter { file ->
                         try {
                             val content = file.readText()
                             // Check for annotation in various forms
                             content.contains("@GenerateOpenApi") ||
-                                content.contains("@io.github.tabilzad.ktor.annotations.GenerateOpenApi")
+                                    content.contains("@io.github.tabilzad.ktor.annotations.GenerateOpenApi")
                         } catch (e: Exception) {
                             // If we can't read the file, skip it
                             false

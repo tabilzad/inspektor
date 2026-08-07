@@ -1,0 +1,47 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v5/tagged" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.TaggedRequest"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.TaggedRequest" : {
+        "type" : "object",
+        "properties" : {
+          "count" : {
+            "type" : "integer",
+            "description" : "How many instances to create, defaults to a single instance."
+          },
+          "inline" : {
+            "type" : "string",
+            "description" : "Inline KDoc wins over the class-level property tag."
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Display name of the created thing."
+          }
+        },
+        "description" : "Request documented with property tags instead of inline field KDocs.",
+        "required" : [ "name", "inline" ]
+      }
+    }
+  }
+}

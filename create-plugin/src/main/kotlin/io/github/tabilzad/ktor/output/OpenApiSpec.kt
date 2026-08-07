@@ -5,11 +5,20 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.tabilzad.ktor.OpenApiSpecParam
 import io.github.tabilzad.ktor.model.Info
 import io.github.tabilzad.ktor.model.SecurityScheme
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 internal typealias ContentSchema = Map<String, OpenApiSpec.TypeDescriptor>
 
 internal typealias BodyContent = Map<String, ContentSchema>
 
+/**
+ * The spec model serves two serialization purposes:
+ * - Jackson writes the final openapi.json/yaml output (honoring [JsonIgnore]/[JsonProperty]);
+ * - kotlinx-serialization persists the model verbatim as the multi-module partial-spec IR,
+ *   where [fqName] is intentionally kept because it carries schema identity across modules.
+ */
+@Serializable
 data class OpenApiSpec(
     val openapi: String = "3.1.0",
     val info: Info?,
@@ -19,8 +28,10 @@ data class OpenApiSpec(
     val security: List<Map<String, List<String>>>? = null
 ) {
 
+    @Serializable
     data class Server(val url: String)
 
+    @Serializable
     data class Path(
         val summary: String? = null,
         val description: String? = null,
@@ -33,6 +44,7 @@ data class OpenApiSpec(
         val deprecated: Boolean? = null
     )
 
+    @Serializable
     data class RequestBody(
         val required: Boolean,
         val content: BodyContent
@@ -42,6 +54,7 @@ data class OpenApiSpec(
         var fqName: String?
     }
 
+    @Serializable
     data class TypeDescriptor(
         var type: String?,
         var properties: MutableMap<String, TypeDescriptor>? = null,
@@ -50,6 +63,7 @@ data class OpenApiSpec(
         @JsonIgnore
         override var fqName: String? = null,
         var description: String? = null,
+        @SerialName("\$ref")
         @JsonProperty("\$ref")
         var ref: String? = null,
         var additionalProperties: TypeDescriptor? = null,
@@ -70,11 +84,13 @@ data class OpenApiSpec(
         override fun hashCode(): Int = fqName?.hashCode() ?: System.identityHashCode(this)
     }
 
+    @Serializable
     data class DiscriminatorDescriptor(
         val propertyName: String = "type",
         val mapping: Map<String, String>
     )
 
+    @Serializable
     data class Parameter(
         override val name: String,
         override val `in`: String,
@@ -83,11 +99,13 @@ data class OpenApiSpec(
         val schema: TypeDescriptor,
     ) : OpenApiSpecParam
 
+    @Serializable
     data class ResponseDetails(
         val description: String,
         val content: BodyContent?
     )
 
+    @Serializable
     data class OpenApiComponents(
         val schemas: Map<String, TypeDescriptor>,
         val securitySchemes: Map<String, SecurityScheme>? = null

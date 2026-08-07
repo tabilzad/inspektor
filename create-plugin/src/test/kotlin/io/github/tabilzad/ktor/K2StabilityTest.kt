@@ -308,6 +308,14 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should map property and param kdoc tags to schema field descriptions`() {
+        val (source, expected) = loadSourceAndExpected("KDocsPropertyTags")
+        generateCompilerTest(testFile, source)
+        val result = testFile.readText()
+        result.assertWith(expected)
+    }
+
+    @Test
     fun `should describe inferred header and query parameters from KDocs and resolve typed header accessors`() {
         val (source, expected) = loadSourceAndExpected("HeaderParameters3")
         generateCompilerTest(testFile, source)

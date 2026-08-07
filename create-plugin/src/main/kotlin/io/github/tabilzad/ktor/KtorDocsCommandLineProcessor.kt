@@ -6,20 +6,28 @@ import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_FORMAT
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_HIDE_PRIVATE
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_HIDE_TRANSIENTS
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_INIT_CONFIG
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_IS_AGGREGATOR
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_KDOCS
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_MODULE_ID
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_PARTIAL_SPEC_PATHS
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_PARTIAL_SPEC_ROOTS
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_PATH
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_REQUEST_FEATURE
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_RESOURCES_PATH
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_SERVERS
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_DERIVE_PROP_REQ
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_FORMAT
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_HIDE_PRIVATE
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_HIDE_TRANSIENT
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_INIT_CONFIG
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_IS_AGGREGATOR
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_IS_ENABLED
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.ARG_INFER_RESPONSE
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_INFER_RESPONSE
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_MODULE_ID
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_PATH
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_REQUEST_BODY
+import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_RESOURCES_PATH
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_SERVERS
 import io.github.tabilzad.ktor.SwaggerConfigurationKeys.OPTION_USE_KDOCS
 import io.github.tabilzad.ktor.model.ConfigInput
@@ -46,6 +54,13 @@ object SwaggerConfigurationKeys {
     const val OPTION_FORMAT = "format"
     const val OPTION_INFER_RESPONSE = "inferResponseSchemas"
 
+    // Multi-module support options
+    const val OPTION_MODULE_ID = "moduleId"
+    const val OPTION_IS_AGGREGATOR = "isAggregator"
+    const val OPTION_RESOURCES_PATH = "resourcesPath"
+    const val OPTION_PARTIAL_SPEC_PATHS = "partialSpecPaths"
+    const val OPTION_PARTIAL_SPEC_ROOTS = "partialSpecRoots"
+
     val ARG_ENABLED = CompilerConfigurationKey.create<Boolean>(OPTION_IS_ENABLED)
     val ARG_PATH = CompilerConfigurationKey.create<String>(OPTION_PATH)
     val ARG_REQUEST_FEATURE = CompilerConfigurationKey.create<Boolean>(OPTION_REQUEST_BODY)
@@ -57,6 +72,13 @@ object SwaggerConfigurationKeys {
     val ARG_INIT_CONFIG = CompilerConfigurationKey.create<ConfigInput>(OPTION_INIT_CONFIG)
     val ARG_KDOCS = CompilerConfigurationKey.create<Boolean>(OPTION_USE_KDOCS)
     val ARG_INFER_RESPONSE = CompilerConfigurationKey.create<Boolean>(OPTION_INFER_RESPONSE)
+
+    // Multi-module support keys
+    val ARG_MODULE_ID = CompilerConfigurationKey.create<String>(OPTION_MODULE_ID)
+    val ARG_IS_AGGREGATOR = CompilerConfigurationKey.create<Boolean>(OPTION_IS_AGGREGATOR)
+    val ARG_RESOURCES_PATH = CompilerConfigurationKey.create<String>(OPTION_RESOURCES_PATH)
+    val ARG_PARTIAL_SPEC_PATHS = CompilerConfigurationKey.create<List<String>>(OPTION_PARTIAL_SPEC_PATHS)
+    val ARG_PARTIAL_SPEC_ROOTS = CompilerConfigurationKey.create<List<String>>(OPTION_PARTIAL_SPEC_ROOTS)
 }
 
 @ExperimentalEncodingApi
@@ -132,6 +154,40 @@ class KtorDocsCommandLineProcessor : CommandLineProcessor {
             allowMultipleOccurrences = false,
             required = false
         )
+
+        // Multi-module support options
+        val moduleIdOption = CliOption(
+            OPTION_MODULE_ID,
+            "Module identifier",
+            "Unique identifier for this module (typically the Gradle project path)",
+            required = false
+        )
+        val isAggregatorOption = CliOption(
+            OPTION_IS_AGGREGATOR,
+            "Is aggregator module",
+            "Whether this module is the aggregator (main server) or a contributor module",
+            required = false
+        )
+        val resourcesPathOption = CliOption(
+            OPTION_RESOURCES_PATH,
+            "Resources output path",
+            "Path where partial spec resources should be written",
+            required = false
+        )
+        val partialSpecPathsOption = CliOption(
+            SwaggerConfigurationKeys.OPTION_PARTIAL_SPEC_PATHS,
+            "Partial spec paths",
+            "Paths to partial spec files from contributor modules (pipe-separated)",
+            allowMultipleOccurrences = false,
+            required = false
+        )
+        val partialSpecRootsOption = CliOption(
+            SwaggerConfigurationKeys.OPTION_PARTIAL_SPEC_ROOTS,
+            "Partial spec roots",
+            "Classpath roots (jars or class dirs, pipe-separated) to scan for embedded partial specs",
+            allowMultipleOccurrences = false,
+            required = false
+        )
     }
 
     override val pluginId: String
@@ -149,7 +205,12 @@ class KtorDocsCommandLineProcessor : CommandLineProcessor {
             serverUrls,
             useKDocs,
             inferResponseSchemas,
-            initConfig
+            initConfig,
+            moduleIdOption,
+            isAggregatorOption,
+            resourcesPathOption,
+            partialSpecPathsOption,
+            partialSpecRootsOption
         )
 
     @Suppress("CyclomaticComplexMethod")
@@ -189,6 +250,23 @@ class KtorDocsCommandLineProcessor : CommandLineProcessor {
                 Base64.decode(value).toString(Charsets.UTF_8).let { decodedJson ->
                     Json.decodeFromString<ConfigInput>(decodedJson)
                 }
+            )
+
+            // Multi-module support options
+            moduleIdOption -> configuration.put(ARG_MODULE_ID, value)
+
+            isAggregatorOption -> configuration.put(ARG_IS_AGGREGATOR, value.toBooleanStrictOrNull() ?: false)
+
+            resourcesPathOption -> configuration.put(ARG_RESOURCES_PATH, value)
+
+            partialSpecPathsOption -> configuration.put(
+                ARG_PARTIAL_SPEC_PATHS,
+                value.split("||").filter { it.isNotBlank() }
+            )
+
+            partialSpecRootsOption -> configuration.put(
+                ARG_PARTIAL_SPEC_ROOTS,
+                value.split("||").filter { it.isNotBlank() }
             )
 
             else -> throw IllegalArgumentException("Unexpected config option ${option.optionName}")

@@ -1,6 +1,7 @@
 package io.github.tabilzad.ktor
 
 import io.github.tabilzad.ktor.output.OpenApiSpec
+import io.github.tabilzad.ktor.output.SchemaDocs
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
@@ -34,6 +35,13 @@ internal object OpenApiSpecCollector {
     private val globalData = ConcurrentHashMap<Int, MutableMap<String, MutableList<CollectedRouteData>>>()
 
     /**
+     * KDoc sidecar storage for contributor modules: configuration identity -> output key ->
+     * (class fqName -> docs). Collected by [io.github.tabilzad.ktor.k2.SchemaDocsCollectingChecker]
+     * during FIR, consumed once during IR.
+     */
+    private val schemaDocsData = ConcurrentHashMap<Int, MutableMap<String, MutableMap<String, SchemaDocs>>>()
+
+    /**
      * Get or create the data map for a specific configuration.
      * Uses System.identityHashCode to key by configuration identity.
      */
@@ -63,6 +71,34 @@ internal object OpenApiSpecCollector {
     }
 
     /**
+     * Records the KDoc sidecar entry for one class of a contributor module.
+     */
+    fun collectSchemaDocs(
+        configuration: CompilerConfiguration,
+        key: String,
+        fqName: String,
+        docs: SchemaDocs
+    ) {
+        val configId = System.identityHashCode(configuration)
+        schemaDocsData
+            .getOrPut(configId) { ConcurrentHashMap() }
+            .getOrPut(key) { ConcurrentHashMap() }[fqName] = docs
+    }
+
+    /**
+     * Consumes and removes all collected KDoc sidecar entries for a given key.
+     */
+    fun consumeSchemaDocs(configuration: CompilerConfiguration, key: String): Map<String, SchemaDocs> {
+        val configId = System.identityHashCode(configuration)
+        val dataMap = schemaDocsData[configId] ?: return emptyMap()
+        val result = dataMap.remove(key) ?: emptyMap()
+        if (dataMap.isEmpty()) {
+            schemaDocsData.remove(configId)
+        }
+        return result
+    }
+
+    /**
      * Remove data for a given key from all configurations EXCEPT the current one.
      * This cleans up orphaned data from previous failed/cancelled compilations.
      */
@@ -78,6 +114,14 @@ internal object OpenApiSpecCollector {
                 }
             }
         }
+
+        // Sidecar entries follow the same lifecycle as route data.
+        schemaDocsData.forEach { (configId, dataMap) ->
+            if (configId != currentConfigId) {
+                dataMap.remove(key)
+            }
+        }
+        schemaDocsData.entries.removeIf { it.value.isEmpty() && it.key != currentConfigId }
 
         // Remove empty configuration entries
         staleConfigIds.forEach { globalData.remove(it) }
