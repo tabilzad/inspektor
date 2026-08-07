@@ -5,6 +5,7 @@ classgraph = "4.8.157"
 jacksonVersion = "2.15.2"
 ktorVersion = "3.5.0"
 compilerTestingVersion = "0.13.0"
+agpApi = "8.1.0"
 assertJVerison = "3.24.2"
 kotlinxSerialization = "1.8.0"
 detekt = "1.23.8"
@@ -41,6 +42,7 @@ ktor-http = { module = "io.ktor:ktor-http", version.ref = "ktorVersion" }
 ktorNetty = { module = "io.ktor:ktor-server-netty", version.ref = "ktorVersion" }
 ktorResources = { module = "io.ktor:ktor-server-resources", version.ref = "ktorVersion" }
 kotlinGradleApi = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin-api", version.ref = "kotlinVersion" }
+agpGradleApi = { module = "com.android.tools.build:gradle-api", version.ref = "agpApi" }
 kotlinGradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlinVersion" }
 kotlinReflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlinVersion" }
 moshi = { module = "com.squareup.moshi:moshi", version = "1.14.0" }

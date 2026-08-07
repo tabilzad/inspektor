@@ -12,6 +12,9 @@ plugins {
 dependencies {
     compileOnly(libs.bundles.kotlinGradle)
     compileOnly(gradleApi())
+    // Android Gradle Plugin API, used only when an Android plugin is applied to the
+    // consumer project (guarded via plugins.withId); never required at runtime for JVM builds.
+    compileOnly(libs.agpGradleApi)
 
     shadow(projects.common){
         isTransitive = false

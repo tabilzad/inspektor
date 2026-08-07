@@ -1,5 +1,8 @@
 package io.github.tabilzad.ktor
 
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
+import com.android.build.api.variant.LibraryAndroidComponentsExtension
+import com.android.build.api.variant.Variant
 import com.vdurmont.semver4j.Semver
 import io.github.tabilzad.ktor.model.ConfigInput
 import io.github.tabilzad.ktor.model.PartialSpecLocation
@@ -14,6 +17,7 @@ import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.PathSensitivity
 import org.jetbrains.kotlin.gradle.plugin.*
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
 import org.jetbrains.kotlin.tooling.core.toKotlinVersion
@@ -23,6 +27,8 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 const val PLUGIN_ID = "io.github.tabilzad.inspektor"
+
+internal const val PARTIAL_SPEC_DIR = "openapi/partial"
 
 @Suppress("MagicNumber")
 private val COMPATIBLE_VERSIONS = setOf(KotlinVersion(2, 4, 0))
@@ -55,6 +61,55 @@ class KtorMetaPlugin @Inject constructor(
             "swagger",
             KtorInspectorGradleConfig::class.java,
             objects
+        )
+        configureAndroidContributorResources(target)
+    }
+
+    /**
+     * Android counterpart of the JVM resources-srcDir wiring for contributor modules.
+     *
+     * AGP's packaging pipeline ignores Kotlin source-set `resources`, so on Android the
+     * partial spec must be registered through the variant API instead: a small staging task
+     * syncs the compile-task-produced partial, and `addGeneratedSourceDirectory` merges it
+     * into the variant's java resources (and therefore the AAR/APK) with proper task
+     * dependencies. Registered from apply() because onVariants callbacks cannot be added
+     * once AGP has computed its variants; the swagger options are read lazily inside the
+     * callback, after the consumer's build script has configured them.
+     */
+    private fun configureAndroidContributorResources(project: Project) {
+        project.plugins.withId("com.android.library") {
+            project.extensions.getByType(LibraryAndroidComponentsExtension::class.java)
+                .onVariants { variant -> wireContributorVariant(project, variant) }
+        }
+        project.plugins.withId("com.android.application") {
+            project.extensions.getByType(ApplicationAndroidComponentsExtension::class.java)
+                .onVariants { variant -> wireContributorVariant(project, variant) }
+        }
+    }
+
+    private fun wireContributorVariant(project: Project, variant: Variant) {
+        val options = project.extensions.getByType(KtorInspectorGradleConfig::class.java).pluginOptions
+        if (options.moduleId == null || options.isAggregator) return
+
+        val variantName = variant.name
+        val capitalized = variantName.replaceFirstChar { it.uppercase() }
+        val partialDir = project.layout.buildDirectory.dir("$PARTIAL_SPEC_DIR/$variantName")
+
+        val stagingTask = project.tasks.register(
+            "inspektorPartialSpec${capitalized}Resources",
+            PartialSpecResourcesTask::class.java
+        ) { task ->
+            task.description = "Stages the inspektor partial OpenAPI spec for $variantName java resources"
+            // builtBy the compile task by name: resolved lazily, so registration order
+            // between AGP variants and KGP task creation does not matter.
+            task.partialSpecDir.from(
+                project.files(partialDir).builtBy("compile${capitalized}Kotlin")
+            )
+        }
+
+        variant.sources.resources?.addGeneratedSourceDirectory(
+            stagingTask,
+            PartialSpecResourcesTask::outputDir
         )
     }
 
@@ -198,7 +253,10 @@ class KtorMetaPlugin @Inject constructor(
         // checks honest. It is registered as a resources srcDir so it still flows into
         // processResources -> jar -> the runtime variants aggregators consume.
         val partialSpecOutputDir = if (moduleId != null && !isAggregator) {
-            File(project.layout.buildDirectory.get().asFile, "openapi/partial")
+            File(
+                project.layout.buildDirectory.get().asFile,
+                "$PARTIAL_SPEC_DIR/${kotlinCompilation.compilationName}"
+            )
         } else {
             null
         }
@@ -376,7 +434,10 @@ class KtorMetaPlugin @Inject constructor(
         if (moduleId == null) return
         val project = kotlinCompilation.target.project
 
-        if (partialSpecOutputDir != null) {
+        // Kotlin source-set resources feed processResources on JVM targets only; Android
+        // packaging ignores them, so Android variants are wired separately through the AGP
+        // variant API in configureAndroidContributorResources.
+        if (partialSpecOutputDir != null && kotlinCompilation.platformType != KotlinPlatformType.androidJvm) {
             kotlinCompilation.defaultSourceSet.resources.srcDir(
                 project.files(partialSpecOutputDir).builtBy(kotlinCompilation.compileTaskProvider)
             )
