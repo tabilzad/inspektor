@@ -1,6 +1,7 @@
 package sources
 
 import io.github.tabilzad.ktor.annotations.GenerateOpenApi
+import io.github.tabilzad.ktor.annotations.KtorSchema
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
@@ -27,6 +28,25 @@ data class CurrentPayload(
     val status: LegacyStatus?
 )
 
+@Deprecated("Use ModernAmount instead")
+@KtorSchema(description = "legacy dollar amount", type = "number")
+data class LegacyAmount(val value: Int)
+
+/** Events emitted by the legacy pipeline. */
+@Deprecated("Use NewEvent instead")
+sealed class LegacyEvent {
+    data class Created(val id: String) : LegacyEvent()
+
+    /** Kept only for replaying old streams. */
+    @Deprecated("Use Created instead")
+    data class Renamed(val old: String) : LegacyEvent()
+}
+
+data class EventWrapper(
+    val amount: LegacyAmount,
+    val event: LegacyEvent
+)
+
 @GenerateOpenApi
 fun Application.deprecatedSchemaModule() {
     routing {
@@ -36,6 +56,9 @@ fun Application.deprecatedSchemaModule() {
             }
             post("/current") {
                 call.receive<CurrentPayload>()
+            }
+            post("/events") {
+                call.receive<EventWrapper>()
             }
         }
     }

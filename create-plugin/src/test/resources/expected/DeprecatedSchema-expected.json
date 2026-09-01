@@ -20,6 +20,20 @@
         }
       }
     },
+    "/v1/events" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.EventWrapper"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/legacy" : {
       "post" : {
         "requestBody" : {
@@ -60,6 +74,71 @@
           }
         },
         "required" : [ "id" ]
+      },
+      "sources.EventWrapper" : {
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "$ref" : "#/components/schemas/sources.LegacyAmount",
+            "deprecated" : true
+          },
+          "event" : {
+            "description" : "Events emitted by the legacy pipeline.\n\nDeprecated: Use NewEvent instead",
+            "$ref" : "#/components/schemas/sources.LegacyEvent",
+            "deprecated" : true
+          }
+        },
+        "required" : [ "amount", "event" ]
+      },
+      "sources.LegacyAmount" : {
+        "type" : "number",
+        "description" : "legacy dollar amount\n\nDeprecated: Use ModernAmount instead",
+        "deprecated" : true
+      },
+      "sources.LegacyEvent" : {
+        "type" : "object",
+        "description" : "Events emitted by the legacy pipeline.\n\nDeprecated: Use NewEvent instead",
+        "oneOf" : [ {
+          "$ref" : "#/components/schemas/sources.LegacyEvent.Created"
+        }, {
+          "$ref" : "#/components/schemas/sources.LegacyEvent.Renamed"
+        } ],
+        "discriminator" : {
+          "propertyName" : "type",
+          "mapping" : {
+            "sources.LegacyEvent.Created" : "#/components/schemas/sources.LegacyEvent.Created",
+            "sources.LegacyEvent.Renamed" : "#/components/schemas/sources.LegacyEvent.Renamed"
+          }
+        },
+        "deprecated" : true
+      },
+      "sources.LegacyEvent.Created" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.LegacyEvent.Created" ]
+          }
+        },
+        "required" : [ "type", "id" ]
+      },
+      "sources.LegacyEvent.Renamed" : {
+        "type" : "object",
+        "properties" : {
+          "old" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "sources.LegacyEvent.Renamed" ]
+          }
+        },
+        "description" : "Kept only for replaying old streams.\n\nDeprecated: Use Created instead",
+        "required" : [ "type", "old" ],
+        "deprecated" : true
       },
       "sources.LegacyPayload" : {
         "type" : "object",

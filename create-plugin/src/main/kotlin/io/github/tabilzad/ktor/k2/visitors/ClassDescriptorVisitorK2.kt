@@ -72,7 +72,7 @@ internal class ClassDescriptorVisitorK2(
         val baseType = parentType.toBaseType(fqClassName)
 
         return when {
-            typeDescription?.explicitType != null -> collectExplicitType(fqClassName, typeDescription)
+            typeDescription?.explicitType != null -> collectExplicitType(fqClassName, typeDescription, parentType)
             typeDescription?.serializedAs != null -> collectDataTypes(typeDescription.serializedAs)
             parentType.isStringOrPrimitive() -> collectPrimitive(baseType, parentType)
             parentType.isMap() -> collectMap(baseType, parentType)
@@ -86,9 +86,21 @@ internal class ClassDescriptorVisitorK2(
         }
     }
 
-    private fun collectExplicitType(fqClassName: String?, typeDescription: KtorDescriptionBag): TypeDescriptor {
-        return TypeDescriptor(type = null).withReferenceBy(fqClassName) {
-            typeDescription.toObjectType().copy(fqName = fqClassName)
+    private fun collectExplicitType(
+        fqClassName: String?,
+        typeDescription: KtorDescriptionBag,
+        parentType: ConeKotlinType
+    ): TypeDescriptor {
+        // The explicit type overrides schema derivation but must not swallow class-level
+        // @Deprecated: the component keeps the annotation-provided type/description with the
+        // deprecation note folded on top, and the returned reference carries the flag.
+        val deprecation = parentType.findDeprecated()
+        return TypeDescriptor(type = null, deprecated = deprecation?.let { true }).withReferenceBy(fqClassName) {
+            typeDescription.toObjectType().copy(
+                fqName = fqClassName,
+                deprecated = deprecation?.let { true },
+                description = typeDescription.description.withDeprecationNote(deprecation)
+            )
         }
     }
 
@@ -130,7 +142,9 @@ internal class ClassDescriptorVisitorK2(
                 ?.associateWith { it.resolveDiscriminatorValue(session) }
                 .orEmpty()
 
-            val sealedDescriptor = TypeDescriptor(
+            // Copy baseType so class-level KDoc and @Deprecated survive onto the sealed
+            // component itself, not only onto references to it.
+            val sealedDescriptor = baseType.copy(
                 "object",
                 fqName = fqClassName,
                 oneOf = inheritorClassIds?.map {
@@ -151,9 +165,15 @@ internal class ClassDescriptorVisitorK2(
             inheritorClassIds?.forEach { classId ->
                 val inheritorFqName = classId.asFqNameString()
                 val inheritorType = classNames.firstOrNull { it.fqName == inheritorFqName }
-                    ?: TypeDescriptor("object", fqName = inheritorFqName).also { newType ->
+                    ?: classId.toLookupTag().toClassSymbol(session).let { symbol ->
+                        // Derive the variant's base descriptor from its own type so class-level
+                        // KDoc and @Deprecated aren't lost on fallback-created variant schemas.
+                        val newType = symbol?.fir?.defaultTypeOf()?.toBaseType(inheritorFqName)
+                            ?: TypeDescriptor("object", fqName = inheritorFqName)
+                        // Register before visiting so self-referential variants can't recurse.
                         classNames.add(newType)
-                        classId.toLookupTag().toClassSymbol(session)?.fir?.accept(this, newType)
+                        symbol?.fir?.accept(this, newType)
+                        newType
                     }
 
                 // Redoc/OpenAPI require the discriminator property to physically exist on every
@@ -253,10 +273,7 @@ internal class ClassDescriptorVisitorK2(
         val kdocs = toRegularClassSymbol(session)?.fir?.getKDocComments(config)
             ?.let { parseKDoc(it).text }
         val typeDescription = findDocsDescriptionOnType(session)
-        // Class-level @Deprecated is read from the class symbol, so it also resolves for
-        // classes deserialized from binaries (types defined in other modules or libraries).
-        val deprecation = toRegularClassSymbol(session)?.annotations
-            ?.findDeprecatedAnnotation(session)?.extractDeprecationInfo(session)
+        val deprecation = findDeprecated()
         return TypeDescriptor(
             type = "object",
             fqName = fqClassName,
@@ -265,6 +282,15 @@ internal class ClassDescriptorVisitorK2(
             deprecated = deprecation?.let { true },
         )
     }
+
+    /**
+     * Class-level @Deprecated is read from the class symbol, so it also resolves for classes
+     * deserialized from binaries (types defined in other modules or libraries).
+     */
+    @OptIn(SymbolInternals::class)
+    private fun ConeKotlinType.findDeprecated(): DeprecationInfo? =
+        toRegularClassSymbol(session)?.annotations
+            ?.findDeprecatedAnnotation(session)?.extractDeprecationInfo(session)
 
     private fun TypeDescriptor.withReferenceBy(fqName: String?, computeRef: () -> TypeDescriptor): TypeDescriptor {
         if (fqName == null) return this
