@@ -55,7 +55,7 @@ internal fun reduce(e: RouteDescriptor): List<KtorRouteSpec> = e.children.flatMa
                 child.copy(
                     path = e.path + child.path.addLeadingSlash(),
                     tags = e.tags merge child.tags,
-                    isDeprecated = (e.isDeprecated optionalAnd child.isDeprecated),
+                    deprecation = (e.deprecation overriddenBy child.deprecation),
                     // child's own declared headers first so the innermost (most specific)
                     // declaration wins when duplicates are merged by name later
                     headers = child.headers merge e.headers
@@ -75,15 +75,12 @@ internal fun reduce(e: RouteDescriptor): List<KtorRouteSpec> = e.children.flatMa
                     responses = child.responses,
                     operationId = child.operationId,
                     tags = e.tags merge child.tags,
-                    deprecated = (e.isDeprecated optionalAnd child.isDeprecated)
+                    deprecation = (e.deprecation overriddenBy child.deprecation)
                 )
             )
         }
     }
 }
-
-infix fun Boolean?.optionalAnd(other: Boolean?): Boolean? =
-    if (this != null && other != null) this && other else this ?: other
 
 internal fun List<KtorRouteSpec>.cleanPaths() = map {
     it.copy(
@@ -99,14 +96,16 @@ internal fun List<KtorRouteSpec>.convertToSpec(): Map<String, Map<String, OpenAp
     value.associate { it: KtorRouteSpec ->
         it.method to OpenApiSpec.Path(
             summary = it.summary,
-            description = it.description,
+            // OpenAPI has no dedicated slot for a deprecation message, so the @Deprecated
+            // message is appended to the operation description as a "Deprecated: ..." note.
+            description = it.description.withDeprecationNote(it.deprecation),
             operationId = it.operationId,
             tags = it.tags?.toList()?.sorted(),
             parameters = (mapPathParams(it) merge mapQueryParams(it) merge mapHeaderParams(it))
                 ?.takeIf { params -> params.isNotEmpty() },
             requestBody = addPostBody(it),
             responses = it.responses,
-            deprecated = it.deprecated
+            deprecated = it.deprecation?.let { true }
         )
     }
 }
@@ -385,6 +384,19 @@ internal fun FirAnnotation.extractDescription(session: FirSession): KtorDescript
         serializedAs = serializedAsType,
         format = format?.accept(StringResolutionVisitor(session), "")
     )
+}
+
+/**
+ * Reads `kotlin.Deprecated` off an already-located annotation, evaluating its `message`
+ * argument (const concatenations included) so it can be surfaced in the spec.
+ */
+@OptIn(PrivateForInline::class)
+internal fun FirAnnotation.extractDeprecationInfo(session: FirSession): DeprecationInfo {
+    val resolved = FirExpressionEvaluator.evaluateAnnotationArguments(this, session)
+    val message = resolved.entries.find { it.key.asString() == "message" }?.value?.result
+        ?.accept(StringResolutionVisitor(session), "")
+        ?.takeIf { it.isNotBlank() }
+    return DeprecationInfo(message)
 }
 
 internal fun KtorDescriptionBag.toObjectType(): OpenApiSpec.TypeDescriptor = OpenApiSpec.TypeDescriptor(

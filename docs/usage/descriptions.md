@@ -103,26 +103,66 @@ If not specified, InspeKtor generates an operation ID from the method and path.
 
 ## Deprecated Endpoints
 
-Mark endpoints as deprecated:
+Deprecation comes from Kotlin's own `@Deprecated` annotation on the route function declaring
+the endpoints (it cannot be placed on a `get(...)`/`post(...)` expression directly):
 
 ```kotlin
-@KtorDescription(
-    summary = "Get user (deprecated)",
-    description = "**Deprecated:** Use `GET /api/v2/users/{id}` instead.",
-    deprecated = true
-)
-get("/api/v1/users/{id}") {
-    // Old implementation
+@Deprecated("Use GET /api/v2/users/{id} instead")
+fun Route.legacyUserRoutes() {
+    @KtorDescription(summary = "Get user (deprecated)")
+    get("/api/v1/users/{id}") {
+        // Old implementation
+    }
 }
+```
+
+Generated — the deprecation message is appended to the operation description:
+
+```yaml
+/api/v1/users/{id}:
+  get:
+    summary: "Get user (deprecated)"
+    description: "Deprecated: Use GET /api/v2/users/{id} instead"
+    deprecated: true
+```
+
+## Deprecated Schemas and Fields
+
+`@Deprecated` on data classes and their properties is reflected in the generated schemas.
+It works for both classes defined in the compiled module and classes coming from other
+modules or libraries (the annotation survives compilation, unlike KDoc):
+
+```kotlin
+@Deprecated("Use CurrentPayload instead")
+data class LegacyPayload(val id: String)
+
+data class CurrentPayload(
+    /** The legacy identifier. */
+    @Deprecated("Use id instead")
+    val legacyId: String?,
+    val id: String
+)
 ```
 
 Generated:
 
 ```yaml
-/api/v1/users/{id}:
-  get:
-    deprecated: true
-    summary: "Get user (deprecated)"
+LegacyPayload:
+  type: object
+  description: "Deprecated: Use CurrentPayload instead"
+  deprecated: true
+  properties:
+    id:
+      type: string
+CurrentPayload:
+  type: object
+  properties:
+    legacyId:
+      type: string
+      description: "The legacy identifier.\n\nDeprecated: Use id instead"
+      deprecated: true
+    id:
+      type: string
 ```
 
 ## KDoc for Schema Descriptions

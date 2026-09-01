@@ -1,0 +1,80 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v1/current" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.CurrentPayload"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/legacy" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.LegacyPayload"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.CurrentPayload" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "legacyId" : {
+            "type" : "string",
+            "description" : "The legacy identifier.\n\nDeprecated: Use id instead",
+            "deprecated" : true
+          },
+          "oldFlag" : {
+            "type" : "boolean",
+            "deprecated" : true
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "INACTIVE" ],
+            "description" : "Deprecated: Use the status endpoint instead",
+            "deprecated" : true
+          }
+        },
+        "required" : [ "id" ]
+      },
+      "sources.LegacyPayload" : {
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "type" : "integer"
+          },
+          "id" : {
+            "type" : "string"
+          }
+        },
+        "description" : "A legacy payload kept for old clients.\n\nDeprecated: Use CurrentPayload instead",
+        "required" : [ "id", "amount" ],
+        "deprecated" : true
+      }
+    }
+  }
+}

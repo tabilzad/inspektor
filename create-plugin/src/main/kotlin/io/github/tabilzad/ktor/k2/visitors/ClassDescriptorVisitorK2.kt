@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.isValueClass
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.utils.isAbstract
+import org.jetbrains.kotlin.fir.expressions.FirAnnotation
 import org.jetbrains.kotlin.fir.declarations.utils.isEnumClass
 import org.jetbrains.kotlin.fir.declarations.utils.isSealed
 import org.jetbrains.kotlin.fir.resolve.fqName
@@ -252,10 +253,16 @@ internal class ClassDescriptorVisitorK2(
         val kdocs = toRegularClassSymbol(session)?.fir?.getKDocComments(config)
             ?.let { parseKDoc(it).text }
         val typeDescription = findDocsDescriptionOnType(session)
+        // Class-level @Deprecated is read from the class symbol, so it also resolves for
+        // classes deserialized from binaries (types defined in other modules or libraries).
+        val deprecation = toRegularClassSymbol(session)?.annotations
+            ?.findDeprecatedAnnotation(session)?.extractDeprecationInfo(session)
         return TypeDescriptor(
             type = "object",
             fqName = fqClassName,
-            description = kdocs ?: typeDescription?.description ?: typeDescription?.summary,
+            description = (kdocs ?: typeDescription?.description ?: typeDescription?.summary)
+                .withDeprecationNote(deprecation),
+            deprecated = deprecation?.let { true },
         )
     }
 
@@ -299,6 +306,7 @@ internal class ClassDescriptorVisitorK2(
         // owning class KDoc (the common way data classes are documented).
         val kdoc = fir.getKDocComments(config) ?: fir.propertyTagDoc()
         val docsDescription = propertyDescription.let { it?.summary ?: it?.description }
+        val deprecation = fir.findDeprecated()
         val propertyName = fir.findName()
         val spec = typeDescriptor ?: TypeDescriptor(type = "object")
 
@@ -308,9 +316,23 @@ internal class ClassDescriptorVisitorK2(
             properties?.put(propertyName, spec)
         }
 
-        spec.description = docsDescription ?: spec.description ?: kdoc
+        if (deprecation != null) spec.deprecated = true
+        spec.description = (docsDescription ?: spec.description ?: kdoc).withDeprecationNote(deprecation)
 
         resolvePropertyRequirement(propertyDescription?.isRequired, propertyName, fir)
+    }
+
+    /**
+     * Finds `@Deprecated` on a property. Kotlin places it on the property itself (its targets
+     * do not include FIELD or VALUE_PARAMETER), but a constructor-declared `val` may carry it
+     * on the primary-constructor parameter in FIR, so both are checked.
+     */
+    @OptIn(SymbolInternals::class)
+    private fun FirProperty.findDeprecated(): DeprecationInfo? {
+        val annotation = annotations.findDeprecatedAnnotation(session)
+            ?: backingField?.annotations?.findDeprecatedAnnotation(session)
+            ?: findSymbolFromPrimaryCtor()?.fir?.annotations?.findDeprecatedAnnotation(session)
+        return annotation?.extractDeprecationInfo(session)
     }
 
     private fun FirProperty.propertyTagDoc(): String? = getContainingClass()
@@ -377,6 +399,9 @@ private fun ClassId.resolveDiscriminatorValue(session: FirSession): String {
         ?.getStringArgument(serialNameFq.identifier)
     return explicitlyAnnotated ?: asFqNameString()
 }
+
+internal fun List<FirAnnotation>.findDeprecatedAnnotation(session: FirSession): FirAnnotation? =
+    firstOrNull { it.fqName(session) == ClassIds.DEPRECATED }
 
 internal fun FirProperty.findDocsDescriptionOnProperty(session: FirSession): KtorDescriptionBag? {
     val docsAnnotation =
