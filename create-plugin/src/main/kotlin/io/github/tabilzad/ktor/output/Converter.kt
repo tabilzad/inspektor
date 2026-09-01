@@ -35,7 +35,7 @@ internal fun convertInternalToOpenSpec(
                         acc.responses?.let { putAll(it) }
                         spec.responses?.forEach { (code, details) -> putIfAbsent(code, details) }
                     }.ifEmpty { null },
-                    deprecated = acc.deprecated ?: spec.deprecated
+                    deprecation = acc.deprecation ?: spec.deprecation
                 )
             }
         }

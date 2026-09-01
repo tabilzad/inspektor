@@ -101,6 +101,33 @@ class K2StabilityTest {
     }
 
     @Test
+    fun `should resolve deprecated schema classes and properties`() {
+        val (source, expected) = loadSourceAndExpected("DeprecatedSchema")
+        generateCompilerTest(testFile, source)
+
+        testFile.readText().let { generatedSwagger ->
+            generatedSwagger.assertWith(expected)
+        }
+    }
+
+    @Test
+    fun `should resolve deprecation on types compiled in external modules`() {
+        val source = loadSourceCodeFrom("DeprecatedExternalSchema")
+        generateCompilerTest(
+            testFile, source, PluginConfiguration.createDefault(),
+            precompiledSources = listOf("DeprecatedExternalTypes.kt")
+        )
+
+        val schema = testFile.parseSpec().components.schemas["sources.precompiled.DeprecatedExternalType"]
+        assertThat(schema).isNotNull
+        assertThat(schema?.deprecated).isTrue
+        assertThat(schema?.description).isEqualTo("Deprecated: Use ReplacementExternalType instead")
+        val legacyId = schema?.properties?.get("legacyId")
+        assertThat(legacyId?.deprecated).isTrue
+        assertThat(legacyId?.description).isEqualTo("Deprecated: Use id instead")
+    }
+
+    @Test
     fun `should generate correct post request body`() {
         val (source, expected) = loadSourceAndExpected("RequestBody")
         generateCompilerTest(testFile, source)

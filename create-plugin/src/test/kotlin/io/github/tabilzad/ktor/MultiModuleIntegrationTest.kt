@@ -339,11 +339,40 @@ class MultiModuleIntegrationTest {
 
         val mergedSpec = objectMapper.readValue<OpenApiSpec>(aggregatorOutputFile.readText())
 
-        // V1 should be deprecated
+        // V1 should be deprecated, with the @Deprecated message folded into the description
         assertThat(mergedSpec.paths["/api/v1/items"]?.get("get")?.deprecated).isTrue
+        assertThat(mergedSpec.paths["/api/v1/items"]?.get("get")?.description)
+            .isEqualTo("Deprecated: Use /api/v2/items instead")
 
         // V2 should not be deprecated
         assertThat(mergedSpec.paths["/api/v2/items"]?.get("get")?.deprecated).isNull()
+    }
+
+    @Test
+    fun `contributor deprecated schema classes should carry deprecation through partial specs`() {
+        compileContributorModule(
+            moduleId = ":feature-billing",
+            source = TestUtils.loadMultiModuleSource("DeprecatedSchemaContributor"),
+            resourcesDir = contributorResourcesDir
+        )
+
+        compileAggregatorModule(
+            moduleId = ":server",
+            source = TestUtils.loadMultiModuleSource("EmptyAggregator"),
+            outputFile = aggregatorOutputFile,
+            contributorResourcesDirs = listOf(contributorResourcesDir)
+        )
+
+        val mergedSpec = objectMapper.readValue<OpenApiSpec>(aggregatorOutputFile.readText())
+
+        val schema = mergedSpec.components.schemas["com.example.billing.LegacyInvoice"]
+        assertThat(schema).isNotNull
+        assertThat(schema?.deprecated).isTrue
+        assertThat(schema?.description).contains("Deprecated: Use Invoice instead")
+
+        val total = schema?.properties?.get("total")
+        assertThat(total?.deprecated).isTrue
+        assertThat(total?.description).isEqualTo("Deprecated: Use totalCents instead")
     }
 
     // ==================== Helper Functions ====================

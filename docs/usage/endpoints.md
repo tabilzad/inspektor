@@ -201,28 +201,35 @@ routing {
 
 ## Deprecated Endpoints
 
-Mark endpoints as deprecated:
+Deprecation comes from Kotlin's own `@Deprecated` annotation. Annotate a route function —
+every endpoint it defines (including nested routes) is marked deprecated:
 
 ```kotlin
-@KtorDescription(
-    summary = "Get user (deprecated)",
-    description = "Use /api/v2/users instead",
-    deprecated = true
-)
-get("/api/v1/users/{id}") {
-    // Old implementation
+@Deprecated("Use /api/v2/users instead")
+fun Route.legacyUserRoutes() {
+    @KtorDescription(summary = "Get user (deprecated)")
+    get("/api/v1/users/{id}") {
+        // Old implementation
+    }
 }
 ```
 
-Generated:
+Generated — the `@Deprecated` message is appended to the operation description, since OpenAPI's
+`deprecated` field is a plain boolean:
 
 ```yaml
 /api/v1/users/{id}:
   get:
-    deprecated: true
     summary: "Get user (deprecated)"
-    description: "Use /api/v2/users instead"
+    description: "Deprecated: Use /api/v2/users instead"
+    deprecated: true
 ```
+
+!!! note
+    Kotlin does not allow `@Deprecated` directly on a `get(...)`/`post(...)` expression —
+    its targets don't include expressions. Place it on the `Route` extension function (or the
+    `@GenerateOpenApi` module function) that declares the endpoints. When nested functions carry
+    their own `@Deprecated`, the innermost message wins.
 
 ## Wildcard Routes
 

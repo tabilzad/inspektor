@@ -46,12 +46,12 @@ internal class ExpressionsVisitorK2(
     // Evaluation Order 1
     override fun visitNamedFunction(namedFunction: FirNamedFunction, parent: KtorElement?): List<KtorElement> {
         val extractedTags = namedFunction.findTags(session)
-        val isDeprecated = namedFunction.findDeprecated()
+        val deprecation = namedFunction.findDeprecated()
         val declaredHeaders = namedFunction.findDeclaredHeaders(session)
         val descriptor = parent ?: RouteDescriptor(
             "/",
             tags = extractedTags,
-            isDeprecated = isDeprecated,
+            deprecation = deprecation,
             headers = declaredHeaders
         )
         namedFunction.acceptChildren(this, descriptor)
@@ -273,17 +273,19 @@ internal class ExpressionsVisitorK2(
     override fun visitFunctionCall(functionCall: FirFunctionCall, parent: KtorElement?): List<KtorElement> {
 
         val tagsFromAnnotation = functionCall.findTags(session)
-        val isDeprecated = functionCall.findDeprecated()
-        val resultElement = functionCall.lookForKtorElements(parent, tagsFromAnnotation, isDeprecated)
+        val deprecationFromCall = functionCall.findDeprecated()
+        val resultElement = functionCall.lookForKtorElements(parent, tagsFromAnnotation, deprecationFromCall)
         functionCall.findLambda()?.accept(this, resultElement ?: parent) ?: run {
             val declaration = functionCall.calleeReference.toResolvedFunctionSymbol()?.fir
             val tagsFromDeclaration = declaration?.findTags(session)
-            val deprecated = declaration?.findDeprecated()
+            val deprecationFromDeclaration = declaration?.findDeprecated()
 
             if (parent is RouteDescriptor) {
                 val acceptedElements = declaration?.accept(this, null)?.onEach {
                     it.tags = it.tags merge tagsFromAnnotation merge tagsFromDeclaration
-                    it.isDeprecated = it.isDeprecated optionalAnd deprecated optionalAnd isDeprecated
+                    // The element's own deprecation is the most specific, so its message wins
+                    // over the called function's declaration, which wins over the call site.
+                    it.deprecation = deprecationFromCall overriddenBy deprecationFromDeclaration overriddenBy it.deprecation
                 }
                 parent.children.addAll(acceptedElements ?: emptyList())
             } else {
@@ -297,7 +299,7 @@ internal class ExpressionsVisitorK2(
     private fun FirFunctionCall.lookForKtorElements(
         parent: KtorElement?,
         tagsFromAnnotation: Set<String>?,
-        isDeprecated: Boolean?
+        deprecation: DeprecationInfo?
     ): KtorElement? {
         val resolvedExp = toResolvedCallableReference(session)
         val expName = resolvedExp?.name?.asString() ?: ""
@@ -309,10 +311,10 @@ internal class ExpressionsVisitorK2(
 
         return when {
             ExpType.ROUTE.labels.contains(expName) ->
-                handleRouteElement(parent, pathValue, expName, tagsFromAnnotation, isDeprecated, declaredHeaders)
+                handleRouteElement(parent, pathValue, expName, tagsFromAnnotation, deprecation, declaredHeaders)
 
             ExpType.METHOD.labels.contains(expName) ->
-                handleMethodElement(parent, pathValue, tagsFromAnnotation, isDeprecated, expName, declaredHeaders)
+                handleMethodElement(parent, pathValue, tagsFromAnnotation, deprecation, expName, declaredHeaders)
 
             else -> null
         }
@@ -323,21 +325,21 @@ internal class ExpressionsVisitorK2(
         pathValue: String?,
         expName: String,
         tagsFromAnnotation: Set<String>?,
-        isDeprecated: Boolean?,
+        deprecation: DeprecationInfo?,
         declaredHeaders: Set<HeaderParamSpec>?
     ): KtorElement? {
         return when (parent) {
             null -> {
                 pathValue?.let {
-                    RouteDescriptor(it, tags = tagsFromAnnotation, isDeprecated = isDeprecated, headers = declaredHeaders)
-                } ?: RouteDescriptor(expName, tags = tagsFromAnnotation, isDeprecated = isDeprecated, headers = declaredHeaders)
+                    RouteDescriptor(it, tags = tagsFromAnnotation, deprecation = deprecation, headers = declaredHeaders)
+                } ?: RouteDescriptor(expName, tags = tagsFromAnnotation, deprecation = deprecation, headers = declaredHeaders)
             }
 
             is RouteDescriptor -> {
                 val newElement = RouteDescriptor(
                     pathValue.toString(),
                     tags = parent.tags merge tagsFromAnnotation,
-                    isDeprecated = parent.isDeprecated optionalAnd isDeprecated,
+                    deprecation = parent.deprecation overriddenBy deprecation,
                     headers = declaredHeaders
                 )
                 parent.children.add(newElement)
@@ -363,7 +365,7 @@ internal class ExpressionsVisitorK2(
         parent: KtorElement?,
         pathValue: String?,
         tagsFromAnnotation: Set<String>?,
-        isDeprecated: Boolean?,
+        deprecation: DeprecationInfo?,
         expName: String,
         declaredHeaders: Set<HeaderParamSpec>?
     ): KtorElement? {
@@ -393,7 +395,7 @@ internal class ExpressionsVisitorK2(
                 if (resource != null && newElement is RouteDescriptor) {
                     newElement
                 } else {
-                    RouteDescriptor("/", children = mutableListOf(newElement), isDeprecated = isDeprecated)
+                    RouteDescriptor("/", children = mutableListOf(newElement), deprecation = deprecation)
                 }
             }
 
@@ -624,11 +626,8 @@ internal class ExpressionsVisitorK2(
         )?.toSet()
     }
 
-    private fun FirStatement.findDeprecated(): Boolean? = if (findAnnotationNamed(ClassIds.DEPRECATED) != null) {
-        true
-    } else {
-        null
-    }
+    private fun FirStatement.findDeprecated(): DeprecationInfo? =
+        findAnnotationNamed(ClassIds.DEPRECATED)?.extractDeprecationInfo(session)
 
     private fun FirFunctionCall.findDocsDescription(session: FirSession): KtorDescriptionBag {
         val docsAnnotation = findAnnotationNamed(ClassIds.KTOR_DESCRIPTION)

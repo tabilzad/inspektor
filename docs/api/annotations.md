@@ -117,18 +117,23 @@ post("/users") {
 
 ### Deprecated Endpoint
 
-Deprecation is derived from Kotlin's own `@Deprecated` annotation, not from `@KtorDescription`:
+Deprecation is derived from Kotlin's own `@Deprecated` annotation, not from `@KtorDescription`.
+Since Kotlin doesn't allow `@Deprecated` on expressions, place it on the route function that
+declares the endpoints; every endpoint it defines is marked deprecated, and the message is
+appended to the operation description as a `Deprecated: ...` note:
 
 ```kotlin
 @Deprecated("Use GET /api/v2/users/{id} instead")
-@KtorDescription(
-    summary = "Get user (deprecated)",
-    description = "Use GET /api/v2/users/{id} instead"
-)
-get("/api/v1/users/{id}") {
-    // Old implementation
+fun Route.legacyUserRoutes() {
+    @KtorDescription(summary = "Get user (deprecated)")
+    get("/api/v1/users/{id}") {
+        // Old implementation
+    }
 }
 ```
+
+`@Deprecated` on data classes and their properties is likewise reflected on the generated
+schemas (`deprecated: true` plus the message folded into the description).
 
 ### Placement
 

@@ -70,7 +70,8 @@ data class OpenApiSpec(
         var oneOf: List<TypeDescriptor>? = null,
         var required: MutableList<String>? = null,
         var format: String? = null,
-        var discriminator: DiscriminatorDescriptor? = null
+        var discriminator: DiscriminatorDescriptor? = null,
+        var deprecated: Boolean? = null
     ) : NamedObject {
         override fun equals(other: Any?): Boolean {
             return when {

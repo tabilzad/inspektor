@@ -41,14 +41,39 @@ internal data class KtorRouteSpec(
     val description: String?,
     val operationId: String?,
     val tags: Set<String>?,
-    val deprecated: Boolean?,
+    val deprecation: DeprecationInfo?,
     val responses: Map<String, OpenApiSpec.ResponseDetails>?
 )
+
+/**
+ * Presence marks the element as deprecated in the generated spec. OpenAPI's `deprecated` is a
+ * plain boolean, so [message] (from `@Deprecated(message = ...)`) is folded into the
+ * description as a "Deprecated: ..." note instead.
+ */
+data class DeprecationInfo(val message: String? = null)
+
+/**
+ * Combines deprecation inherited from an enclosing scope (receiver) with a more specific one
+ * (argument): deprecated when either side is, and the more specific message wins when both
+ * carry one.
+ */
+infix fun DeprecationInfo?.overriddenBy(specific: DeprecationInfo?): DeprecationInfo? = when {
+    this == null -> specific
+    specific == null -> this
+    else -> DeprecationInfo(specific.message ?: message)
+}
+
+/** Appends the deprecation note to a description, or becomes the description when there is none. */
+internal fun String?.withDeprecationNote(deprecation: DeprecationInfo?): String? {
+    val message = deprecation?.message ?: return this
+    val note = "Deprecated: $message"
+    return if (isNullOrBlank()) note else "$this\n\n$note"
+}
 
 sealed class KtorElement {
     abstract var path: String?
     abstract var tags: Set<String>?
-    abstract var isDeprecated: Boolean?
+    abstract var deprecation: DeprecationInfo?
     abstract fun newInstance(tags: Set<String>?): KtorElement
 }
 
@@ -68,7 +93,7 @@ internal data class EndpointDescriptor(
     var summary: String? = null,
     override var tags: Set<String>? = null,
     var responses: Map<String, OpenApiSpec.ResponseDetails>? = null,
-    override var isDeprecated: Boolean? = null
+    override var deprecation: DeprecationInfo? = null
 ) : KtorElement() {
     override fun newInstance(tags: Set<String>?): EndpointDescriptor {
         return copy(tags = tags)
@@ -79,7 +104,7 @@ internal data class RouteDescriptor(
     override var path: String? = "/",
     val children: MutableList<KtorElement> = mutableListOf(),
     override var tags: Set<String>? = null,
-    override var isDeprecated: Boolean? = null,
+    override var deprecation: DeprecationInfo? = null,
     /** Headers declared via `@KtorHeaders` on this route; propagated to all child endpoints. */
     var headers: Set<HeaderParamSpec>? = null
 ) : KtorElement() {

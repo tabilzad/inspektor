@@ -17,30 +17,36 @@
     "/v2/getRequest2" : {
       "get" : {
         "summary" : "should be deprecated",
+        "description" : "Deprecated: This module is deprecated",
         "deprecated" : true
       },
       "post" : {
         "summary" : "should be deprecated",
+        "description" : "Deprecated: This module is deprecated",
         "deprecated" : true
       }
     },
     "/v3/getRequest3" : {
       "get" : {
         "summary" : "should be deprecated",
+        "description" : "Deprecated: This route is deprecated, use routeTwoD instead",
         "deprecated" : true
       },
       "post" : {
         "summary" : "should be deprecated",
+        "description" : "Deprecated: This route is deprecated, use routeTwoD instead",
         "deprecated" : true
       }
     },
     "/v3/v3a/getRequest3" : {
       "get" : {
         "summary" : "should be deprecated",
+        "description" : "Deprecated: This route is deprecated, use routeTwoD instead",
         "deprecated" : true
       },
       "post" : {
         "summary" : "should be deprecated",
+        "description" : "Deprecated: This route is deprecated, use routeTwoD instead",
         "deprecated" : true
       }
     }
