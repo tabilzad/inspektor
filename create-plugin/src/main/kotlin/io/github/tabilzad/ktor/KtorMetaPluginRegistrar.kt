@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.DeclarationCheckers
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirRegularClassChecker
-import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirSimpleFunctionChecker
+import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirNamedFunctionChecker
 import org.jetbrains.kotlin.fir.analysis.extensions.FirAdditionalCheckersExtension
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrarAdapter
@@ -41,7 +41,7 @@ open class KtorMetaPluginRegistrar : CompilerPluginRegistrar() {
 class FirCheckers(session: FirSession, configuration: CompilerConfiguration) : FirAdditionalCheckersExtension(session) {
     override val declarationCheckers: DeclarationCheckers = object : DeclarationCheckers() {
         // these could probably be ExpressionCheckers instead of Declaration
-        override val simpleFunctionCheckers: Set<FirSimpleFunctionChecker> =
+        override val namedFunctionCheckers: Set<FirNamedFunctionChecker> =
             setOf(SwaggerDeclarationChecker(session, configuration))
 
         // Contributor-mode KDoc sidecar collection; inert outside contributor mode.

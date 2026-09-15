@@ -1,10 +1,10 @@
 [versions]
-kotlinVersion = "2.4.10"
+kotlinVersion = "2.4.20"
 dokkaVersion = "2.0.0"
 classgraph = "4.8.157"
 jacksonVersion = "2.15.2"
 ktorVersion = "3.5.0"
-compilerTestingVersion = "0.13.0"
+compilerTestingVersion = "0.14.0"
 agpApi = "8.1.0"
 assertJVerison = "3.24.2"
 kotlinxSerialization = "1.8.0"

@@ -10,7 +10,7 @@ Add the plugin to your `build.gradle.kts`:
 
 ```kotlin title="build.gradle.kts"
 plugins {
-    kotlin("jvm") version "2.4.10"
+    kotlin("jvm") version "2.4.20"
     id("io.ktor.plugin") version "3.0.0"
     id("io.github.tabilzad.inspektor") version "0.11.3-alpha" // (1)!
 }
@@ -22,7 +22,7 @@ plugins {
 
 ```groovy title="build.gradle"
 plugins {
-    id 'org.jetbrains.kotlin.jvm' version '2.4.10'
+    id 'org.jetbrains.kotlin.jvm' version '2.4.20'
     id 'io.ktor.plugin' version '3.0.0'
     id 'io.github.tabilzad.inspektor' version '0.11.3-alpha'
 }

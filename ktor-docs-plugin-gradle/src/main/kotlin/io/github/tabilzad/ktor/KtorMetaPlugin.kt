@@ -119,7 +119,7 @@ class KtorMetaPlugin @Inject constructor(
         val project = kotlinCompilation.target.project
         val swaggerExtension = project.extensions.getByType(KtorInspectorGradleConfig::class.java)
 
-        kotlinCompilation.dependencies {
+        kotlinCompilation.defaultSourceSet.dependencies {
             compileOnly("io.github.tabilzad.inspektor:ktor-docs-plugin:$inspektorVersion")
             implementation("io.github.tabilzad.inspektor:annotations:$inspektorVersion")
         }

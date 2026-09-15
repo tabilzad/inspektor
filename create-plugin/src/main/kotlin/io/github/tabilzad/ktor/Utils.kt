@@ -5,8 +5,11 @@ import io.github.tabilzad.ktor.k2.visitors.StringResolutionVisitor
 import io.github.tabilzad.ktor.model.ConfigInput
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import org.jetbrains.kotlin.KtSourceElement
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.com.intellij.lang.LighterASTNode
+import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirEvaluatorResult
 import org.jetbrains.kotlin.fir.FirSession
@@ -468,3 +471,13 @@ fun String.toGenericPostFixClassifier(): String {
 
     return "_Of_" + process(content)
 }
+
+/**
+ * Returns the compiler's [MessageCollector], or [MessageCollector.NONE] when none is configured.
+ *
+ * Kotlin 2.4.20 gates direct access to the message collector behind [MessageCollectorAccess];
+ * the opt-in is kept in this single accessor so call sites stay free of it.
+ */
+@OptIn(MessageCollectorAccess::class)
+internal fun CompilerConfiguration.messageCollectorOrNone(): MessageCollector =
+    get(CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE)

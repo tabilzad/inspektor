@@ -8,13 +8,13 @@ import io.github.tabilzad.ktor.output.PartialOpenApiSpec
 import io.github.tabilzad.ktor.output.PartialSpecs
 import io.github.tabilzad.ktor.output.SchemaDocs
 import io.github.tabilzad.ktor.output.convertInternalToOpenSpec
+import io.github.tabilzad.ktor.messageCollectorOrNone
 import io.github.tabilzad.ktor.writeFreshTo
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.jvm.config.jvmClasspathRoots
-import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -127,7 +127,7 @@ internal class OpenApiIrGenerationExtension(
     }
 
     private val messageCollector: MessageCollector
-        get() = configuration.get(CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE)
+        get() = configuration.messageCollectorOrNone()
 
     private fun warn(message: String) =
         messageCollector.report(CompilerMessageSeverity.WARNING, "[inspektor] $message")

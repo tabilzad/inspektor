@@ -3,13 +3,12 @@ package io.github.tabilzad.ktor.k2
 
 import io.github.tabilzad.ktor.*
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.MppCheckerKind
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
-import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirSimpleFunctionChecker
+import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirNamedFunctionChecker
 import org.jetbrains.kotlin.fir.declarations.FirNamedFunction
 import org.jetbrains.kotlin.fir.declarations.hasAnnotation
 
@@ -27,13 +26,9 @@ import org.jetbrains.kotlin.fir.declarations.hasAnnotation
 class SwaggerDeclarationChecker(
     private val session: FirSession,
     private val configuration: CompilerConfiguration
-) : FirSimpleFunctionChecker(MppCheckerKind.Common) {
+) : FirNamedFunctionChecker(MppCheckerKind.Common) {
 
-    private val log = try {
-        configuration.get(CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY, MessageCollector.NONE)
-    } catch (ex: Throwable) {
-        null
-    }
+    private val log: MessageCollector = configuration.messageCollectorOrNone()
     private val config = configuration.buildPluginConfiguration()
 
     context(context: CheckerContext, reporter: DiagnosticReporter)

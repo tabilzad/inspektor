@@ -1,4 +1,6 @@
 .gradle
+# Kotlin Gradle Plugin session/metadata directory (KGP 2.x)
+.kotlin/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
