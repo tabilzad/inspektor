@@ -16,6 +16,12 @@ Version compatibility information for InspeKtor.
 
 InspeKtor 0.12.x is built against the Kotlin 2.4 compiler line (currently 2.4.20).
 
+!!! warning "0.12.1-alpha and Kotlin 2.4.20"
+    Kotlin 2.4.20 renamed the compiler slot that function checkers register into. InspeKtor
+    0.12.1-alpha, built against 2.4.10, is therefore never invoked by a 2.4.20 compiler: the build
+    succeeds but no specification is written. Later versions register in a way that works on both
+    2.4.10 and 2.4.20; until you upgrade the plugin, keep Kotlin at 2.4.10.
+
 ```kotlin title="build.gradle.kts"
 plugins {
     kotlin("jvm") version "2.4.20" // Required

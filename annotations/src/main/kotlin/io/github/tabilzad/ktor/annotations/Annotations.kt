@@ -95,7 +95,8 @@ annotation class KtorDescription(
  *
  * The annotation can be placed on a class, on a typealias declaration, or on a type usage. On a
  * typealias it applies wherever the alias is used, including from modules that only see the alias
- * through compiled class files:
+ * through compiled class files — provided the module declaring the alias is on the compile classpath
+ * of the module generating the specification (expose it with `api`, or depend on it directly):
  *
  * Example usage:
  * ```

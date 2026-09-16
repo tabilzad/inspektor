@@ -448,7 +448,7 @@ internal class ExpressionsVisitorK2(
     @OptIn(SymbolInternals::class)
     private fun ConeKotlinType.generateDescriptor(): OpenApiSpec.TypeDescriptor? {
         val annotatedDescription = findDocsDescriptionOnType(session)
-        val classDescriptorVisitor = ClassDescriptorVisitorK2(config, session, context)
+        val classDescriptorVisitor = ClassDescriptorVisitorK2(config, session, context, log = log)
         val visited = classDescriptorVisitor.collectDataTypes(annotatedDescription?.serializedAs ?: this)
         classNames.addAll(classDescriptorVisitor.classNames)
         return visited

@@ -9,6 +9,8 @@ import io.github.tabilzad.ktor.k2.ClassIds.KTOR_SCHEMA
 import io.github.tabilzad.ktor.k2.JsonNameResolver.getCustomNameFromAnnotation
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import io.github.tabilzad.ktor.output.OpenApiSpec.TypeDescriptor
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
@@ -42,6 +44,9 @@ internal class ClassDescriptorVisitorK2(
     private val context: CheckerContext,
     private val genericParameters: List<GenericParameter> = emptyList(),
     val classNames: MutableSet<TypeDescriptor> = mutableSetOf(),
+    private val log: MessageCollector? = null,
+    /** Aliases already reported by [warnIfAliasUnresolvable]; shared with nested visitors. */
+    private val reportedUnresolvableAliases: MutableSet<String> = mutableSetOf(),
 ) : FirDefaultVisitor<TypeDescriptor, TypeDescriptor>() {
 
     override fun visitProperty(property: FirProperty, data: TypeDescriptor): TypeDescriptor {
@@ -69,6 +74,7 @@ internal class ClassDescriptorVisitorK2(
 
         val fqClassName = parentType.fqNameStr()
         val typeSymbol = parentType.toRegularClassSymbol(session)
+        parentType.warnIfAliasUnresolvable()
         val typeDescription = parentType.findDocsDescriptionOnType(session)
         val baseType = parentType.toBaseType(fqClassName)
 
@@ -85,6 +91,25 @@ internal class ClassDescriptorVisitorK2(
             parentType.typeArguments.isEmpty() -> collectSimpleObject(baseType, fqClassName, parentType)
             else -> collectGenericObject(baseType, fqClassName, parentType, typeSymbol)
         }
+    }
+
+    /**
+     * `@KtorSchema` on a typealias can only be honored when the alias declaration itself is on this
+     * compilation's classpath. A type written through an alias from a module that reaches this one
+     * only as a transitive `implementation` dependency still expands (the aliased class is visible)
+     * while the alias is not, so its annotations would be lost without a trace. Say so, once per alias.
+     */
+    private fun ConeKotlinType.warnIfAliasUnresolvable() {
+        val alias = abbreviatedType as? ConeClassLikeType ?: return
+        val aliasFqName = alias.lookupTag.classId.asFqNameString()
+        if (alias.lookupTag.toSymbol(session) != null || !reportedUnresolvableAliases.add(aliasFqName)) return
+        log?.report(
+            CompilerMessageSeverity.WARNING,
+            "[inspektor] Type alias '$aliasFqName' (expanding to '${fqNameStr()}') is not on the compile " +
+                "classpath of this module, so any @KtorSchema declared on the alias cannot be applied to its " +
+                "schema. If the alias is annotated, add the module that declares it as a dependency of this " +
+                "module, or expose that module with `api` from the modules whose types use the alias."
+        )
     }
 
     private fun collectExplicitType(
@@ -258,7 +283,9 @@ internal class ClassDescriptorVisitorK2(
                     ClassDescriptorVisitorK2(
                         config, session, context,
                         classNames = classNames,
-                        genericParameters = resolvedGenericParams
+                        genericParameters = resolvedGenericParams,
+                        log = log,
+                        reportedUnresolvableAliases = reportedUnresolvableAliases
                     ),
                     genericDescriptor
                 )

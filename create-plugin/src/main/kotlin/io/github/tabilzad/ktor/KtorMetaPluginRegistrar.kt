@@ -11,8 +11,8 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.DeclarationCheckers
+import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirFunctionChecker
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirRegularClassChecker
-import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirNamedFunctionChecker
 import org.jetbrains.kotlin.fir.analysis.extensions.FirAdditionalCheckersExtension
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrarAdapter
@@ -40,8 +40,12 @@ open class KtorMetaPluginRegistrar : CompilerPluginRegistrar() {
 
 class FirCheckers(session: FirSession, configuration: CompilerConfiguration) : FirAdditionalCheckersExtension(session) {
     override val declarationCheckers: DeclarationCheckers = object : DeclarationCheckers() {
-        // these could probably be ExpressionCheckers instead of Declaration
-        override val namedFunctionCheckers: Set<FirNamedFunctionChecker> =
+        // Registered as a generic function checker on purpose: the dedicated named-function slot
+        // was renamed between Kotlin 2.4.10 (`simpleFunctionCheckers`) and 2.4.20
+        // (`namedFunctionCheckers`), and a plugin overriding the wrong name is silently never
+        // invoked by the other compiler — no error, just an empty spec. `functionCheckers` exists
+        // under the same name in both, so one binary works across the 2.4 line.
+        override val functionCheckers: Set<FirFunctionChecker> =
             setOf(SwaggerDeclarationChecker(session, configuration))
 
         // Contributor-mode KDoc sidecar collection; inert outside contributor mode.
