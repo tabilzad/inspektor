@@ -1,0 +1,62 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v3/pricedItem" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.PricedItem"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.JsonMoney" : {
+        "type" : "object",
+        "properties" : {
+          "currencyCode" : {
+            "type" : "string"
+          },
+          "valueInLowestDenomination" : {
+            "type" : "integer"
+          }
+        },
+        "description" : "Money as its JSON surrogate",
+        "required" : [ "valueInLowestDenomination", "currencyCode" ]
+      },
+      "sources.PricedItem" : {
+        "type" : "object",
+        "properties" : {
+          "allocatedPrices" : {
+            "type" : "array",
+            "items" : {
+              "description" : "Money as its JSON surrogate",
+              "$ref" : "#/components/schemas/sources.JsonMoney"
+            }
+          },
+          "price" : {
+            "description" : "Money as its JSON surrogate",
+            "$ref" : "#/components/schemas/sources.JsonMoney"
+          },
+          "upcharge" : {
+            "description" : "Money as its JSON surrogate",
+            "$ref" : "#/components/schemas/sources.JsonMoney"
+          }
+        },
+        "required" : [ "price" ]
+      }
+    }
+  }
+}

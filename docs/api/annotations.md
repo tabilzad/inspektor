@@ -257,15 +257,15 @@ route("/products") { }
 
 ## Summary Table
 
-| Annotation         | Target                     | Required           | Purpose                                                       |
-|--------------------|----------------------------|--------------------|---------------------------------------------------------------|
-| `@GenerateOpenApi` | Function                   | Yes (at least one) | Enable spec generation                                        |
-| `@KtorDescription` | Before HTTP method         | No                 | Add documentation                                             |
-| `@Tag`             | Function or route          | No                 | Group endpoints                                               |
-| `@KtorResponds`    | Before HTTP method         | No                 | Declare responses (see [Responses](../usage/responses.md))    |
-| `@KtorHeaders`     | Function, route, or method | No                 | Declare header parameters (see [Parameters](../usage/parameters.md#declaring-headers-with-ktorheaders)) |
-| `@KtorSchema`      | Class                      | No                 | Describe/override a schema (see [Descriptions](../usage/descriptions.md)) |
-| `@KtorField`       | Field                      | No                 | Describe/override a schema field                              |
+| Annotation         | Target                     | Required           | Purpose                                                                                                                                                  |
+|--------------------|----------------------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `@GenerateOpenApi` | Function                   | Yes (at least one) | Enable spec generation                                                                                                                                   |
+| `@KtorDescription` | Before HTTP method         | No                 | Add documentation                                                                                                                                        |
+| `@Tag`             | Function or route          | No                 | Group endpoints                                                                                                                                          |
+| `@KtorResponds`    | Before HTTP method         | No                 | Declare responses (see [Responses](../usage/responses.md))                                                                                               |
+| `@KtorHeaders`     | Function, route, or method | No                 | Declare header parameters (see [Parameters](../usage/parameters.md#declaring-headers-with-ktorheaders))                                                  |
+| `@KtorSchema`      | Class, typealias           | No                 | Describe/override a schema (see [Descriptions](../usage/descriptions.md)); on a typealias it applies wherever the alias is used, also from other modules |
+| `@KtorField`       | Field                      | No                 | Describe/override a schema field                                                                                                                         |
 
 ## Complete Example
 

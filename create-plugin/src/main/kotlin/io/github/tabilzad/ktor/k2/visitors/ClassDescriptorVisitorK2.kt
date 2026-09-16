@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.fir.resolve.fqName
 import org.jetbrains.kotlin.fir.resolve.getContainingClass
 import org.jetbrains.kotlin.fir.resolve.toClassSymbol
 import org.jetbrains.kotlin.fir.resolve.toRegularClassSymbol
+import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirValueParameterSymbol
@@ -296,14 +297,27 @@ internal class ClassDescriptorVisitorK2(
         if (fqName == null) return this
         type = null
         if (!classNames.names.contains(fqName)) {
-            val element = computeRef()
             val override = config.initConfig.overrides.find { it.fqName == fqName }
-            if (override != null) {
-                element.apply {
-                    type = override.serializedAs ?: type
+            val element = when {
+                // A `serializedAs` override replaces the type's representation wholesale: the
+                // Kotlin members are not what travels on the wire, so they must neither shape the
+                // component (a `string` with `properties` is contradictory) nor be visited, which
+                // would register their types as unrelated components. Only the base descriptor
+                // (class KDoc / deprecation) is kept.
+                override?.serializedAs != null -> copy(
+                    type = override.serializedAs,
+                    fqName = fqName,
+                    description = override.description ?: description,
+                    format = override.format
+                )
+
+                // Description/format-only overrides decorate the derived schema.
+                override != null -> computeRef().apply {
                     description = override.description ?: description
                     format = override.format ?: format
                 }
+
+                else -> computeRef()
             }
             classNames.add(element)
         }
@@ -445,7 +459,12 @@ internal fun FirProperty.findDocsDescriptionOnProperty(session: FirSession): Kto
 
 @OptIn(SymbolInternals::class)
 internal fun ConeKotlinType.findDocsDescriptionOnType(session: FirSession): KtorDescriptionBag? {
-    val docsAnnotation = ((toRegularClassSymbol(session)?.annotations ?: emptyList()) + typeAnnotations)
+    // Most specific declaration site first: an annotation written on the type usage itself, then
+    // one on the typealias the usage was written through, then one on the class.
+    val candidates = typeAnnotations +
+        typeAliasAnnotations(session) +
+        (toRegularClassSymbol(session)?.annotations ?: emptyList())
+    val docsAnnotation = candidates
         .find {
             it.fqName(session) == KTOR_FIELD_DESCRIPTION
                     || it.fqName(session) == KTOR_SCHEMA
@@ -457,4 +476,22 @@ internal fun ConeKotlinType.findDocsDescriptionOnType(session: FirSession): Ktor
     return dataBag.copy(
         isRequired = dataBag.isRequired ?: (!isMarkedNullable)
     )
+}
+
+/**
+ * Annotations declared on the typealias(es) this type was written through, e.g.
+ * `@KtorSchema(serializedAs = JsonMoney::class) typealias SerializableMoney = Money`.
+ *
+ * FIR expands a typealias at every use site but keeps the alias as the [abbreviatedType]
+ * attribute, both for source declarations and for declarations deserialized from other modules
+ * (Kotlin metadata records the abbreviated type and the alias's annotations). `typeAnnotations`
+ * only covers annotations on the aliased *type* (`typealias X = @KtorSchema Y`), so the
+ * declaration form is looked up here. Innermost alias first for nested aliases.
+ */
+private fun ConeKotlinType.typeAliasAnnotations(session: FirSession): List<FirAnnotation> = buildList {
+    var alias = abbreviatedType
+    while (alias != null) {
+        (alias as? ConeClassLikeType)?.lookupTag?.toSymbol(session)?.resolvedAnnotationsWithArguments?.let(::addAll)
+        alias = alias.abbreviatedType
+    }
 }

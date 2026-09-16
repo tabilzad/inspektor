@@ -89,7 +89,13 @@ annotation class KtorDescription(
  * @property type An optional explicit field type in OpenAPI. Can be used to override the automatic field type definition.
  *      Note: Automatic schema generation will NOT run for this field if the explicitType is not empty.
  * @property format An optional format of the data type (e.g., "date-time", "int32").
- * @property serializedAs Not currently implemented
+ * @property serializedAs A class whose schema is documented instead of the annotated type's own, for
+ *      types that a custom serializer turns into a different shape on the wire. Every reference to the
+ *      annotated type points at the schema of this class.
+ *
+ * The annotation can be placed on a class, on a typealias declaration, or on a type usage. On a
+ * typealias it applies wherever the alias is used, including from modules that only see the alias
+ * through compiled class files:
  *
  * Example usage:
  * ```
@@ -97,6 +103,9 @@ annotation class KtorDescription(
  * data class DollarAmount(
  *     val value: Int
  * )
+ *
+ * @KtorSchema(serializedAs = JsonMoney::class)
+ * typealias SerializableMoney = @Serializable(with = MoneySerializer::class) Money
  * ```
  */
 

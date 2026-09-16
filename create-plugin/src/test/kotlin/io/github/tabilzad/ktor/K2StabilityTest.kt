@@ -5,6 +5,7 @@ import io.github.tabilzad.ktor.TestUtils.loadSourceCodeFrom
 import io.github.tabilzad.ktor.model.CommonHeaderConfig
 import io.github.tabilzad.ktor.model.ConfigInput
 import io.github.tabilzad.ktor.model.Info
+import io.github.tabilzad.ktor.model.TypeOverrideConfig
 import io.github.tabilzad.ktor.output.OpenApiSpec
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -532,6 +533,56 @@ class K2StabilityTest {
         generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
         val result = testFile.readText()
         result.assertWith(expected)
+    }
+
+    @Test
+    fun `should capture serializedAs declared on the typealias itself`() {
+        val (source, expected) = loadSourceAndExpected("TypeAliasAnnotations3")
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault())
+        val result = testFile.readText()
+        result.assertWith(expected)
+        assertThat(testFile.parseSpec().components.schemas).doesNotContainKey("sources.Money")
+    }
+
+    @Test
+    fun `should capture serializedAs declared on a typealias from a precompiled module`() {
+        val (source, expected) = loadSourceAndExpected("TypeAliasAnnotations4")
+        generateCompilerTest(
+            testFile, source, PluginConfiguration.createDefault(),
+            precompiledSources = listOf("TypeAliasedExternalTypes.kt")
+        )
+        val result = testFile.readText()
+        result.assertWith(expected)
+        assertThat(testFile.parseSpec().components.schemas).doesNotContainKey("sources.precompiled.ExternalMoney")
+    }
+
+    @Test
+    fun `serializedAs type override should replace the schema of a class with members`() {
+        val (source, expected) = loadSourceAndExpected("TypeOverrideWithMembers")
+        val config = ConfigInput(
+            info = Info(
+                title = "Open API Specification",
+                description = "",
+                version = "1.0.0",
+                contact = null,
+                license = null
+            ),
+            overrides = listOf(
+                TypeOverrideConfig(fqName = "sources.Timestamp", serializedAs = "string", format = "date-time")
+            )
+        )
+        generateCompilerTest(testFile, source, PluginConfiguration.createDefault(initConfig = config))
+        val result = testFile.readText()
+        result.assertWith(expected)
+
+        val schemas = testFile.parseSpec().components.schemas
+        val timestamp = schemas["sources.Timestamp"]
+        assertThat(timestamp?.type).isEqualTo("string")
+        assertThat(timestamp?.format).isEqualTo("date-time")
+        assertThat(timestamp?.properties).isNull()
+        assertThat(timestamp?.required).isNull()
+        // Members of an overridden type are not visited, so their types are not registered.
+        assertThat(schemas).doesNotContainKey("sources.Zone")
     }
 
     @Test

@@ -209,6 +209,29 @@ serialOverrides {
 | `minLength` | `Int?` | Minimum length (for strings) |
 | `maxLength` | `Int?` | Maximum length (for strings) |
 
+## How an Override Is Applied
+
+An override with `serializedAs` replaces the schema derived from the class entirely: the component
+named after the type contains only the overridden `type`, plus `format` and `description` when
+given (falling back to the class KDoc). The class members are neither listed nor visited, so types
+that are only reachable through them do not appear in the specification. Usages keep referencing
+the component:
+
+```yaml
+components:
+  schemas:
+    kotlin.time.Instant:
+      type: "string"
+      format: "date-time"
+    com.example.Event:
+      properties:
+        at:
+          $ref: "#/components/schemas/kotlin.time.Instant"
+```
+
+An override without `serializedAs` only decorates the derived schema with the given `format` and
+`description`.
+
 ## Using Fully Qualified Names
 
 Always use the fully qualified class name (including package):

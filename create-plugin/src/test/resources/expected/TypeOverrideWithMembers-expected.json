@@ -1,0 +1,55 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v3/events" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.Event"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.Event" : {
+        "type" : "object",
+        "properties" : {
+          "at" : {
+            "description" : "Travels as an ISO-8601 string; see the serialOverrides of the test configuration.",
+            "$ref" : "#/components/schemas/sources.Timestamp"
+          },
+          "payload" : {
+            "$ref" : "#/components/schemas/sources.Payload"
+          }
+        },
+        "required" : [ "at", "payload" ]
+      },
+      "sources.Payload" : {
+        "type" : "object",
+        "properties" : {
+          "note" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "note" ]
+      },
+      "sources.Timestamp" : {
+        "type" : "string",
+        "description" : "Travels as an ISO-8601 string; see the serialOverrides of the test configuration.",
+        "format" : "date-time"
+      }
+    }
+  }
+}

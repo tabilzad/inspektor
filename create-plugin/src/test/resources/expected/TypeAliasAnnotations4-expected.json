@@ -1,0 +1,62 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Open API Specification",
+    "description" : "test",
+    "version" : "1.0.0"
+  },
+  "paths" : {
+    "/v3/externalPricedItem" : {
+      "post" : {
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/sources.precompiled.ExternalPricedItem"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "sources.precompiled.ExternalJsonMoney" : {
+        "type" : "object",
+        "properties" : {
+          "currencyCode" : {
+            "type" : "string"
+          },
+          "valueInLowestDenomination" : {
+            "type" : "integer"
+          }
+        },
+        "description" : "External money as its JSON surrogate",
+        "required" : [ "valueInLowestDenomination", "currencyCode" ]
+      },
+      "sources.precompiled.ExternalPricedItem" : {
+        "type" : "object",
+        "properties" : {
+          "allocatedPrices" : {
+            "type" : "array",
+            "items" : {
+              "description" : "External money as its JSON surrogate",
+              "$ref" : "#/components/schemas/sources.precompiled.ExternalJsonMoney"
+            }
+          },
+          "price" : {
+            "description" : "External money as its JSON surrogate",
+            "$ref" : "#/components/schemas/sources.precompiled.ExternalJsonMoney"
+          },
+          "upcharge" : {
+            "description" : "External money as its JSON surrogate",
+            "$ref" : "#/components/schemas/sources.precompiled.ExternalJsonMoney"
+          }
+        },
+        "required" : [ "price" ]
+      }
+    }
+  }
+}
